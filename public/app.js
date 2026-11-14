@@ -37,16 +37,32 @@ function pageFromHash() {
     return 'Overview';
   }
 }
+// Some in-app/mobile browsers deny localStorage. Preferences are optional and
+// must never prevent the research interface from booting.
+function storageGet(key, fallback = null) {
+  try {
+    return window.localStorage.getItem(key) ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+function storageSet(key, value) {
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // Keep the current session usable when persistent browser storage is blocked.
+  }
+}
 let current = pageFromHash(),
-  lang = localStorage.getItem('mors-lang') || 'en',
-  theme = localStorage.getItem('mors-theme') || 'arctic',
+  lang = storageGet('mors-lang', 'en'),
+  theme = storageGet('mors-theme', 'arctic'),
   dataset = null,
   analysis = null,
   chatThread = [],
   chatBusy = false;
 let navigationId = 0;
 try {
-  const saved = JSON.parse(localStorage.getItem('mors-chat-v1') || '[]');
+  const saved = JSON.parse(storageGet('mors-chat-v1', '[]'));
   if (Array.isArray(saved))
     chatThread = saved
       .filter((m) => m && ['user', 'assistant'].includes(m.role) && typeof m.content === 'string')
@@ -532,7 +548,7 @@ async function go(name) {
 }
 function persistChat() {
   try {
-    localStorage.setItem('mors-chat-v1', JSON.stringify(chatThread.slice(-60)));
+    storageSet('mors-chat-v1', JSON.stringify(chatThread.slice(-60)));
   } catch {
     toast('Local chat history could not be saved in this browser.');
   }
@@ -710,7 +726,7 @@ function bindPage() {
         dataset: 'PSI-69',
         savedAt: new Date().toISOString(),
       };
-      localStorage.setItem('mors-project', JSON.stringify(p));
+      storageSet('mors-project', JSON.stringify(p));
       $('#savedProject').innerHTML =
         `<div class="callout good">Saved locally in this browser: <b>${esc(p.name)}</b>. No server storage configured.</div>`;
     };
@@ -718,7 +734,7 @@ function bindPage() {
     (b) =>
       (b.onclick = () => {
         theme = b.dataset.theme;
-        localStorage.setItem('mors-theme', theme);
+        storageSet('mors-theme', theme);
         setTheme();
         go(current);
       }),
@@ -727,7 +743,7 @@ function bindPage() {
     (b) =>
       (b.onclick = () => {
         lang = b.dataset.lang;
-        localStorage.setItem('mors-lang', lang);
+        storageSet('mors-lang', lang);
         setTheme();
         $('#langBtn').textContent = lang === 'ar' ? 'English' : 'عربي';
         renderNav();
@@ -778,14 +794,14 @@ $('#reportBtn').onclick = () => go('Reports');
 $('#langBtn').textContent = lang === 'ar' ? 'English' : 'عربي';
 $('#langBtn').onclick = () => {
   lang = lang === 'en' ? 'ar' : 'en';
-  localStorage.setItem('mors-lang', lang);
+  storageSet('mors-lang', lang);
   setTheme();
   renderNav();
   go(current);
 };
 $('#themeBtn').onclick = () => {
   theme = { arctic: 'space', space: 'observatory', observatory: 'arctic' }[theme];
-  localStorage.setItem('mors-theme', theme);
+  storageSet('mors-theme', theme);
   setTheme();
   go(current);
 };
@@ -795,6 +811,7 @@ window.addEventListener('hashchange', () => {
 });
 setTheme();
 renderNav();
+$('#content').innerHTML = `<div class="empty">${t('Loading research view…', 'جارٍ تحميل صفحة البحث…')}</div>`;
 (async () => {
   try {
     dataset = await get('/api/datasets/flex');
