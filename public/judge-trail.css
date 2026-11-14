@@ -1,0 +1,55 @@
+.judging-trail {
+  margin: 16px 0;
+  border-color: color-mix(in srgb, var(--accent) 24%, var(--line));
+  background: linear-gradient(135deg, var(--surface), var(--surface2));
+}
+
+.judging-trail .card-head h2 {
+  margin: 4px 0 0;
+  font-size: 16px;
+}
+
+.judging-trail-steps {
+  margin-top: 16px;
+}
+
+.judging-trail-step {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--surface);
+}
+
+.judging-trail-step h3 {
+  margin: 10px 0 0;
+}
+
+.judging-trail-step .outline-btn {
+  margin-top: 12px;
+}
+
+.judging-trail-step .text-btn {
+  display: block;
+  margin: 9px 0 0;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.judging-trail-step .text-btn:hover {
+  text-decoration: underline;
+}
+
+.judging-trail-step button:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.judging-trail-pitch {
+  margin: 14px 0 0;
+  font-weight: 700;
+}

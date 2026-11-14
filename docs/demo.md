@@ -1,5 +1,14 @@
 # MORS AEGIS judging walkthrough
 
+## 90-second live route
+
+1. **Open the new judging path on Overview.** Pitch: “MORS AEGIS makes NASA combustion evidence traceable from source row to analysis, shows its limits, then turns it into a testable engineering question.”
+2. **Find the evidence.** Open Challenge Evidence; point to the official PSI inventory and verified original tables. Say that study rows stay separate.
+3. **Inspect one measurement.** Open Chart Guide; tap a point and show its source details. Explain that a droplet burning-rate constant is not solid-material flame-spread speed.
+4. **Show bounded impact.** Open Safety Insights, then one 3D concept. Describe these as research questions and concepts, not validated hardware or fire-risk predictions.
+
+The central claim to leave with judges: **the product does not hide uncertainty behind one hazard score; it exposes the source, condition and limit alongside each useful view.**
+
 ## 5-minute path
 
 1. **Start at Overview.** State the question: how can decades of NASA reduced-gravity combustion evidence be organized into useful crew fire-safety insight? Identify the 2026 challenge video as an introduction to the prompt; use the written challenge brief and its linked PSI repository as the exact requirements and data source.
