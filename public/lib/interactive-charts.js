@@ -20,6 +20,27 @@ function tick(value, digits = 3) {
   return Number(value.toFixed(digits)).toString();
 }
 
+export function shouldDismissChartTooltip(pointerType, pinned) {
+  return pointerType !== 'touch' && !pinned;
+}
+
+export function chartTooltipPosition({ clientX, clientY, viewportRect, tooltipRect, offset = 12, padding = 4 }) {
+  const availableWidth = Math.max(0, viewportRect.width - padding * 2);
+  const availableHeight = Math.max(0, viewportRect.height - padding * 2);
+  const width = Math.min(tooltipRect.width || 240, availableWidth);
+  const height = Math.min(tooltipRect.height || 64, availableHeight);
+  const relativeX = clientX - viewportRect.left;
+  const relativeY = clientY - viewportRect.top;
+  let left = relativeX + offset;
+  let top = relativeY + offset;
+  if (left + width > viewportRect.width - padding) left = relativeX - width - offset;
+  if (top + height > viewportRect.height - padding) top = relativeY - height - offset;
+  return {
+    left: Math.max(padding, Math.min(viewportRect.width - width - padding, left)),
+    top: Math.max(padding, Math.min(viewportRect.height - height - padding, top)),
+  };
+}
+
 export function scientificScatter({
   rows,
   xKey,
@@ -69,7 +90,7 @@ export function scientificScatter({
   const marks = points
     .map(({ row, x, y, group }) => {
       const info = `${row.id || `Test ${row.test}`} · ${row.fuel || 'Fuel unreported'} · ${xLabel}: ${tick(x)} ${xUnit} · ${yLabel}: ${tick(y)} ${yUnit} · O₂ ${(row.oxygen_mole_fraction * 100).toFixed(1)}% · ${row.pressure_mmHg ?? '—'} mmHg · ${row.test_end || 'End state unreported'}`;
-      return `<circle class="chart-point" cx="${sx(x)}" cy="${sy(y)}" r="5" fill="${colorByGroup.get(group)}" fill-opacity=".82" tabindex="0" aria-label="${esc(info)}" data-info="${esc(info)}"><title>${esc(info)}</title></circle>`;
+      return `<circle class="chart-point" cx="${sx(x)}" cy="${sy(y)}" r="5" fill="${colorByGroup.get(group)}" fill-opacity=".82" tabindex="0" role="button" aria-label="${esc(info)}" data-info="${esc(info)}"><title>${esc(info)}</title></circle>`;
     })
     .join('');
   const legend = groups
@@ -86,7 +107,7 @@ export function scientificScatter({
     )
     .join('');
 
-  return `<section class="scientific-chart" data-chart-panel><div class="chart-toolbar" role="group" aria-label="${esc(labels.controls)}"><button type="button" data-chart-action="zoom-in" aria-label="${esc(labels.zoomIn)}">＋</button><button type="button" data-chart-action="zoom-out" aria-label="${esc(labels.zoomOut)}">−</button><button type="button" data-chart-action="reset">${esc(labels.reset)}</button>${fitted.length ? `<button type="button" data-chart-action="fit" aria-pressed="false">${esc(labels.fitLine)}</button>` : ''}<button type="button" data-chart-action="draw" aria-pressed="false" data-idle-label="${esc(labels.drawLine)}" data-active-label="${esc(labels.drawLineActive)}">${esc(labels.drawLine)}</button><button type="button" data-chart-action="undo">${esc(labels.undo)}</button></div><div class="chart-viewport"><svg class="scientific-plot" viewBox="${base.x} ${base.y} ${base.width} ${base.height}" role="img" aria-label="${esc(`${xLabel} versus ${yLabel}`)}"><g class="chart-grid">${grid}</g><line x1="${plot.left}" y1="${base.height - plot.bottom}" x2="${base.width - plot.right}" y2="${base.height - plot.bottom}" class="chart-axis"/><line x1="${plot.left}" y1="${plot.top}" x2="${plot.left}" y2="${base.height - plot.bottom}" class="chart-axis"/><g class="chart-trend">${trend}</g><g class="chart-annotations"></g><g>${marks}</g><text x="${(plot.left + base.width - plot.right) / 2}" y="${base.height - 12}" class="chart-axis-label" text-anchor="middle">${esc(xLabel)}${xUnit ? ` (${esc(xUnit)})` : ''}</text><text transform="translate(18 ${(plot.top + base.height - plot.bottom) / 2}) rotate(-90)" class="chart-axis-label" text-anchor="middle">${esc(yLabel)}${yUnit ? ` (${esc(yUnit)})` : ''}</text></svg><div class="chart-tooltip" role="status" hidden></div></div><div class="chart-legend">${legend}</div><p class="sub chart-caption">${esc(labels.rows)}: n=${points.length}/${rows.length} · ${esc(labels.fitNote)} ${esc(fitSummary)}</p></section>`;
+  return `<section class="scientific-chart" data-chart-panel><div class="chart-toolbar" role="group" aria-label="${esc(labels.controls)}"><button type="button" data-chart-action="zoom-in" aria-label="${esc(labels.zoomIn)}">＋</button><button type="button" data-chart-action="zoom-out" aria-label="${esc(labels.zoomOut)}">−</button><button type="button" data-chart-action="reset">${esc(labels.reset)}</button>${fitted.length ? `<button type="button" data-chart-action="fit" aria-pressed="false">${esc(labels.fitLine)}</button>` : ''}<button type="button" data-chart-action="draw" aria-pressed="false" data-idle-label="${esc(labels.drawLine)}" data-active-label="${esc(labels.drawLineActive)}">${esc(labels.drawLine)}</button><button type="button" data-chart-action="undo">${esc(labels.undo)}</button></div><p class="chart-interaction-hint">${esc(labels.interactionHint || '')}</p><div class="chart-viewport"><svg class="scientific-plot" viewBox="${base.x} ${base.y} ${base.width} ${base.height}" role="group" aria-label="${esc(`${xLabel} versus ${yLabel}`)}"><g class="chart-grid">${grid}</g><line x1="${plot.left}" y1="${base.height - plot.bottom}" x2="${base.width - plot.right}" y2="${base.height - plot.bottom}" class="chart-axis"/><line x1="${plot.left}" y1="${plot.top}" x2="${plot.left}" y2="${base.height - plot.bottom}" class="chart-axis"/><g class="chart-trend">${trend}</g><g class="chart-annotations"></g><g>${marks}</g><text x="${(plot.left + base.width - plot.right) / 2}" y="${base.height - 12}" class="chart-axis-label" text-anchor="middle">${esc(xLabel)}${xUnit ? ` (${esc(xUnit)})` : ''}</text><text transform="translate(18 ${(plot.top + base.height - plot.bottom) / 2}) rotate(-90)" class="chart-axis-label" text-anchor="middle">${esc(yLabel)}${yUnit ? ` (${esc(yUnit)})` : ''}</text></svg><div class="chart-tooltip" role="status" aria-live="polite" hidden></div></div><div class="chart-legend">${legend}</div><p class="sub chart-caption">${esc(labels.rows)}: n=${points.length}/${rows.length} · ${esc(labels.fitNote)} ${esc(fitSummary)}</p></section>`;
 }
 
 export function bindInteractiveCharts(root) {
@@ -101,8 +122,23 @@ export function bindInteractiveCharts(root) {
     let drawing = false;
     let drag = null;
     let lineStart = null;
+    let tooltipPinned = false;
     const view = () => svg.viewBox.baseVal;
     const setView = (next) => svg.setAttribute('viewBox', `${next.x} ${next.y} ${next.width} ${next.height}`);
+    const showPoint = (mark, event) => {
+      tooltip.textContent = mark.dataset.info;
+      tooltip.hidden = false;
+      const box = panel.querySelector('.chart-viewport').getBoundingClientRect();
+      const keyboardClick = event.type === 'click' && event.detail === 0;
+      const bounds = chartTooltipPosition({
+        clientX: keyboardClick ? box.left + box.width / 2 : event.clientX,
+        clientY: keyboardClick ? box.top + box.height / 2 : event.clientY,
+        viewportRect: box,
+        tooltipRect: tooltip.getBoundingClientRect(),
+      });
+      tooltip.style.left = `${bounds.left}px`;
+      tooltip.style.top = `${bounds.top}px`;
+    };
     const point = (event) => {
       const p = svg.createSVGPoint();
       p.x = event.clientX;
@@ -150,11 +186,12 @@ export function bindInteractiveCharts(root) {
     );
     svg.addEventListener('pointerdown', (event) => {
       if (event.target.closest('.chart-point')) {
-        const info = event.target.closest('.chart-point').dataset.info;
-        tooltip.textContent = info;
-        tooltip.hidden = false;
+        tooltipPinned = true;
+        showPoint(event.target.closest('.chart-point'), event);
         return;
       }
+      tooltipPinned = false;
+      tooltip.hidden = true;
       const p = point(event);
       if (drawing) {
         lineStart = p;
@@ -175,11 +212,8 @@ export function bindInteractiveCharts(root) {
     svg.addEventListener('pointermove', (event) => {
       const mark = event.target.closest?.('.chart-point');
       if (mark && event.pointerType !== 'touch') {
-        tooltip.textContent = mark.dataset.info;
-        tooltip.hidden = false;
-        const box = panel.querySelector('.chart-viewport').getBoundingClientRect();
-        tooltip.style.left = `${Math.max(4, Math.min(box.width - 240, event.clientX - box.left + 12))}px`;
-        tooltip.style.top = `${Math.max(4, event.clientY - box.top + 12)}px`;
+        tooltipPinned = false;
+        showPoint(mark, event);
       }
       if (!drag || drag.pointerId !== event.pointerId) return;
       if (drag.kind === 'draw') {
@@ -205,8 +239,19 @@ export function bindInteractiveCharts(root) {
     };
     svg.addEventListener('pointerup', stop);
     svg.addEventListener('pointercancel', stop);
-    svg.addEventListener('pointerleave', () => {
-      if (tooltip) tooltip.hidden = true;
+    svg.addEventListener('click', (event) => {
+      const mark = event.target.closest?.('.chart-point');
+      if (!mark) return;
+      tooltipPinned = true;
+      showPoint(mark, event);
+    });
+    svg.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape') return;
+      tooltipPinned = false;
+      tooltip.hidden = true;
+    });
+    svg.addEventListener('pointerleave', (event) => {
+      if (tooltip && shouldDismissChartTooltip(event.pointerType, tooltipPinned)) tooltip.hidden = true;
     });
   });
 }

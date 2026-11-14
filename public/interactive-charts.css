@@ -29,6 +29,13 @@
   background: var(--accent);
 }
 
+.chart-interaction-hint {
+  margin: -2px 0 8px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 .chart-viewport {
   position: relative;
   overflow: hidden;

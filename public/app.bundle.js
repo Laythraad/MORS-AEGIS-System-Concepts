@@ -593,6 +593,25 @@
   function tick(value, digits = 3) {
     return Number(value.toFixed(digits)).toString();
   }
+  function shouldDismissChartTooltip(pointerType, pinned) {
+    return pointerType !== "touch" && !pinned;
+  }
+  function chartTooltipPosition({ clientX, clientY, viewportRect, tooltipRect, offset = 12, padding = 4 }) {
+    const availableWidth = Math.max(0, viewportRect.width - padding * 2);
+    const availableHeight = Math.max(0, viewportRect.height - padding * 2);
+    const width = Math.min(tooltipRect.width || 240, availableWidth);
+    const height = Math.min(tooltipRect.height || 64, availableHeight);
+    const relativeX = clientX - viewportRect.left;
+    const relativeY = clientY - viewportRect.top;
+    let left = relativeX + offset;
+    let top = relativeY + offset;
+    if (left + width > viewportRect.width - padding) left = relativeX - width - offset;
+    if (top + height > viewportRect.height - padding) top = relativeY - height - offset;
+    return {
+      left: Math.max(padding, Math.min(viewportRect.width - width - padding, left)),
+      top: Math.max(padding, Math.min(viewportRect.height - height - padding, top))
+    };
+  }
   function scientificScatter({
     rows,
     xKey,
@@ -635,7 +654,7 @@
     const marks = points.map(({ row, x, y, group }) => {
       var _a;
       const info = `${row.id || `Test ${row.test}`} \xB7 ${row.fuel || "Fuel unreported"} \xB7 ${xLabel}: ${tick(x)} ${xUnit} \xB7 ${yLabel}: ${tick(y)} ${yUnit} \xB7 O\u2082 ${(row.oxygen_mole_fraction * 100).toFixed(1)}% \xB7 ${(_a = row.pressure_mmHg) != null ? _a : "\u2014"} mmHg \xB7 ${row.test_end || "End state unreported"}`;
-      return `<circle class="chart-point" cx="${sx(x)}" cy="${sy(y)}" r="5" fill="${colorByGroup.get(group)}" fill-opacity=".82" tabindex="0" aria-label="${esc(info)}" data-info="${esc(info)}"><title>${esc(info)}</title></circle>`;
+      return `<circle class="chart-point" cx="${sx(x)}" cy="${sy(y)}" r="5" fill="${colorByGroup.get(group)}" fill-opacity=".82" tabindex="0" role="button" aria-label="${esc(info)}" data-info="${esc(info)}"><title>${esc(info)}</title></circle>`;
     }).join("");
     const legend = groups.map((group) => `<span><i style="--legend-color:${colorByGroup.get(group)}"></i>${esc(group)}</span>`).join("");
     const fitted = fits.filter(([, fit]) => fit);
@@ -643,7 +662,7 @@
     const trend = fitted.map(
       ([group, fit]) => `<line class="chart-trendline" stroke="${colorByGroup.get(group)}" x1="${sx(domain.xMin)}" y1="${sy(fit.intercept + fit.slope * domain.xMin)}" x2="${sx(domain.xMax)}" y2="${sy(fit.intercept + fit.slope * domain.xMax)}" visibility="hidden"/>`
     ).join("");
-    return `<section class="scientific-chart" data-chart-panel><div class="chart-toolbar" role="group" aria-label="${esc(labels2.controls)}"><button type="button" data-chart-action="zoom-in" aria-label="${esc(labels2.zoomIn)}">\uFF0B</button><button type="button" data-chart-action="zoom-out" aria-label="${esc(labels2.zoomOut)}">\u2212</button><button type="button" data-chart-action="reset">${esc(labels2.reset)}</button>${fitted.length ? `<button type="button" data-chart-action="fit" aria-pressed="false">${esc(labels2.fitLine)}</button>` : ""}<button type="button" data-chart-action="draw" aria-pressed="false" data-idle-label="${esc(labels2.drawLine)}" data-active-label="${esc(labels2.drawLineActive)}">${esc(labels2.drawLine)}</button><button type="button" data-chart-action="undo">${esc(labels2.undo)}</button></div><div class="chart-viewport"><svg class="scientific-plot" viewBox="${base.x} ${base.y} ${base.width} ${base.height}" role="img" aria-label="${esc(`${xLabel} versus ${yLabel}`)}"><g class="chart-grid">${grid}</g><line x1="${plot.left}" y1="${base.height - plot.bottom}" x2="${base.width - plot.right}" y2="${base.height - plot.bottom}" class="chart-axis"/><line x1="${plot.left}" y1="${plot.top}" x2="${plot.left}" y2="${base.height - plot.bottom}" class="chart-axis"/><g class="chart-trend">${trend}</g><g class="chart-annotations"></g><g>${marks}</g><text x="${(plot.left + base.width - plot.right) / 2}" y="${base.height - 12}" class="chart-axis-label" text-anchor="middle">${esc(xLabel)}${xUnit ? ` (${esc(xUnit)})` : ""}</text><text transform="translate(18 ${(plot.top + base.height - plot.bottom) / 2}) rotate(-90)" class="chart-axis-label" text-anchor="middle">${esc(yLabel)}${yUnit ? ` (${esc(yUnit)})` : ""}</text></svg><div class="chart-tooltip" role="status" hidden></div></div><div class="chart-legend">${legend}</div><p class="sub chart-caption">${esc(labels2.rows)}: n=${points.length}/${rows.length} \xB7 ${esc(labels2.fitNote)} ${esc(fitSummary)}</p></section>`;
+    return `<section class="scientific-chart" data-chart-panel><div class="chart-toolbar" role="group" aria-label="${esc(labels2.controls)}"><button type="button" data-chart-action="zoom-in" aria-label="${esc(labels2.zoomIn)}">\uFF0B</button><button type="button" data-chart-action="zoom-out" aria-label="${esc(labels2.zoomOut)}">\u2212</button><button type="button" data-chart-action="reset">${esc(labels2.reset)}</button>${fitted.length ? `<button type="button" data-chart-action="fit" aria-pressed="false">${esc(labels2.fitLine)}</button>` : ""}<button type="button" data-chart-action="draw" aria-pressed="false" data-idle-label="${esc(labels2.drawLine)}" data-active-label="${esc(labels2.drawLineActive)}">${esc(labels2.drawLine)}</button><button type="button" data-chart-action="undo">${esc(labels2.undo)}</button></div><p class="chart-interaction-hint">${esc(labels2.interactionHint || "")}</p><div class="chart-viewport"><svg class="scientific-plot" viewBox="${base.x} ${base.y} ${base.width} ${base.height}" role="group" aria-label="${esc(`${xLabel} versus ${yLabel}`)}"><g class="chart-grid">${grid}</g><line x1="${plot.left}" y1="${base.height - plot.bottom}" x2="${base.width - plot.right}" y2="${base.height - plot.bottom}" class="chart-axis"/><line x1="${plot.left}" y1="${plot.top}" x2="${plot.left}" y2="${base.height - plot.bottom}" class="chart-axis"/><g class="chart-trend">${trend}</g><g class="chart-annotations"></g><g>${marks}</g><text x="${(plot.left + base.width - plot.right) / 2}" y="${base.height - 12}" class="chart-axis-label" text-anchor="middle">${esc(xLabel)}${xUnit ? ` (${esc(xUnit)})` : ""}</text><text transform="translate(18 ${(plot.top + base.height - plot.bottom) / 2}) rotate(-90)" class="chart-axis-label" text-anchor="middle">${esc(yLabel)}${yUnit ? ` (${esc(yUnit)})` : ""}</text></svg><div class="chart-tooltip" role="status" aria-live="polite" hidden></div></div><div class="chart-legend">${legend}</div><p class="sub chart-caption">${esc(labels2.rows)}: n=${points.length}/${rows.length} \xB7 ${esc(labels2.fitNote)} ${esc(fitSummary)}</p></section>`;
   }
   function bindInteractiveCharts(root) {
     root.querySelectorAll("[data-chart-panel]").forEach((panel) => {
@@ -657,8 +676,23 @@
       let drawing = false;
       let drag = null;
       let lineStart = null;
+      let tooltipPinned = false;
       const view = () => svg.viewBox.baseVal;
       const setView = (next) => svg.setAttribute("viewBox", `${next.x} ${next.y} ${next.width} ${next.height}`);
+      const showPoint = (mark, event) => {
+        tooltip.textContent = mark.dataset.info;
+        tooltip.hidden = false;
+        const box = panel.querySelector(".chart-viewport").getBoundingClientRect();
+        const keyboardClick = event.type === "click" && event.detail === 0;
+        const bounds = chartTooltipPosition({
+          clientX: keyboardClick ? box.left + box.width / 2 : event.clientX,
+          clientY: keyboardClick ? box.top + box.height / 2 : event.clientY,
+          viewportRect: box,
+          tooltipRect: tooltip.getBoundingClientRect()
+        });
+        tooltip.style.left = `${bounds.left}px`;
+        tooltip.style.top = `${bounds.top}px`;
+      };
       const point = (event) => {
         const p = svg.createSVGPoint();
         p.x = event.clientX;
@@ -707,11 +741,12 @@
       );
       svg.addEventListener("pointerdown", (event) => {
         if (event.target.closest(".chart-point")) {
-          const info = event.target.closest(".chart-point").dataset.info;
-          tooltip.textContent = info;
-          tooltip.hidden = false;
+          tooltipPinned = true;
+          showPoint(event.target.closest(".chart-point"), event);
           return;
         }
+        tooltipPinned = false;
+        tooltip.hidden = true;
         const p = point(event);
         if (drawing) {
           lineStart = p;
@@ -733,11 +768,8 @@
         var _a, _b;
         const mark = (_b = (_a = event.target).closest) == null ? void 0 : _b.call(_a, ".chart-point");
         if (mark && event.pointerType !== "touch") {
-          tooltip.textContent = mark.dataset.info;
-          tooltip.hidden = false;
-          const box = panel.querySelector(".chart-viewport").getBoundingClientRect();
-          tooltip.style.left = `${Math.max(4, Math.min(box.width - 240, event.clientX - box.left + 12))}px`;
-          tooltip.style.top = `${Math.max(4, event.clientY - box.top + 12)}px`;
+          tooltipPinned = false;
+          showPoint(mark, event);
         }
         if (!drag || drag.pointerId !== event.pointerId) return;
         if (drag.kind === "draw") {
@@ -763,8 +795,20 @@
       };
       svg.addEventListener("pointerup", stop);
       svg.addEventListener("pointercancel", stop);
-      svg.addEventListener("pointerleave", () => {
-        if (tooltip) tooltip.hidden = true;
+      svg.addEventListener("click", (event) => {
+        var _a, _b;
+        const mark = (_b = (_a = event.target).closest) == null ? void 0 : _b.call(_a, ".chart-point");
+        if (!mark) return;
+        tooltipPinned = true;
+        showPoint(mark, event);
+      });
+      svg.addEventListener("keydown", (event) => {
+        if (event.key !== "Escape") return;
+        tooltipPinned = false;
+        tooltip.hidden = true;
+      });
+      svg.addEventListener("pointerleave", (event) => {
+        if (tooltip && shouldDismissChartTooltip(event.pointerType, tooltipPinned)) tooltip.hidden = true;
       });
     });
   }
@@ -1436,6 +1480,10 @@
   function scientificChartGallery(rows, { explain = false } = {}) {
     const labels2 = {
       controls: t("Chart controls", "\u0623\u062F\u0648\u0627\u062A \u0627\u0644\u0645\u062E\u0637\u0637"),
+      interactionHint: t(
+        "Tap or click a point for details \xB7 drag the plot to pan \xB7 use +/\u2212 or the wheel to zoom.",
+        "\u0627\u0646\u0642\u0631 \u0627\u0644\u0646\u0642\u0637\u0629 \u0644\u0639\u0631\u0636 \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644 \xB7 \u0627\u0633\u062D\u0628 \u0627\u0644\u0645\u062E\u0637\u0637 \u0644\u062A\u062D\u0631\u064A\u0643\u0647 \xB7 \u0627\u0633\u062A\u062E\u062F\u0645 +/\u2212 \u0623\u0648 \u0639\u062C\u0644\u0629 \u0627\u0644\u0641\u0623\u0631\u0629 \u0644\u0644\u062A\u0643\u0628\u064A\u0631."
+      ),
       zoomIn: t("Zoom in", "\u062A\u0643\u0628\u064A\u0631"),
       zoomOut: t("Zoom out", "\u062A\u0635\u063A\u064A\u0631"),
       reset: t("Reset view", "\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0639\u0631\u0636"),

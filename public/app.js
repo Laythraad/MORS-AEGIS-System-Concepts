@@ -295,6 +295,10 @@ function wbGroupRow(label, g, bold = false) {
 function scientificChartGallery(rows, { explain = false } = {}) {
   const labels = {
     controls: t('Chart controls', 'أدوات المخطط'),
+    interactionHint: t(
+      'Tap or click a point for details · drag the plot to pan · use +/− or the wheel to zoom.',
+      'انقر النقطة لعرض التفاصيل · اسحب المخطط لتحريكه · استخدم +/− أو عجلة الفأرة للتكبير.',
+    ),
     zoomIn: t('Zoom in', 'تكبير'),
     zoomOut: t('Zoom out', 'تصغير'),
     reset: t('Reset view', 'إعادة العرض'),
