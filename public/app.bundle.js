@@ -503,6 +503,200 @@
     return `<svg class="chart flex-scatter" viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(labelX)} against ${esc(labelY)}"><g>${grid}</g><line x1="${p.l}" y1="${h - p.b}" x2="${w - p.r}" y2="${h - p.b}" stroke="var(--muted)"/><line x1="${p.l}" y1="${p.t}" x2="${p.l}" y2="${h - p.b}" stroke="var(--muted)"/>${circles}<text x="${(p.l + w - p.r) / 2}" y="${h - 12}" text-anchor="middle" fill="var(--muted)" font-size="11">${esc(labelX)}</text><text transform="translate(16 ${(p.t + h - p.b) / 2}) rotate(-90)" text-anchor="middle" fill="var(--muted)" font-size="11">${esc(labelY)}</text><text x="${xx(xmin)}" y="${h - p.b + 19}" text-anchor="middle" fill="var(--muted)" font-size="10">${xmin.toFixed(1)}%</text><text x="${xx(xmax)}" y="${h - p.b + 19}" text-anchor="middle" fill="var(--muted)" font-size="10">${xmax.toFixed(1)}%</text></svg>`;
   }
 
+  // public/lib/interactive-charts.js
+  var NS = "http://www.w3.org/2000/svg";
+  var COLORS = ["#1688be", "#d59a3d", "#39a77e", "#7d73d3", "#d36d7c", "#5077a8"];
+  function linearFit(points) {
+    if (points.length < 3) return null;
+    const meanX = points.reduce((sum, point) => sum + point.x, 0) / points.length;
+    const meanY = points.reduce((sum, point) => sum + point.y, 0) / points.length;
+    const variance = points.reduce((sum, point) => sum + (point.x - meanX) ** 2, 0);
+    if (!variance) return null;
+    const slope = points.reduce((sum, point) => sum + (point.x - meanX) * (point.y - meanY), 0) / variance;
+    const intercept = meanY - slope * meanX;
+    const total = points.reduce((sum, point) => sum + (point.y - meanY) ** 2, 0);
+    const residual = points.reduce((sum, point) => sum + (point.y - intercept - slope * point.x) ** 2, 0);
+    return { slope, intercept, r2: total ? 1 - residual / total : 1 };
+  }
+  function tick(value, digits = 3) {
+    return Number(value.toFixed(digits)).toString();
+  }
+  function scientificScatter({
+    rows,
+    xKey,
+    yKey,
+    xLabel,
+    yLabel,
+    xUnit = "",
+    yUnit = "",
+    xFactor = 1,
+    yFactor = 1,
+    groupKey = "fuel",
+    labels: labels2
+  }) {
+    const points = rows.filter((row) => Number.isFinite(row[xKey]) && Number.isFinite(row[yKey])).map((row) => ({
+      row,
+      x: row[xKey] * xFactor,
+      y: row[yKey] * yFactor,
+      group: String(row[groupKey] || "Unreported")
+    }));
+    if (!points.length) return '<div class="empty">No source rows contain both measurements.</div>';
+    const base = { x: 0, y: 0, width: 800, height: 400 };
+    const plot = { left: 86, right: 26, top: 24, bottom: 67 };
+    const xMin = Math.min(...points.map((point) => point.x));
+    const xMax = Math.max(...points.map((point) => point.x));
+    const yMin = Math.min(0, ...points.map((point) => point.y));
+    const yMax = Math.max(...points.map((point) => point.y));
+    const xPad = (xMax - xMin) * 0.04 || Math.max(Math.abs(xMin) * 0.04, 0.01);
+    const yPad = (yMax - yMin) * 0.06 || Math.max(Math.abs(yMax) * 0.06, 0.01);
+    const domain = { xMin: xMin - xPad, xMax: xMax + xPad, yMin, yMax: yMax + yPad };
+    const sx = (value) => plot.left + (value - domain.xMin) / (domain.xMax - domain.xMin) * (base.width - plot.left - plot.right);
+    const sy = (value) => base.height - plot.bottom - (value - domain.yMin) / (domain.yMax - domain.yMin || 1) * (base.height - plot.top - plot.bottom);
+    const groups = [...new Set(points.map((point) => point.group))];
+    const colorByGroup = new Map(groups.map((group, index) => [group, COLORS[index % COLORS.length]]));
+    const fits = groups.map((group) => [group, linearFit(points.filter((point) => point.group === group))]);
+    const grid = Array.from({ length: 6 }, (_, index) => {
+      const x = domain.xMin + (domain.xMax - domain.xMin) * index / 5;
+      const y = domain.yMin + (domain.yMax - domain.yMin) * index / 5;
+      return `<line x1="${sx(x)}" y1="${plot.top}" x2="${sx(x)}" y2="${base.height - plot.bottom}" class="chart-gridline"/><line x1="${plot.left}" y1="${sy(y)}" x2="${base.width - plot.right}" y2="${sy(y)}" class="chart-gridline"/><text x="${sx(x)}" y="${base.height - plot.bottom + 19}" class="chart-tick" text-anchor="middle">${tick(x)}</text><text x="${plot.left - 10}" y="${sy(y) + 4}" class="chart-tick" text-anchor="end">${tick(y)}</text>`;
+    }).join("");
+    const marks = points.map(({ row, x, y, group }) => {
+      var _a;
+      const info = `${row.id || `Test ${row.test}`} \xB7 ${row.fuel || "Fuel unreported"} \xB7 ${xLabel}: ${tick(x)} ${xUnit} \xB7 ${yLabel}: ${tick(y)} ${yUnit} \xB7 O\u2082 ${(row.oxygen_mole_fraction * 100).toFixed(1)}% \xB7 ${(_a = row.pressure_mmHg) != null ? _a : "\u2014"} mmHg \xB7 ${row.test_end || "End state unreported"}`;
+      return `<circle class="chart-point" cx="${sx(x)}" cy="${sy(y)}" r="5" fill="${colorByGroup.get(group)}" fill-opacity=".82" tabindex="0" aria-label="${esc(info)}" data-info="${esc(info)}"><title>${esc(info)}</title></circle>`;
+    }).join("");
+    const legend = groups.map((group) => `<span><i style="--legend-color:${colorByGroup.get(group)}"></i>${esc(group)}</span>`).join("");
+    const fitted = fits.filter(([, fit]) => fit);
+    const fitSummary = fitted.length ? `${labels2.fit}: ${fitted.map(([group, fit]) => `${group}: y = ${tick(fit.intercept)} + ${tick(fit.slope)}x, R\xB2 = ${fit.r2.toFixed(3)} (n=${points.filter((point) => point.group === group).length})`).join(" \xB7 ")}` : `${labels2.fitUnavailable}`;
+    const trend = fitted.map(
+      ([group, fit]) => `<line class="chart-trendline" stroke="${colorByGroup.get(group)}" x1="${sx(domain.xMin)}" y1="${sy(fit.intercept + fit.slope * domain.xMin)}" x2="${sx(domain.xMax)}" y2="${sy(fit.intercept + fit.slope * domain.xMax)}" visibility="hidden"/>`
+    ).join("");
+    return `<section class="scientific-chart" data-chart-panel><div class="chart-toolbar" role="group" aria-label="${esc(labels2.controls)}"><button type="button" data-chart-action="zoom-in" aria-label="${esc(labels2.zoomIn)}">\uFF0B</button><button type="button" data-chart-action="zoom-out" aria-label="${esc(labels2.zoomOut)}">\u2212</button><button type="button" data-chart-action="reset">${esc(labels2.reset)}</button>${fitted.length ? `<button type="button" data-chart-action="fit" aria-pressed="false">${esc(labels2.fitLine)}</button>` : ""}<button type="button" data-chart-action="draw" aria-pressed="false" data-idle-label="${esc(labels2.drawLine)}" data-active-label="${esc(labels2.drawLineActive)}">${esc(labels2.drawLine)}</button><button type="button" data-chart-action="undo">${esc(labels2.undo)}</button></div><div class="chart-viewport"><svg class="scientific-plot" viewBox="${base.x} ${base.y} ${base.width} ${base.height}" role="img" aria-label="${esc(`${xLabel} versus ${yLabel}`)}"><g class="chart-grid">${grid}</g><line x1="${plot.left}" y1="${base.height - plot.bottom}" x2="${base.width - plot.right}" y2="${base.height - plot.bottom}" class="chart-axis"/><line x1="${plot.left}" y1="${plot.top}" x2="${plot.left}" y2="${base.height - plot.bottom}" class="chart-axis"/><g class="chart-trend">${trend}</g><g class="chart-annotations"></g><g>${marks}</g><text x="${(plot.left + base.width - plot.right) / 2}" y="${base.height - 12}" class="chart-axis-label" text-anchor="middle">${esc(xLabel)}${xUnit ? ` (${esc(xUnit)})` : ""}</text><text transform="translate(18 ${(plot.top + base.height - plot.bottom) / 2}) rotate(-90)" class="chart-axis-label" text-anchor="middle">${esc(yLabel)}${yUnit ? ` (${esc(yUnit)})` : ""}</text></svg><div class="chart-tooltip" role="status" hidden></div></div><div class="chart-legend">${legend}</div><p class="sub chart-caption">${esc(labels2.rows)}: n=${points.length}/${rows.length} \xB7 ${esc(labels2.fitNote)} ${esc(fitSummary)}</p></section>`;
+  }
+  function bindInteractiveCharts(root) {
+    root.querySelectorAll("[data-chart-panel]").forEach((panel) => {
+      if (panel.dataset.bound === "true") return;
+      panel.dataset.bound = "true";
+      const svg = panel.querySelector("svg");
+      const tooltip = panel.querySelector(".chart-tooltip");
+      const initial = svg.viewBox.baseVal;
+      const original = { x: initial.x, y: initial.y, width: initial.width, height: initial.height };
+      const annotations = svg.querySelector(".chart-annotations");
+      let drawing = false;
+      let drag = null;
+      let lineStart = null;
+      const view = () => svg.viewBox.baseVal;
+      const setView = (next) => svg.setAttribute("viewBox", `${next.x} ${next.y} ${next.width} ${next.height}`);
+      const point = (event) => {
+        const p = svg.createSVGPoint();
+        p.x = event.clientX;
+        p.y = event.clientY;
+        return p.matrixTransform(svg.getScreenCTM().inverse());
+      };
+      const zoom = (factor, anchorX = view().x + view().width / 2, anchorY = view().y + view().height / 2) => {
+        const current2 = view();
+        const width = Math.max(100, Math.min(original.width * 8, current2.width * factor));
+        const height = Math.max(70, Math.min(original.height * 8, current2.height * factor));
+        const rx = (anchorX - current2.x) / current2.width;
+        const ry = (anchorY - current2.y) / current2.height;
+        setView({ x: anchorX - width * rx, y: anchorY - height * ry, width, height });
+      };
+      panel.querySelectorAll("[data-chart-action]").forEach((button) => {
+        button.addEventListener("click", () => {
+          var _a;
+          const action = button.dataset.chartAction;
+          if (action === "zoom-in") zoom(0.78);
+          if (action === "zoom-out") zoom(1.28);
+          if (action === "reset") setView(original);
+          if (action === "fit") {
+            const lines = [...svg.querySelectorAll(".chart-trendline")];
+            const visible = lines.some((line) => line.getAttribute("visibility") !== "visible");
+            lines.forEach((line) => line.setAttribute("visibility", visible ? "visible" : "hidden"));
+            button.setAttribute("aria-pressed", String(visible));
+          }
+          if (action === "draw") {
+            drawing = !drawing;
+            button.setAttribute("aria-pressed", String(drawing));
+            button.textContent = drawing ? button.dataset.activeLabel : button.dataset.idleLabel;
+            svg.classList.toggle("drawing-line", drawing);
+            lineStart = null;
+          }
+          if (action === "undo") (_a = annotations.lastElementChild) == null ? void 0 : _a.remove();
+        });
+      });
+      svg.addEventListener(
+        "wheel",
+        (event) => {
+          event.preventDefault();
+          const p = point(event);
+          zoom(event.deltaY < 0 ? 0.88 : 1.14, p.x, p.y);
+        },
+        { passive: false }
+      );
+      svg.addEventListener("pointerdown", (event) => {
+        if (event.target.closest(".chart-point")) {
+          const info = event.target.closest(".chart-point").dataset.info;
+          tooltip.textContent = info;
+          tooltip.hidden = false;
+          return;
+        }
+        const p = point(event);
+        if (drawing) {
+          lineStart = p;
+          const line = document.createElementNS(NS, "line");
+          line.setAttribute("class", "chart-user-line");
+          line.setAttribute("x1", p.x);
+          line.setAttribute("y1", p.y);
+          line.setAttribute("x2", p.x);
+          line.setAttribute("y2", p.y);
+          annotations.append(line);
+          drag = { kind: "draw", pointerId: event.pointerId, line };
+        } else {
+          drag = { kind: "pan", pointerId: event.pointerId, x: event.clientX, y: event.clientY, view: __spreadValues({}, view()) };
+        }
+        svg.setPointerCapture(event.pointerId);
+        event.preventDefault();
+      });
+      svg.addEventListener("pointermove", (event) => {
+        var _a, _b;
+        const mark = (_b = (_a = event.target).closest) == null ? void 0 : _b.call(_a, ".chart-point");
+        if (mark && event.pointerType !== "touch") {
+          tooltip.textContent = mark.dataset.info;
+          tooltip.hidden = false;
+          const box = panel.querySelector(".chart-viewport").getBoundingClientRect();
+          tooltip.style.left = `${Math.max(4, Math.min(box.width - 240, event.clientX - box.left + 12))}px`;
+          tooltip.style.top = `${Math.max(4, event.clientY - box.top + 12)}px`;
+        }
+        if (!drag || drag.pointerId !== event.pointerId) return;
+        if (drag.kind === "draw") {
+          const p = point(event);
+          drag.line.setAttribute("x2", p.x);
+          drag.line.setAttribute("y2", p.y);
+        } else {
+          const rect = svg.getBoundingClientRect();
+          const dx = (event.clientX - drag.x) * drag.view.width / rect.width;
+          const dy = (event.clientY - drag.y) * drag.view.height / rect.height;
+          setView(__spreadProps(__spreadValues({}, drag.view), { x: drag.view.x - dx, y: drag.view.y - dy }));
+          if (tooltip) tooltip.hidden = true;
+        }
+      });
+      const stop = (event) => {
+        if (!drag || drag.pointerId !== event.pointerId) return;
+        if (drag.kind === "draw" && lineStart) {
+          const end = point(event);
+          if (Math.hypot(end.x - lineStart.x, end.y - lineStart.y) < 4) drag.line.remove();
+        }
+        drag = null;
+        lineStart = null;
+      };
+      svg.addEventListener("pointerup", stop);
+      svg.addEventListener("pointercancel", stop);
+      svg.addEventListener("pointerleave", () => {
+        if (tooltip) tooltip.hidden = true;
+      });
+    });
+  }
+
   // public/lib/system-concepts.js
   var copy = {
     en: {
@@ -863,6 +1057,31 @@
     const a = g.association, name = bold ? `<b>${esc(label)}</b>` : esc(label);
     return `<tr><td>${name}</td><td>${g.records}</td><td>${g.n}</td><td><b>${fmt(g.mean)}</b></td><td>${ciCell(g.ci95)}</td><td>${fmt(g.sampleSd)}</td><td>${a.r === null ? "\u2014" : fmt(a.r)} <span style="color:var(--muted)">(n=${a.n})</span></td><td>${a.r === null ? "\u2014" : ciCell(a.ci95)}</td></tr>`;
   }
+  function scientificChartGallery(rows) {
+    const labels2 = {
+      controls: t("Chart controls", "\u0623\u062F\u0648\u0627\u062A \u0627\u0644\u0645\u062E\u0637\u0637"),
+      zoomIn: t("Zoom in", "\u062A\u0643\u0628\u064A\u0631"),
+      zoomOut: t("Zoom out", "\u062A\u0635\u063A\u064A\u0631"),
+      reset: t("Reset view", "\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0639\u0631\u0636"),
+      fitLine: t("Linear fit", "\u062E\u0637 \u0627\u0644\u0645\u0644\u0627\u0621\u0645\u0629"),
+      drawLine: t("Draw guide line", "\u0627\u0631\u0633\u0645 \u062E\u0637\u0627\u064B \u0625\u0631\u0634\u0627\u062F\u064A\u0627\u064B"),
+      drawLineActive: t("Drag to draw \xB7 tap to stop", "\u0627\u0633\u062D\u0628 \u0644\u0631\u0633\u0645 \u0627\u0644\u062E\u0637 \xB7 \u0627\u0636\u063A\u0637 \u0644\u0644\u0625\u064A\u0642\u0627\u0641"),
+      undo: t("Undo line", "\u062A\u0631\u0627\u062C\u0639 \u0639\u0646 \u0627\u0644\u062E\u0637"),
+      fit: t("Exploratory linear fit", "\u0645\u0644\u0627\u0621\u0645\u0629 \u062E\u0637\u064A\u0629 \u0627\u0633\u062A\u0643\u0634\u0627\u0641\u064A\u0629"),
+      fitUnavailable: t("Fit unavailable (need at least 3 points)", "\u0644\u0627 \u064A\u0645\u0643\u0646 \u062D\u0633\u0627\u0628 \u0627\u0644\u0645\u0644\u0627\u0621\u0645\u0629 (\u064A\u0644\u0632\u0645 3 \u0646\u0642\u0627\u0637 \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644)"),
+      fitNote: t("Exploratory association only; it does not show causation.", "\u0627\u0631\u062A\u0628\u0627\u0637 \u0627\u0633\u062A\u0643\u0634\u0627\u0641\u064A \u0641\u0642\u0637\u061B \u0644\u0627 \u064A\u062B\u0628\u062A \u0627\u0644\u0633\u0628\u0628\u064A\u0629."),
+      rows: t("Valid source rows", "\u0635\u0641\u0648\u0641 \u0627\u0644\u0645\u0635\u062F\u0631 \u0627\u0644\u0635\u0627\u0644\u062D\u0629")
+    };
+    const configs = [
+      { title: t("Oxygen fraction and droplet burning rate", "\u0646\u0633\u0628\u0629 \u0627\u0644\u0623\u0643\u0633\u062C\u064A\u0646 \u0648\u0645\u0639\u062F\u0644 \u0627\u062D\u062A\u0631\u0627\u0642 \u0627\u0644\u0642\u0637\u0631\u0629"), xKey: "oxygen_mole_fraction", yKey: "burning_rate_mm_s", xLabel: t("Oxygen mole fraction", "\u0627\u0644\u0643\u0633\u0631 \u0627\u0644\u0645\u0648\u0644\u064A \u0644\u0644\u0623\u0643\u0633\u062C\u064A\u0646"), xUnit: "%", xFactor: 100, yLabel: t("Burning-rate constant", "\u062B\u0627\u0628\u062A \u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642"), yUnit: "mm\xB2/s" },
+      { title: t("Initial droplet diameter and burning rate", "\u0642\u0637\u0631 \u0627\u0644\u0642\u0637\u0631\u0629 \u0627\u0644\u0627\u0628\u062A\u062F\u0627\u0626\u064A \u0648\u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642"), xKey: "initial_droplet_diameter_mm", yKey: "burning_rate_mm_s", xLabel: t("Initial droplet diameter", "\u0642\u0637\u0631 \u0627\u0644\u0642\u0637\u0631\u0629 \u0627\u0644\u0627\u0628\u062A\u062F\u0627\u0626\u064A"), xUnit: "mm", yLabel: t("Burning-rate constant", "\u062B\u0627\u0628\u062A \u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642"), yUnit: "mm\xB2/s" },
+      { title: t("Pressure and droplet burning rate", "\u0627\u0644\u0636\u063A\u0637 \u0648\u0645\u0639\u062F\u0644 \u0627\u062D\u062A\u0631\u0627\u0642 \u0627\u0644\u0642\u0637\u0631\u0629"), xKey: "pressure_mmHg", yKey: "burning_rate_mm_s", xLabel: t("Pressure", "\u0627\u0644\u0636\u063A\u0637"), xUnit: "mmHg", yLabel: t("Burning-rate constant", "\u062B\u0627\u0628\u062A \u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642"), yUnit: "mm\xB2/s" },
+      { title: t("Burn time and droplet burning rate", "\u0632\u0645\u0646 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642 \u0648\u0645\u0639\u062F\u0644 \u0627\u062D\u062A\u0631\u0627\u0642 \u0627\u0644\u0642\u0637\u0631\u0629"), xKey: "burn_time_s", yKey: "burning_rate_mm_s", xLabel: t("Burn time", "\u0632\u0645\u0646 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642"), xUnit: "s", yLabel: t("Burning-rate constant", "\u062B\u0627\u0628\u062A \u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642"), yUnit: "mm\xB2/s" },
+      { title: t("Oxygen fraction and flame-extinction diameter", "\u0646\u0633\u0628\u0629 \u0627\u0644\u0623\u0643\u0633\u062C\u064A\u0646 \u0648\u0642\u0637\u0631 \u0627\u0646\u0637\u0641\u0627\u0621 \u0627\u0644\u0644\u0647\u0628"), xKey: "oxygen_mole_fraction", yKey: "visible_flame_extinction_diameter_mm", xLabel: t("Oxygen mole fraction", "\u0627\u0644\u0643\u0633\u0631 \u0627\u0644\u0645\u0648\u0644\u064A \u0644\u0644\u0623\u0643\u0633\u062C\u064A\u0646"), xUnit: "%", xFactor: 100, yLabel: t("Visible flame extinction diameter", "\u0642\u0637\u0631 \u0627\u0646\u0637\u0641\u0627\u0621 \u0627\u0644\u0644\u0647\u0628 \u0627\u0644\u0645\u0631\u0626\u064A"), yUnit: "mm" },
+      { title: t("Pressure and flame-extinction diameter", "\u0627\u0644\u0636\u063A\u0637 \u0648\u0642\u0637\u0631 \u0627\u0646\u0637\u0641\u0627\u0621 \u0627\u0644\u0644\u0647\u0628"), xKey: "pressure_mmHg", yKey: "visible_flame_extinction_diameter_mm", xLabel: t("Pressure", "\u0627\u0644\u0636\u063A\u0637"), xUnit: "mmHg", yLabel: t("Visible flame extinction diameter", "\u0642\u0637\u0631 \u0627\u0646\u0637\u0641\u0627\u0621 \u0627\u0644\u0644\u0647\u0628 \u0627\u0644\u0645\u0631\u0626\u064A"), yUnit: "mm" }
+    ];
+    return `<section class="chart-gallery"><div class="section-title"><div><h2>${t("Interactive FLEX research plots", "\u0645\u062E\u0637\u0637\u0627\u062A FLEX \u0627\u0644\u0628\u062D\u062B\u064A\u0629 \u0627\u0644\u062A\u0641\u0627\u0639\u0644\u064A\u0629")}</h2><p>${t("Each dot is a source test. Missing pairs are excluded for that chart only. Color separates fuel types.", "\u0643\u0644 \u0646\u0642\u0637\u0629 \u062A\u0645\u062B\u0644 \u0627\u062E\u062A\u0628\u0627\u0631\u0627\u064B \u0645\u0646 \u0627\u0644\u0645\u0635\u062F\u0631. \u062A\u064F\u0633\u062A\u0628\u0639\u062F \u0627\u0644\u0642\u064A\u0645 \u0627\u0644\u0646\u0627\u0642\u0635\u0629 \u0644\u0643\u0644 \u0645\u062E\u0637\u0637 \u0641\u0642\u0637. \u0627\u0644\u0644\u0648\u0646 \u064A\u0645\u064A\u0632 \u0646\u0648\u0639 \u0627\u0644\u0648\u0642\u0648\u062F.")}</p></div></div><div class="grid two">${configs.map((cfg) => `<article class="card"><h3>${cfg.title}</h3>${scientificScatter(__spreadProps(__spreadValues({}, cfg), { rows, groupKey: "fuel", labels: labels2 }))}</article>`).join("")}</div></section>`;
+  }
   async function analysisPage() {
     var _a, _b, _c, _d;
     const params = new URLSearchParams(Object.entries(wbFilter).filter(([, v]) => v));
@@ -895,7 +1114,7 @@
     const table = `<article class="card" style="margin-top:15px"><div class="card-head"><div><h3>${t("Per-condition results", "\u0627\u0644\u0646\u062A\u0627\u0626\u062C \u0628\u062D\u0633\u0628 \u0638\u0631\u0648\u0641 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631")} \xB7 ${esc(varLabel)}</h3><p class="sub">${esc(wb.conditionLabel)} \xB7 ${t("grouped by fuel, pressure band and diluent. 95% CIs are seeded percentile bootstrap intervals", "\u0645\u062C\u0645\u0639\u0629 \u062D\u0633\u0628 \u0627\u0644\u0648\u0642\u0648\u062F \u0648\u0646\u0637\u0627\u0642 \u0627\u0644\u0636\u063A\u0637 \u0648\u0627\u0644\u063A\u0627\u0632 \u0627\u0644\u0645\u062E\u0641\u0641. \u0641\u0648\u0627\u0635\u0644 \u0627\u0644\u062B\u0642\u0629 95% \u0645\u062D\u0633\u0648\u0628\u0629 \u0628\u0625\u0639\u0627\u062F\u0629 \u0645\u0639\u0627\u064A\u0646\u0629 bootstrap \u0630\u0627\u062A \u0628\u0630\u0631\u0629 \u062B\u0627\u0628\u062A\u0629")} (seed ${boot.seed}, ${boot.resamples} ${t("resamples; withheld when n", "\u0625\u0639\u0627\u062F\u0629 \u0645\u0639\u0627\u064A\u0646\u0629\u061B \u0644\u0627 \u062A\u064F\u0639\u0631\u0636 \u0639\u0646\u062F\u0645\u0627 n")} &lt; ${boot.minN}.</p></div><span class="tag comp">${t("COMPUTED", "\u0645\u062D\u0633\u0648\u0628")}</span></div><div class="table-wrap"><table><thead><tr><th>${t("Condition", "\u0627\u0644\u0638\u0631\u0641")}</th><th>${t("Tests", "\u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631\u0627\u062A")}</th><th>n</th><th>${t("Mean", "\u0627\u0644\u0645\u062A\u0648\u0633\u0637")}</th><th>95% CI (${t("mean", "\u0627\u0644\u0645\u062A\u0648\u0633\u0637")})</th><th>SD (${t("sample", "\u0627\u0644\u0639\u064A\u0646\u0629")})</th><th>Pearson r \xB7 ${t("diameter vs burning rate", "\u0627\u0644\u0642\u0637\u0631 \u0645\u0642\u0627\u0628\u0644 \u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642")}</th><th>95% CI (r)</th></tr></thead><tbody>${wbGroupRow(filtered ? `${wb.conditionLabel} (${t("all", "\u0627\u0644\u0643\u0644")})` : t("All tests (pooled)", "\u0643\u0644 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631\u0627\u062A (\u0645\u062C\u0645\u0639\u0629)"), pooled, true)}${strata.groups.map((g) => wbGroupRow(g.label, g)).join("")}</tbody></table></div><div class="callout warn" style="margin-top:12px">${filtered ? t("Oxygen fraction, diluent fraction and droplet size still vary among tests within each row.", "\u0645\u0627 \u062A\u0632\u0627\u0644 \u0646\u0633\u0628\u0629 \u0627\u0644\u0623\u0643\u0633\u062C\u064A\u0646 \u0648\u0627\u0644\u063A\u0627\u0632 \u0627\u0644\u0645\u062E\u0641\u0641 \u0648\u062D\u062C\u0645 \u0627\u0644\u0642\u0637\u0631\u0629 \u062A\u062E\u062A\u0644\u0641 \u0628\u064A\u0646 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631\u0627\u062A \u0641\u064A \u0627\u0644\u0635\u0641 \u0627\u0644\u0648\u0627\u062D\u062F.") : t("The first row pools different fuels, pressures and diluents; prefer the per-condition rows.", "\u064A\u062C\u0645\u0639 \u0627\u0644\u0635\u0641 \u0627\u0644\u0623\u0648\u0644 \u0623\u0646\u0648\u0627\u0639 \u0648\u0642\u0648\u062F \u0648\u0636\u063A\u0648\u0637\u0627\u064B \u0648\u063A\u0627\u0632\u0627\u062A \u0645\u062E\u0641\u0641\u0629 \u0645\u062E\u062A\u0644\u0641\u0629\u061B \u0627\u0639\u062A\u0645\u062F \u0635\u0641\u0648\u0641 \u0638\u0631\u0648\u0641 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631 \u0627\u0644\u0645\u0646\u0641\u0635\u0644\u0629.")} ${t("The >2 atm band spans 2.0\u20133.1 atm and contains", "\u064A\u0645\u062A\u062F \u0646\u0637\u0627\u0642 >2 atm \u0645\u0646 2.0 \u0625\u0644\u0649 3.1 atm \u0648\u064A\u0636\u0645")} ${(_b = highBand == null ? void 0 : highBand.n) != null ? _b : 0} ${t("tests. Intervals describe resampling, not instrument uncertainty.", "\u0627\u062E\u062A\u0628\u0627\u0631\u0627\u064B. \u062A\u0635\u0641 \u0627\u0644\u0641\u0648\u0627\u0635\u0644 \u0625\u0639\u0627\u062F\u0629 \u0645\u0639\u0627\u064A\u0646\u0629 \u0627\u0644\u0633\u062C\u0644\u0627\u062A \u0648\u0644\u0627 \u062A\u0645\u062B\u0644 \u0639\u062F\u0645 \u064A\u0642\u064A\u0646 \u0627\u0644\u0623\u062C\u0647\u0632\u0629.")}</div></article>`;
     const assoc = `<article class="card"><div class="card-head"><div><h3>${t("Exploratory association", "\u0627\u0631\u062A\u0628\u0627\u0637 \u0627\u0633\u062A\u0643\u0634\u0627\u0641\u064A")}</h3><p class="sub">${t("Initial droplet diameter vs. burning rate", "\u0642\u0637\u0631 \u0627\u0644\u0642\u0637\u0631\u0629 \u0627\u0644\u0627\u0628\u062A\u062F\u0627\u0626\u064A \u0645\u0642\u0627\u0628\u0644 \u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642")} \xB7 ${esc(wb.conditionLabel)}</p></div><span class="tag comp">${t("COMPUTED", "\u0645\u062D\u0633\u0648\u0628")}</span></div><div style="font-size:34px;font-weight:800;margin:18px 0">${(_d = (_c = wb.associations.r) == null ? void 0 : _c.toFixed(3)) != null ? _d : "\u2014"}</div><p class="sub">Pearson r \xB7 n = ${wb.associations.n} \xB7 95% CI ${wb.associations.r === null ? "\u2014" : ciCell(pooled.association.ci95)}. ${t("Conditions still vary within this selection, so this association cannot establish causality.", "\u062A\u0628\u0642\u0649 \u0638\u0631\u0648\u0641 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631 \u0645\u062A\u063A\u064A\u0631\u0629 \u0636\u0645\u0646 \u0647\u0630\u0627 \u0627\u0644\u0627\u062E\u062A\u064A\u0627\u0631\u060C \u0644\u0630\u0644\u0643 \u0644\u0627 \u064A\u062B\u0628\u062A \u0627\u0644\u0627\u0631\u062A\u0628\u0627\u0637 \u0639\u0644\u0627\u0642\u0629 \u0633\u0628\u0628\u064A\u0629.")}</p><div class="callout warn">${t("No hypothesis test is run. Small-group r values are exploratory.", "\u0644\u0645 \u064A\u064F\u062C\u0631\u064E \u0627\u062E\u062A\u0628\u0627\u0631 \u0641\u0631\u0636\u064A\u0629. \u0642\u064A\u0645 r \u0644\u0644\u0645\u062C\u0645\u0648\u0639\u0627\u062A \u0627\u0644\u0635\u063A\u064A\u0631\u0629 \u0627\u0633\u062A\u0643\u0634\u0627\u0641\u064A\u0629.")}</div></article>`;
     const methods = `<article class="card"><h3>${t("Methods & reproducibility", "\u0627\u0644\u0637\u0631\u0642 \u0648\u0642\u0627\u0628\u0644\u064A\u0629 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0625\u0646\u062A\u0627\u062C")}</h3><div class="list-row"><span>${t("Mean", "\u0627\u0644\u0645\u062A\u0648\u0633\u0637")}</span><b>${t("Arithmetic mean", "\u0627\u0644\u0645\u062A\u0648\u0633\u0637 \u0627\u0644\u062D\u0633\u0627\u0628\u064A")}</b></div><div class="list-row"><span>${t("Spread", "\u0627\u0644\u062A\u0634\u062A\u062A")}</span><b>${t("Sample standard deviation (n \u2212 1)", "\u0627\u0644\u0627\u0646\u062D\u0631\u0627\u0641 \u0627\u0644\u0645\u0639\u064A\u0627\u0631\u064A \u0644\u0644\u0639\u064A\u0646\u0629 (n \u2212 1)")}</b></div><div class="list-row"><span>${t("Interval", "\u0627\u0644\u0641\u0627\u0635\u0644")}</span><b>95% ${t("percentile bootstrap", "bootstrap \u0627\u0644\u0645\u0626\u064A\u0646\u064A")} \xB7 seed ${boot.seed} \xB7 ${boot.resamples} \xB7 n \u2265 ${boot.minN}</b></div><div class="list-row"><span>${t("Grouping", "\u0627\u0644\u062A\u062C\u0645\u064A\u0639")}</span><b>${t("Fuel \xB7 pressure band \xB7 diluent", "\u0627\u0644\u0648\u0642\u0648\u062F \xB7 \u0646\u0637\u0627\u0642 \u0627\u0644\u0636\u063A\u0637 \xB7 \u0627\u0644\u063A\u0627\u0632 \u0627\u0644\u0645\u062E\u0641\u0641")}</b></div><div class="list-row"><span>${t("Missing values", "\u0627\u0644\u0642\u064A\u0645 \u0627\u0644\u0645\u0641\u0642\u0648\u062F\u0629")}</span><b>${t("Excluded per variable; no imputation", "\u062A\u064F\u0633\u062A\u0628\u0639\u062F \u0644\u0643\u0644 \u0645\u062A\u063A\u064A\u0631\u061B \u0628\u0644\u0627 \u062A\u0639\u0648\u064A\u0636")}</b></div><div class="list-row"><span>${t("Source table", "\u062C\u062F\u0648\u0644 \u0627\u0644\u0645\u0635\u062F\u0631")}</span><b>NASA PSI-69</b></div><div class="list-row"><span>${t("Software", "\u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C")}</span><b>MORS AEGIS 3.0 \xB7 JS</b></div></article>`;
-    return `${pageHead(t("Scientific Analysis Workbench", "\u0645\u0646\u0636\u062F\u0629 \u0627\u0644\u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u0639\u0644\u0645\u064A"), t("Reproducible statistics computed from source rows by test condition; nulls are excluded per variable.", "\u0625\u062D\u0635\u0627\u0621\u0627\u062A \u0642\u0627\u0628\u0644\u0629 \u0644\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0625\u0646\u062A\u0627\u062C \u0645\u0646 \u0635\u0641\u0648\u0641 \u0627\u0644\u0645\u0635\u062F\u0631 \u0628\u062D\u0633\u0628 \u0638\u0631\u0641 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631\u061B \u062A\u064F\u0633\u062A\u0628\u0639\u062F \u0627\u0644\u0642\u064A\u0645 \u0627\u0644\u0641\u0627\u0631\u063A\u0629 \u0644\u0643\u0644 \u0645\u062A\u063A\u064A\u0631."))}${bar}<div class="grid three" style="margin-top:15px">${metrics}</div>${table}<div class="grid two" style="margin-top:15px">${assoc}${methods}</div>`;
+    return `${pageHead(t("Scientific Analysis Workbench", "\u0645\u0646\u0636\u062F\u0629 \u0627\u0644\u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u0639\u0644\u0645\u064A"), t("Reproducible statistics computed from source rows by test condition; nulls are excluded per variable.", "\u0625\u062D\u0635\u0627\u0621\u0627\u062A \u0642\u0627\u0628\u0644\u0629 \u0644\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0625\u0646\u062A\u0627\u062C \u0645\u0646 \u0635\u0641\u0648\u0641 \u0627\u0644\u0645\u0635\u062F\u0631 \u0628\u062D\u0633\u0628 \u0638\u0631\u0641 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631\u061B \u062A\u064F\u0633\u062A\u0628\u0639\u062F \u0627\u0644\u0642\u064A\u0645 \u0627\u0644\u0641\u0627\u0631\u063A\u0629 \u0644\u0643\u0644 \u0645\u062A\u063A\u064A\u0631."))}${bar}${scientificChartGallery(dataset.rows)}<div class="grid three" style="margin-top:15px">${metrics}</div>${table}<div class="grid two" style="margin-top:15px">${assoc}${methods}</div>`;
   }
   function comparePage() {
     return `${pageHead(t("Experiment Comparison Studio", "\u0627\u0633\u062A\u0648\u062F\u064A\u0648 \u0645\u0642\u0627\u0631\u0646\u0629 \u0627\u0644\u062A\u062C\u0627\u0631\u0628"), t("Compare two FLEX tests. Differences are computed only when fuel and gas composition match.", "\u0642\u0627\u0631\u0646 \u0627\u062E\u062A\u0628\u0627\u0631\u064A\u0646 \u0645\u0646 FLEX. \u0644\u0627 \u062A\u064F\u062D\u0633\u0628 \u0627\u0644\u0641\u0631\u0648\u0642 \u0625\u0644\u0627 \u0625\u0630\u0627 \u062A\u0637\u0627\u0628\u0642 \u0627\u0644\u0648\u0642\u0648\u062F \u0648\u062A\u0631\u0643\u064A\u0628 \u0627\u0644\u063A\u0627\u0632."))}<div class="grid two"><article class="card"><h3>${t("Test A", "\u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631 A")}</h3><label class="field-label">${t("Select record", "\u0627\u062E\u062A\u0631 \u0633\u062C\u0644\u0627\u064B")}</label><select id="compareA" class="field">${dataset.rows.map((r) => {
@@ -1223,6 +1442,7 @@
     }
   }
   function bindPage() {
+    bindInteractiveCharts(document);
     document.querySelectorAll("[data-go]").forEach((b) => b.onclick = () => go(b.dataset.go));
     if ($("#compareA")) {
       $("#compareA").onchange = renderCompare;

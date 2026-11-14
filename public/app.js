@@ -11,6 +11,7 @@ import { csvCell } from './csv-safe.js';
 import { $, esc, toast, pageHead, stat, download } from './lib/dom.js';
 import { get, post } from './lib/api.js';
 import { chartSVG, flexOxygenScatterSVG } from './lib/charts.js';
+import { scientificScatter, bindInteractiveCharts } from './lib/interactive-charts.js';
 import { bindFlameScene3d } from './lib/flame-scene3d.js';
 import { renderSystemConcepts, bindSystemConcepts } from './lib/system-concepts.js';
 const nav = [
@@ -248,6 +249,32 @@ function wbGroupRow(label, g, bold = false) {
     name = bold ? `<b>${esc(label)}</b>` : esc(label);
   return `<tr><td>${name}</td><td>${g.records}</td><td>${g.n}</td><td><b>${fmt(g.mean)}</b></td><td>${ciCell(g.ci95)}</td><td>${fmt(g.sampleSd)}</td><td>${a.r === null ? '—' : fmt(a.r)} <span style="color:var(--muted)">(n=${a.n})</span></td><td>${a.r === null ? '—' : ciCell(a.ci95)}</td></tr>`;
 }
+function scientificChartGallery(rows) {
+  const labels = {
+    controls: t('Chart controls', 'أدوات المخطط'),
+    zoomIn: t('Zoom in', 'تكبير'),
+    zoomOut: t('Zoom out', 'تصغير'),
+    reset: t('Reset view', 'إعادة العرض'),
+    fitLine: t('Linear fit', 'خط الملاءمة'),
+    drawLine: t('Draw guide line', 'ارسم خطاً إرشادياً'),
+    drawLineActive: t('Drag to draw · tap to stop', 'اسحب لرسم الخط · اضغط للإيقاف'),
+    undo: t('Undo line', 'تراجع عن الخط'),
+    fit: t('Exploratory linear fit', 'ملاءمة خطية استكشافية'),
+    fitUnavailable: t('Fit unavailable (need at least 3 points)', 'لا يمكن حساب الملاءمة (يلزم 3 نقاط على الأقل)'),
+    fitNote: t('Exploratory association only; it does not show causation.', 'ارتباط استكشافي فقط؛ لا يثبت السببية.'),
+    rows: t('Valid source rows', 'صفوف المصدر الصالحة'),
+  };
+  const configs = [
+    { title: t('Oxygen fraction and droplet burning rate', 'نسبة الأكسجين ومعدل احتراق القطرة'), xKey: 'oxygen_mole_fraction', yKey: 'burning_rate_mm_s', xLabel: t('Oxygen mole fraction', 'الكسر المولي للأكسجين'), xUnit: '%', xFactor: 100, yLabel: t('Burning-rate constant', 'ثابت معدل الاحتراق'), yUnit: 'mm²/s' },
+    { title: t('Initial droplet diameter and burning rate', 'قطر القطرة الابتدائي ومعدل الاحتراق'), xKey: 'initial_droplet_diameter_mm', yKey: 'burning_rate_mm_s', xLabel: t('Initial droplet diameter', 'قطر القطرة الابتدائي'), xUnit: 'mm', yLabel: t('Burning-rate constant', 'ثابت معدل الاحتراق'), yUnit: 'mm²/s' },
+    { title: t('Pressure and droplet burning rate', 'الضغط ومعدل احتراق القطرة'), xKey: 'pressure_mmHg', yKey: 'burning_rate_mm_s', xLabel: t('Pressure', 'الضغط'), xUnit: 'mmHg', yLabel: t('Burning-rate constant', 'ثابت معدل الاحتراق'), yUnit: 'mm²/s' },
+    { title: t('Burn time and droplet burning rate', 'زمن الاحتراق ومعدل احتراق القطرة'), xKey: 'burn_time_s', yKey: 'burning_rate_mm_s', xLabel: t('Burn time', 'زمن الاحتراق'), xUnit: 's', yLabel: t('Burning-rate constant', 'ثابت معدل الاحتراق'), yUnit: 'mm²/s' },
+    { title: t('Oxygen fraction and flame-extinction diameter', 'نسبة الأكسجين وقطر انطفاء اللهب'), xKey: 'oxygen_mole_fraction', yKey: 'visible_flame_extinction_diameter_mm', xLabel: t('Oxygen mole fraction', 'الكسر المولي للأكسجين'), xUnit: '%', xFactor: 100, yLabel: t('Visible flame extinction diameter', 'قطر انطفاء اللهب المرئي'), yUnit: 'mm' },
+    { title: t('Pressure and flame-extinction diameter', 'الضغط وقطر انطفاء اللهب'), xKey: 'pressure_mmHg', yKey: 'visible_flame_extinction_diameter_mm', xLabel: t('Pressure', 'الضغط'), xUnit: 'mmHg', yLabel: t('Visible flame extinction diameter', 'قطر انطفاء اللهب المرئي'), yUnit: 'mm' },
+  ];
+  return `<section class="chart-gallery"><div class="section-title"><div><h2>${t('Interactive FLEX research plots', 'مخططات FLEX البحثية التفاعلية')}</h2><p>${t('Each dot is a source test. Missing pairs are excluded for that chart only. Color separates fuel types.', 'كل نقطة تمثل اختباراً من المصدر. تُستبعد القيم الناقصة لكل مخطط فقط. اللون يميز نوع الوقود.')}</p></div></div><div class="grid two">${configs.map((cfg) => `<article class="card"><h3>${cfg.title}</h3>${scientificScatter({ ...cfg, rows, groupKey: 'fuel', labels })}</article>`).join('')}</div></section>`;
+}
+
 async function analysisPage() {
   const params = new URLSearchParams(Object.entries(wbFilter).filter(([, v]) => v));
   const wb = await get(`/api/analysis?${params}`);
@@ -286,7 +313,7 @@ async function analysisPage() {
   const table = `<article class="card" style="margin-top:15px"><div class="card-head"><div><h3>${t('Per-condition results', 'النتائج بحسب ظروف الاختبار')} · ${esc(varLabel)}</h3><p class="sub">${esc(wb.conditionLabel)} · ${t('grouped by fuel, pressure band and diluent. 95% CIs are seeded percentile bootstrap intervals', 'مجمعة حسب الوقود ونطاق الضغط والغاز المخفف. فواصل الثقة 95% محسوبة بإعادة معاينة bootstrap ذات بذرة ثابتة')} (seed ${boot.seed}, ${boot.resamples} ${t('resamples; withheld when n', 'إعادة معاينة؛ لا تُعرض عندما n')} &lt; ${boot.minN}.</p></div><span class="tag comp">${t('COMPUTED', 'محسوب')}</span></div><div class="table-wrap"><table><thead><tr><th>${t('Condition', 'الظرف')}</th><th>${t('Tests', 'الاختبارات')}</th><th>n</th><th>${t('Mean', 'المتوسط')}</th><th>95% CI (${t('mean', 'المتوسط')})</th><th>SD (${t('sample', 'العينة')})</th><th>Pearson r · ${t('diameter vs burning rate', 'القطر مقابل معدل الاحتراق')}</th><th>95% CI (r)</th></tr></thead><tbody>${wbGroupRow(filtered ? `${wb.conditionLabel} (${t('all', 'الكل')})` : t('All tests (pooled)', 'كل الاختبارات (مجمعة)'), pooled, true)}${strata.groups.map((g) => wbGroupRow(g.label, g)).join('')}</tbody></table></div><div class="callout warn" style="margin-top:12px">${filtered ? t('Oxygen fraction, diluent fraction and droplet size still vary among tests within each row.', 'ما تزال نسبة الأكسجين والغاز المخفف وحجم القطرة تختلف بين الاختبارات في الصف الواحد.') : t('The first row pools different fuels, pressures and diluents; prefer the per-condition rows.', 'يجمع الصف الأول أنواع وقود وضغوطاً وغازات مخففة مختلفة؛ اعتمد صفوف ظروف الاختبار المنفصلة.')} ${t('The >2 atm band spans 2.0–3.1 atm and contains', 'يمتد نطاق >2 atm من 2.0 إلى 3.1 atm ويضم')} ${highBand?.n ?? 0} ${t('tests. Intervals describe resampling, not instrument uncertainty.', 'اختباراً. تصف الفواصل إعادة معاينة السجلات ولا تمثل عدم يقين الأجهزة.')}</div></article>`;
   const assoc = `<article class="card"><div class="card-head"><div><h3>${t('Exploratory association', 'ارتباط استكشافي')}</h3><p class="sub">${t('Initial droplet diameter vs. burning rate', 'قطر القطرة الابتدائي مقابل معدل الاحتراق')} · ${esc(wb.conditionLabel)}</p></div><span class="tag comp">${t('COMPUTED', 'محسوب')}</span></div><div style="font-size:34px;font-weight:800;margin:18px 0">${wb.associations.r?.toFixed(3) ?? '—'}</div><p class="sub">Pearson r · n = ${wb.associations.n} · 95% CI ${wb.associations.r === null ? '—' : ciCell(pooled.association.ci95)}. ${t('Conditions still vary within this selection, so this association cannot establish causality.', 'تبقى ظروف الاختبار متغيرة ضمن هذا الاختيار، لذلك لا يثبت الارتباط علاقة سببية.')}</p><div class="callout warn">${t('No hypothesis test is run. Small-group r values are exploratory.', 'لم يُجرَ اختبار فرضية. قيم r للمجموعات الصغيرة استكشافية.')}</div></article>`;
   const methods = `<article class="card"><h3>${t('Methods & reproducibility', 'الطرق وقابلية إعادة الإنتاج')}</h3><div class="list-row"><span>${t('Mean', 'المتوسط')}</span><b>${t('Arithmetic mean', 'المتوسط الحسابي')}</b></div><div class="list-row"><span>${t('Spread', 'التشتت')}</span><b>${t('Sample standard deviation (n − 1)', 'الانحراف المعياري للعينة (n − 1)')}</b></div><div class="list-row"><span>${t('Interval', 'الفاصل')}</span><b>95% ${t('percentile bootstrap', 'bootstrap المئيني')} · seed ${boot.seed} · ${boot.resamples} · n ≥ ${boot.minN}</b></div><div class="list-row"><span>${t('Grouping', 'التجميع')}</span><b>${t('Fuel · pressure band · diluent', 'الوقود · نطاق الضغط · الغاز المخفف')}</b></div><div class="list-row"><span>${t('Missing values', 'القيم المفقودة')}</span><b>${t('Excluded per variable; no imputation', 'تُستبعد لكل متغير؛ بلا تعويض')}</b></div><div class="list-row"><span>${t('Source table', 'جدول المصدر')}</span><b>NASA PSI-69</b></div><div class="list-row"><span>${t('Software', 'البرنامج')}</span><b>MORS AEGIS 3.0 · JS</b></div></article>`;
-  return `${pageHead(t('Scientific Analysis Workbench', 'منضدة التحليل العلمي'), t('Reproducible statistics computed from source rows by test condition; nulls are excluded per variable.', 'إحصاءات قابلة لإعادة الإنتاج من صفوف المصدر بحسب ظرف الاختبار؛ تُستبعد القيم الفارغة لكل متغير.'))}${bar}<div class="grid three" style="margin-top:15px">${metrics}</div>${table}<div class="grid two" style="margin-top:15px">${assoc}${methods}</div>`;
+  return `${pageHead(t('Scientific Analysis Workbench', 'منضدة التحليل العلمي'), t('Reproducible statistics computed from source rows by test condition; nulls are excluded per variable.', 'إحصاءات قابلة لإعادة الإنتاج من صفوف المصدر بحسب ظرف الاختبار؛ تُستبعد القيم الفارغة لكل متغير.'))}${bar}${scientificChartGallery(dataset.rows)}<div class="grid three" style="margin-top:15px">${metrics}</div>${table}<div class="grid two" style="margin-top:15px">${assoc}${methods}</div>`;
 }
 function comparePage() {
   return `${pageHead(t('Experiment Comparison Studio', 'استوديو مقارنة التجارب'), t('Compare two FLEX tests. Differences are computed only when fuel and gas composition match.', 'قارن اختبارين من FLEX. لا تُحسب الفروق إلا إذا تطابق الوقود وتركيب الغاز.'))}<div class="grid two"><article class="card"><h3>${t('Test A', 'الاختبار A')}</h3><label class="field-label">${t('Select record', 'اختر سجلاً')}</label><select id="compareA" class="field">${dataset.rows.map((r) => `<option value="${esc(r.id)}">${esc(r.id)} · ${r.burning_rate_mm_s ?? '—'} mm²/s</option>`).join('')}</select><div id="compareResultA"></div></article><article class="card"><h3>${t('Test B', 'الاختبار B')}</h3><label class="field-label">${t('Select record', 'اختر سجلاً')}</label><select id="compareB" class="field">${dataset.rows.map((r, i) => `<option value="${esc(r.id)}" ${i === 1 ? 'selected' : ''}>${esc(r.id)} · ${r.burning_rate_mm_s ?? '—'} mm²/s</option>`).join('')}</select><div id="compareResultB"></div></article></div><article class="card" style="margin-top:15px"><div class="card-head"><div><h3>${t('Paired variables', 'المتغيرات المقارنة')}</h3><p class="sub">${t('Observed source values shown side by side', 'قيم المصدر المرصودة معروضة جنباً إلى جنب')}</p></div><span class="tag obs">${t('OBSERVED', 'مرصود')}</span></div><div id="compareTable"></div></article><div class="callout warn" style="margin-top:14px">${t('These are individual records, not controlled matched groups. A difference does not establish a physical effect.', 'هذه سجلات اختبار منفردة وليست مجموعات مضبوطة ومتطابقة؛ والفرق الظاهر لا يثبت أثراً فيزيائياً.')}</div>`;
@@ -658,6 +685,7 @@ async function submitChat(event) {
   }
 }
 function bindPage() {
+  bindInteractiveCharts(document);
   document.querySelectorAll('[data-go]').forEach((b) => (b.onclick = () => go(b.dataset.go)));
   if ($('#compareA')) {
     $('#compareA').onchange = renderCompare;

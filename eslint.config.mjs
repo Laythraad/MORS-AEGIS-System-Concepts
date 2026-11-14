@@ -22,7 +22,7 @@ const rules = {
 };
 
 export default [
-  { ignores: ['node_modules/**', 'dist/**', 'var/**', 'launcher/**'] },
+  { ignores: ['node_modules/**', 'dist/**', 'var/**', 'launcher/**', 'public/**/*.bundle.js', 'public/vendor/**'] },
   {
     files: ['public/**/*.js'],
     languageOptions: { ecmaVersion: 'latest', sourceType: 'module', globals: asGlobals([...shared, ...browser]) },

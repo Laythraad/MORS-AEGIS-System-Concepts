@@ -1,0 +1,161 @@
+.chart-gallery {
+  margin-top: 24px;
+}
+
+.scientific-chart {
+  margin-top: 14px;
+}
+
+.chart-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.chart-toolbar button {
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  background: var(--surface2);
+  font-size: 11px;
+}
+
+.chart-toolbar button[aria-pressed='true'] {
+  color: white;
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.chart-viewport {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.scientific-plot {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 240px;
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+}
+
+.scientific-plot:active {
+  cursor: grabbing;
+}
+
+.scientific-plot.drawing-line {
+  cursor: crosshair;
+}
+
+.chart-gridline {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.chart-axis {
+  stroke: var(--muted);
+  stroke-width: 1.4;
+}
+
+.chart-tick {
+  fill: var(--muted);
+  font: 11px system-ui, sans-serif;
+}
+
+.chart-axis-label {
+  fill: var(--ink);
+  font: 12px system-ui, sans-serif;
+}
+
+.chart-point {
+  cursor: pointer;
+  stroke: var(--surface);
+  stroke-width: 1.2;
+}
+
+.chart-point:focus-visible {
+  outline: none;
+  stroke: var(--ink);
+  stroke-width: 3;
+}
+
+.chart-trendline,
+.chart-user-line {
+  fill: none;
+  stroke-width: 2.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.chart-trendline {
+  stroke-dasharray: 7 5;
+  opacity: 0.9;
+}
+
+.chart-user-line {
+  stroke: var(--gold);
+  vector-effect: none;
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 9px 2px 0;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.chart-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.chart-legend i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--legend-color);
+}
+
+.chart-caption {
+  margin: 8px 2px 0;
+  line-height: 1.6;
+}
+
+.chart-tooltip {
+  position: absolute;
+  z-index: 2;
+  max-width: min(280px, 85%);
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  font-size: 11px;
+  line-height: 1.5;
+  pointer-events: none;
+}
+
+.chart-tooltip[hidden] {
+  display: none;
+}
+
+@media (max-width: 680px) {
+  .scientific-plot {
+    min-height: 210px;
+  }
+
+  .chart-toolbar button {
+    min-height: 40px;
+  }
+}
