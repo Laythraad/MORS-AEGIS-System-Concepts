@@ -769,6 +769,90 @@
     });
   }
 
+  // public/lib/chart-guide.js
+  var FLEX_CHART_GUIDE = [
+    {
+      id: "oxygen-burning-rate",
+      title: { en: "Oxygen fraction and droplet burning rate", ar: "\u0646\u0633\u0628\u0629 \u0627\u0644\u0623\u0643\u0633\u062C\u064A\u0646 \u0648\u0645\u0639\u062F\u0644 \u0627\u062D\u062A\u0631\u0627\u0642 \u0627\u0644\u0642\u0637\u0631\u0629" },
+      xKey: "oxygen_mole_fraction",
+      yKey: "burning_rate_mm_s",
+      xLabel: { en: "Oxygen mole fraction", ar: "\u0627\u0644\u0643\u0633\u0631 \u0627\u0644\u0645\u0648\u0644\u064A \u0644\u0644\u0623\u0643\u0633\u062C\u064A\u0646" },
+      xUnit: "%",
+      xFactor: 100,
+      yLabel: { en: "Burning-rate constant", ar: "\u062B\u0627\u0628\u062A \u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642" },
+      yUnit: "mm\xB2/s",
+      question: { en: "Do recorded burning-rate constants vary across the oxygen fractions in these tests?", ar: "\u0647\u0644 \u062A\u062E\u062A\u0644\u0641 \u062B\u0648\u0627\u0628\u062A \u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642 \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0639\u0628\u0631 \u0646\u0633\u0628 \u0627\u0644\u0623\u0643\u0633\u062C\u064A\u0646 \u0641\u064A \u0647\u0630\u0647 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631\u0627\u062A\u061F" },
+      use: { en: "Compare each source test by fuel; zoom, inspect individual points, or show an exploratory fit.", ar: "\u0642\u0627\u0631\u0646 \u0627\u062E\u062A\u0628\u0627\u0631\u0627\u062A \u0627\u0644\u0645\u0635\u062F\u0631 \u0628\u062D\u0633\u0628 \u0627\u0644\u0648\u0642\u0648\u062F\u060C \u0648\u0643\u0628\u0651\u0631 \u0648\u0627\u0641\u062D\u0635 \u0627\u0644\u0646\u0642\u0627\u0637 \u0623\u0648 \u0623\u0638\u0647\u0631 \u0645\u0644\u0627\u0621\u0645\u0629 \u0627\u0633\u062A\u0643\u0634\u0627\u0641\u064A\u0629." },
+      limit: { en: "Fuel, pressure, diluent, and test procedure also vary. This pooled view describes the sample; it does not isolate an oxygen effect.", ar: "\u064A\u062A\u063A\u064A\u0631 \u0623\u064A\u0636\u0627\u064B \u0627\u0644\u0648\u0642\u0648\u062F \u0648\u0627\u0644\u0636\u063A\u0637 \u0648\u0627\u0644\u063A\u0627\u0632 \u0627\u0644\u0645\u062E\u0641\u0641 \u0648\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631. \u064A\u0635\u0641 \u0627\u0644\u0639\u0631\u0636 \u0627\u0644\u0639\u064A\u0646\u0629 \u0648\u0644\u0627 \u064A\u0639\u0632\u0644 \u0623\u062B\u0631 \u0627\u0644\u0623\u0643\u0633\u062C\u064A\u0646." }
+    },
+    {
+      id: "initial-diameter-burning-rate",
+      title: { en: "Initial droplet diameter and burning rate", ar: "\u0642\u0637\u0631 \u0627\u0644\u0642\u0637\u0631\u0629 \u0627\u0644\u0627\u0628\u062A\u062F\u0627\u0626\u064A \u0648\u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642" },
+      xKey: "initial_droplet_diameter_mm",
+      yKey: "burning_rate_mm_s",
+      xLabel: { en: "Initial droplet diameter", ar: "\u0642\u0637\u0631 \u0627\u0644\u0642\u0637\u0631\u0629 \u0627\u0644\u0627\u0628\u062A\u062F\u0627\u0626\u064A" },
+      xUnit: "mm",
+      yLabel: { en: "Burning-rate constant", ar: "\u062B\u0627\u0628\u062A \u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642" },
+      yUnit: "mm\xB2/s",
+      question: { en: "How does the recorded initial droplet size sit alongside the burning-rate result?", ar: "\u0643\u064A\u0641 \u064A\u0642\u0639 \u062D\u062C\u0645 \u0627\u0644\u0642\u0637\u0631\u0629 \u0627\u0644\u0627\u0628\u062A\u062F\u0627\u0626\u064A \u0627\u0644\u0645\u0633\u062C\u0644 \u0645\u0642\u0627\u0631\u0646\u0629 \u0628\u0646\u062A\u064A\u062C\u0629 \u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642\u061F" },
+      use: { en: "Inspect the spread of individual FLEX tests and identify values that merit source-row review.", ar: "\u0627\u0641\u062D\u0635 \u062A\u0634\u062A\u062A \u0627\u062E\u062A\u0628\u0627\u0631\u0627\u062A FLEX \u0627\u0644\u0641\u0631\u062F\u064A\u0629 \u0648\u062D\u062F\u062F \u0627\u0644\u0642\u064A\u0645 \u0627\u0644\u062A\u064A \u062A\u0633\u062A\u062D\u0642 \u0645\u0631\u0627\u062C\u0639\u0629 \u0635\u0641 \u0627\u0644\u0645\u0635\u062F\u0631." },
+      limit: { en: "Droplet size is not an isolated control here; differences between tests can reflect other conditions or protocol.", ar: "\u062D\u062C\u0645 \u0627\u0644\u0642\u0637\u0631\u0629 \u0644\u064A\u0633 \u0645\u062A\u063A\u064A\u0631\u0627\u064B \u0645\u0639\u0632\u0648\u0644\u0627\u064B \u0647\u0646\u0627\u061B \u0648\u0642\u062F \u062A\u0639\u0643\u0633 \u0627\u0644\u0641\u0631\u0648\u0642 \u0638\u0631\u0648\u0641\u0627\u064B \u0623\u062E\u0631\u0649 \u0623\u0648 \u0628\u0631\u0648\u062A\u0648\u0643\u0648\u0644 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631." }
+    },
+    {
+      id: "pressure-burning-rate",
+      title: { en: "Pressure and droplet burning rate", ar: "\u0627\u0644\u0636\u063A\u0637 \u0648\u0645\u0639\u062F\u0644 \u0627\u062D\u062A\u0631\u0627\u0642 \u0627\u0644\u0642\u0637\u0631\u0629" },
+      xKey: "pressure_mmHg",
+      yKey: "burning_rate_mm_s",
+      xLabel: { en: "Pressure", ar: "\u0627\u0644\u0636\u063A\u0637" },
+      xUnit: "mmHg",
+      yLabel: { en: "Burning-rate constant", ar: "\u062B\u0627\u0628\u062A \u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642" },
+      yUnit: "mm\xB2/s",
+      question: { en: "What burning-rate values were observed across the recorded ambient pressures?", ar: "\u0645\u0627 \u0642\u064A\u0645 \u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642 \u0627\u0644\u0645\u0631\u0635\u0648\u062F\u0629 \u0639\u0628\u0631 \u0627\u0644\u0636\u063A\u0648\u0637 \u0627\u0644\u0645\u062D\u064A\u0637\u0629 \u0627\u0644\u0645\u0633\u062C\u0644\u0629\u061F" },
+      use: { en: "See the pressure coverage and spread before using the condition filters in the Workbench.", ar: "\u0627\u0633\u062A\u0639\u0631\u0636 \u062A\u063A\u0637\u064A\u0629 \u0627\u0644\u0636\u063A\u0637 \u0648\u0627\u0644\u062A\u0634\u062A\u062A \u0642\u0628\u0644 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0645\u0631\u0634\u062D\u0627\u062A \u0627\u0644\u0638\u0631\u0648\u0641 \u0641\u064A \u0645\u0646\u0636\u062F\u0629 \u0627\u0644\u062A\u062D\u0644\u064A\u0644." },
+      limit: { en: "Tests are not a single controlled pressure sweep; pressure alone cannot explain the pattern.", ar: "\u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631\u0627\u062A \u0644\u064A\u0633\u062A \u0645\u0633\u062D\u0627\u064B \u0645\u0636\u0628\u0648\u0637\u0627\u064B \u0644\u0644\u0636\u063A\u0637 \u0648\u062D\u062F\u0647\u061B \u0644\u0630\u0644\u0643 \u0644\u0627 \u064A\u0641\u0633\u0631 \u0627\u0644\u0636\u063A\u0637 \u0648\u062D\u062F\u0647 \u0627\u0644\u0646\u0645\u0637." }
+    },
+    {
+      id: "burn-time-burning-rate",
+      title: { en: "Burn time and droplet burning rate", ar: "\u0632\u0645\u0646 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642 \u0648\u0645\u0639\u062F\u0644 \u0627\u062D\u062A\u0631\u0627\u0642 \u0627\u0644\u0642\u0637\u0631\u0629" },
+      xKey: "burn_time_s",
+      yKey: "burning_rate_mm_s",
+      xLabel: { en: "Burn time", ar: "\u0632\u0645\u0646 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642" },
+      xUnit: "s",
+      yLabel: { en: "Burning-rate constant", ar: "\u062B\u0627\u0628\u062A \u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642" },
+      yUnit: "mm\xB2/s",
+      question: { en: "How are the recorded test duration and burning-rate constant distributed together?", ar: "\u0643\u064A\u0641 \u064A\u062A\u0648\u0632\u0639 \u0632\u0645\u0646 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631 \u0627\u0644\u0645\u0633\u062C\u0644 \u0645\u0639 \u062B\u0627\u0628\u062A \u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642\u061F" },
+      use: { en: "Check whether short or long tests occupy distinct parts of this observed sample.", ar: "\u062A\u062D\u0642\u0642 \u0645\u0645\u0627 \u0625\u0630\u0627 \u0643\u0627\u0646\u062A \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631\u0627\u062A \u0627\u0644\u0642\u0635\u064A\u0631\u0629 \u0623\u0648 \u0627\u0644\u0637\u0648\u064A\u0644\u0629 \u062A\u0642\u0639 \u0641\u064A \u0623\u062C\u0632\u0627\u0621 \u0645\u062E\u062A\u0644\u0641\u0629 \u0645\u0646 \u0627\u0644\u0639\u064A\u0646\u0629 \u0627\u0644\u0645\u0631\u0635\u0648\u062F\u0629." },
+      limit: { en: "Duration is linked to the test outcome and procedure; this plot is descriptive, not a predictive lifetime model.", ar: "\u064A\u0631\u062A\u0628\u0637 \u0627\u0644\u0632\u0645\u0646 \u0628\u0646\u062A\u064A\u062C\u0629 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631 \u0648\u0625\u062C\u0631\u0627\u0626\u0647\u061B \u0647\u0630\u0627 \u0648\u0635\u0641 \u0644\u0644\u0639\u064A\u0646\u0629 \u0648\u0644\u064A\u0633 \u0646\u0645\u0648\u0630\u062C\u0627\u064B \u062A\u0646\u0628\u0624\u064A\u0627\u064B \u0644\u0645\u062F\u0629 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642." }
+    },
+    {
+      id: "oxygen-extinction-diameter",
+      title: { en: "Oxygen fraction and flame-extinction diameter", ar: "\u0646\u0633\u0628\u0629 \u0627\u0644\u0623\u0643\u0633\u062C\u064A\u0646 \u0648\u0642\u0637\u0631 \u0627\u0646\u0637\u0641\u0627\u0621 \u0627\u0644\u0644\u0647\u0628" },
+      xKey: "oxygen_mole_fraction",
+      yKey: "visible_flame_extinction_diameter_mm",
+      xLabel: { en: "Oxygen mole fraction", ar: "\u0627\u0644\u0643\u0633\u0631 \u0627\u0644\u0645\u0648\u0644\u064A \u0644\u0644\u0623\u0643\u0633\u062C\u064A\u0646" },
+      xUnit: "%",
+      xFactor: 100,
+      yLabel: { en: "Visible flame extinction diameter", ar: "\u0642\u0637\u0631 \u0627\u0646\u0637\u0641\u0627\u0621 \u0627\u0644\u0644\u0647\u0628 \u0627\u0644\u0645\u0631\u0626\u064A" },
+      yUnit: "mm",
+      question: { en: "For tests with a reported extinction diameter, how does that value vary across oxygen fractions?", ar: "\u0641\u064A \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631\u0627\u062A \u0627\u0644\u062A\u064A \u0623\u0628\u0644\u063A\u062A \u0639\u0646 \u0642\u0637\u0631 \u0627\u0646\u0637\u0641\u0627\u0621\u060C \u0643\u064A\u0641 \u062A\u062A\u063A\u064A\u0631 \u0642\u064A\u0645\u062A\u0647 \u0639\u0628\u0631 \u0646\u0633\u0628 \u0627\u0644\u0623\u0643\u0633\u062C\u064A\u0646\u061F" },
+      use: { en: "Inspect the finite-diameter extinction observations relevant to FLEX flammability-limit work.", ar: "\u0627\u0641\u062D\u0635 \u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u0627\u0646\u0637\u0641\u0627\u0621 \u0630\u0627\u062A \u0627\u0644\u0642\u0637\u0631 \u0627\u0644\u0645\u062D\u062F\u0648\u062F \u0627\u0644\u0645\u0631\u062A\u0628\u0637\u0629 \u0628\u062F\u0631\u0627\u0633\u0629 \u062D\u062F\u0648\u062F \u0642\u0627\u0628\u0644\u064A\u0629 \u0627\u0644\u0627\u0634\u062A\u0639\u0627\u0644 \u0641\u064A FLEX." },
+      limit: { en: "Missing values are not zero: tests without a reported finite extinction diameter are excluded from this pair.", ar: "\u0627\u0644\u0642\u064A\u0645 \u0627\u0644\u0645\u0641\u0642\u0648\u062F\u0629 \u0644\u064A\u0633\u062A \u0635\u0641\u0631\u0627\u064B\u061B \u062A\u064F\u0633\u062A\u0628\u0639\u062F \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631\u0627\u062A \u0627\u0644\u062A\u064A \u0644\u0627 \u062A\u0645\u0644\u0643 \u0642\u0637\u0631\u0627\u064B \u0645\u062D\u062F\u0648\u062F\u0627\u064B \u0645\u0633\u062C\u0644\u0627\u064B \u0645\u0646 \u0647\u0630\u0627 \u0627\u0644\u0632\u0648\u062C." }
+    },
+    {
+      id: "pressure-extinction-diameter",
+      title: { en: "Pressure and flame-extinction diameter", ar: "\u0627\u0644\u0636\u063A\u0637 \u0648\u0642\u0637\u0631 \u0627\u0646\u0637\u0641\u0627\u0621 \u0627\u0644\u0644\u0647\u0628" },
+      xKey: "pressure_mmHg",
+      yKey: "visible_flame_extinction_diameter_mm",
+      xLabel: { en: "Pressure", ar: "\u0627\u0644\u0636\u063A\u0637" },
+      xUnit: "mmHg",
+      yLabel: { en: "Visible flame extinction diameter", ar: "\u0642\u0637\u0631 \u0627\u0646\u0637\u0641\u0627\u0621 \u0627\u0644\u0644\u0647\u0628 \u0627\u0644\u0645\u0631\u0626\u064A" },
+      yUnit: "mm",
+      question: { en: "How are recorded ambient pressure and finite extinction-diameter observations distributed together?", ar: "\u0643\u064A\u0641 \u062A\u062A\u0648\u0632\u0639 \u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u0636\u063A\u0637 \u0627\u0644\u0645\u062D\u064A\u0637 \u0648\u0642\u0637\u0631 \u0627\u0644\u0627\u0646\u0637\u0641\u0627\u0621 \u0627\u0644\u0645\u062D\u062F\u0648\u062F \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0645\u0639\u0627\u064B\u061F" },
+      use: { en: "Review the observed pressure range associated with reported extinction diameters.", ar: "\u0631\u0627\u062C\u0639 \u0646\u0637\u0627\u0642 \u0627\u0644\u0636\u063A\u0637 \u0627\u0644\u0645\u0631\u0635\u0648\u062F \u0645\u0639 \u0623\u0642\u0637\u0627\u0631 \u0627\u0644\u0627\u0646\u0637\u0641\u0627\u0621 \u0627\u0644\u0645\u0633\u062C\u0644\u0629." },
+      limit: { en: "The available tests do not form a controlled pressure-only sweep; absent diameters stay missing.", ar: "\u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631\u0627\u062A \u0627\u0644\u0645\u062A\u0627\u062D\u0629 \u0644\u0627 \u062A\u0634\u0643\u0644 \u0645\u0633\u062D\u0627\u064B \u0645\u0636\u0628\u0648\u0637\u0627\u064B \u0644\u0644\u0636\u063A\u0637 \u0648\u062D\u062F\u0647\u061B \u0648\u062A\u0628\u0642\u0649 \u0627\u0644\u0623\u0642\u0637\u0627\u0631 \u063A\u064A\u0631 \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0645\u0641\u0642\u0648\u062F\u0629." }
+    }
+  ];
+
   // public/lib/system-concepts.js
   var copy = {
     en: {
@@ -1093,6 +1177,7 @@
     ["Challenge Evidence", "NASA PSI investigation tables", "\u25A4", "SCIENCE"],
     ["Investigation Lab", "Study-specific NASA PSI evidence summaries", "\u25C9", "ANALYSIS"],
     ["Analysis Workbench", "FLEX-only descriptive analysis", "\u2211", "ANALYSIS"],
+    ["Chart Guide", "Chart purposes, variables & limits", "\u25A5", "ANALYSIS"],
     ["Comparison Studio", "Compare matched FLEX tests", "\u25EB", "ANALYSIS"],
     ["AI Copilot", "Evidence-grounded research assistant", "\u2727", "RESEARCH"],
     ["Sources", "NASA PSI sources & methods", "\u25CE", "RESEARCH"],
@@ -1161,6 +1246,7 @@
     "Challenge Evidence": "\u0623\u062F\u0644\u0629 \u0627\u0644\u062A\u062D\u062F\u064A",
     "Investigation Lab": "\u0645\u062E\u062A\u0628\u0631 \u0627\u0644\u062A\u062D\u0642\u064A\u0642\u0627\u062A",
     "Analysis Workbench": "\u0645\u0646\u0636\u062F\u0629 \u0627\u0644\u062A\u062D\u0644\u064A\u0644",
+    "Chart Guide": "\u062F\u0644\u064A\u0644 \u0627\u0644\u0645\u062E\u0637\u0637\u0627\u062A",
     "Comparison Studio": "\u0645\u0642\u0627\u0631\u0646\u0629 \u0627\u0644\u062A\u062C\u0627\u0631\u0628",
     "AI Copilot": "\u0645\u0633\u0627\u0639\u062F \u0627\u0644\u0623\u0628\u062D\u0627\u062B",
     Sources: "\u0627\u0644\u0645\u0635\u0627\u062F\u0631 \u0648\u0627\u0644\u0645\u0646\u0647\u062C\u064A\u0629",
@@ -1300,7 +1386,7 @@
     const a = g.association, name = bold ? `<b>${esc(label)}</b>` : esc(label);
     return `<tr><td>${name}</td><td>${g.records}</td><td>${g.n}</td><td><b>${fmt(g.mean)}</b></td><td>${ciCell(g.ci95)}</td><td>${fmt(g.sampleSd)}</td><td>${a.r === null ? "\u2014" : fmt(a.r)} <span style="color:var(--muted)">(n=${a.n})</span></td><td>${a.r === null ? "\u2014" : ciCell(a.ci95)}</td></tr>`;
   }
-  function scientificChartGallery(rows) {
+  function scientificChartGallery(rows, { explain = false } = {}) {
     const labels2 = {
       controls: t("Chart controls", "\u0623\u062F\u0648\u0627\u062A \u0627\u0644\u0645\u062E\u0637\u0637"),
       zoomIn: t("Zoom in", "\u062A\u0643\u0628\u064A\u0631"),
@@ -1315,15 +1401,31 @@
       fitNote: t("Exploratory association only; it does not show causation.", "\u0627\u0631\u062A\u0628\u0627\u0637 \u0627\u0633\u062A\u0643\u0634\u0627\u0641\u064A \u0641\u0642\u0637\u061B \u0644\u0627 \u064A\u062B\u0628\u062A \u0627\u0644\u0633\u0628\u0628\u064A\u0629."),
       rows: t("Valid source rows", "\u0635\u0641\u0648\u0641 \u0627\u0644\u0645\u0635\u062F\u0631 \u0627\u0644\u0635\u0627\u0644\u062D\u0629")
     };
-    const configs = [
-      { title: t("Oxygen fraction and droplet burning rate", "\u0646\u0633\u0628\u0629 \u0627\u0644\u0623\u0643\u0633\u062C\u064A\u0646 \u0648\u0645\u0639\u062F\u0644 \u0627\u062D\u062A\u0631\u0627\u0642 \u0627\u0644\u0642\u0637\u0631\u0629"), xKey: "oxygen_mole_fraction", yKey: "burning_rate_mm_s", xLabel: t("Oxygen mole fraction", "\u0627\u0644\u0643\u0633\u0631 \u0627\u0644\u0645\u0648\u0644\u064A \u0644\u0644\u0623\u0643\u0633\u062C\u064A\u0646"), xUnit: "%", xFactor: 100, yLabel: t("Burning-rate constant", "\u062B\u0627\u0628\u062A \u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642"), yUnit: "mm\xB2/s" },
-      { title: t("Initial droplet diameter and burning rate", "\u0642\u0637\u0631 \u0627\u0644\u0642\u0637\u0631\u0629 \u0627\u0644\u0627\u0628\u062A\u062F\u0627\u0626\u064A \u0648\u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642"), xKey: "initial_droplet_diameter_mm", yKey: "burning_rate_mm_s", xLabel: t("Initial droplet diameter", "\u0642\u0637\u0631 \u0627\u0644\u0642\u0637\u0631\u0629 \u0627\u0644\u0627\u0628\u062A\u062F\u0627\u0626\u064A"), xUnit: "mm", yLabel: t("Burning-rate constant", "\u062B\u0627\u0628\u062A \u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642"), yUnit: "mm\xB2/s" },
-      { title: t("Pressure and droplet burning rate", "\u0627\u0644\u0636\u063A\u0637 \u0648\u0645\u0639\u062F\u0644 \u0627\u062D\u062A\u0631\u0627\u0642 \u0627\u0644\u0642\u0637\u0631\u0629"), xKey: "pressure_mmHg", yKey: "burning_rate_mm_s", xLabel: t("Pressure", "\u0627\u0644\u0636\u063A\u0637"), xUnit: "mmHg", yLabel: t("Burning-rate constant", "\u062B\u0627\u0628\u062A \u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642"), yUnit: "mm\xB2/s" },
-      { title: t("Burn time and droplet burning rate", "\u0632\u0645\u0646 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642 \u0648\u0645\u0639\u062F\u0644 \u0627\u062D\u062A\u0631\u0627\u0642 \u0627\u0644\u0642\u0637\u0631\u0629"), xKey: "burn_time_s", yKey: "burning_rate_mm_s", xLabel: t("Burn time", "\u0632\u0645\u0646 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642"), xUnit: "s", yLabel: t("Burning-rate constant", "\u062B\u0627\u0628\u062A \u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642"), yUnit: "mm\xB2/s" },
-      { title: t("Oxygen fraction and flame-extinction diameter", "\u0646\u0633\u0628\u0629 \u0627\u0644\u0623\u0643\u0633\u062C\u064A\u0646 \u0648\u0642\u0637\u0631 \u0627\u0646\u0637\u0641\u0627\u0621 \u0627\u0644\u0644\u0647\u0628"), xKey: "oxygen_mole_fraction", yKey: "visible_flame_extinction_diameter_mm", xLabel: t("Oxygen mole fraction", "\u0627\u0644\u0643\u0633\u0631 \u0627\u0644\u0645\u0648\u0644\u064A \u0644\u0644\u0623\u0643\u0633\u062C\u064A\u0646"), xUnit: "%", xFactor: 100, yLabel: t("Visible flame extinction diameter", "\u0642\u0637\u0631 \u0627\u0646\u0637\u0641\u0627\u0621 \u0627\u0644\u0644\u0647\u0628 \u0627\u0644\u0645\u0631\u0626\u064A"), yUnit: "mm" },
-      { title: t("Pressure and flame-extinction diameter", "\u0627\u0644\u0636\u063A\u0637 \u0648\u0642\u0637\u0631 \u0627\u0646\u0637\u0641\u0627\u0621 \u0627\u0644\u0644\u0647\u0628"), xKey: "pressure_mmHg", yKey: "visible_flame_extinction_diameter_mm", xLabel: t("Pressure", "\u0627\u0644\u0636\u063A\u0637"), xUnit: "mmHg", yLabel: t("Visible flame extinction diameter", "\u0642\u0637\u0631 \u0627\u0646\u0637\u0641\u0627\u0621 \u0627\u0644\u0644\u0647\u0628 \u0627\u0644\u0645\u0631\u0626\u064A"), yUnit: "mm" }
-    ];
-    return `<section class="chart-gallery"><div class="section-title"><div><h2>${t("Interactive FLEX research plots", "\u0645\u062E\u0637\u0637\u0627\u062A FLEX \u0627\u0644\u0628\u062D\u062B\u064A\u0629 \u0627\u0644\u062A\u0641\u0627\u0639\u0644\u064A\u0629")}</h2><p>${t("Each dot is a source test. Missing pairs are excluded for that chart only. Color separates fuel types.", "\u0643\u0644 \u0646\u0642\u0637\u0629 \u062A\u0645\u062B\u0644 \u0627\u062E\u062A\u0628\u0627\u0631\u0627\u064B \u0645\u0646 \u0627\u0644\u0645\u0635\u062F\u0631. \u062A\u064F\u0633\u062A\u0628\u0639\u062F \u0627\u0644\u0642\u064A\u0645 \u0627\u0644\u0646\u0627\u0642\u0635\u0629 \u0644\u0643\u0644 \u0645\u062E\u0637\u0637 \u0641\u0642\u0637. \u0627\u0644\u0644\u0648\u0646 \u064A\u0645\u064A\u0632 \u0646\u0648\u0639 \u0627\u0644\u0648\u0642\u0648\u062F.")}</p></div></div><div class="grid two">${configs.map((cfg) => `<article class="card"><h3>${cfg.title}</h3>${scientificScatter(__spreadProps(__spreadValues({}, cfg), { rows, groupKey: "fuel", labels: labels2 }))}</article>`).join("")}</div></section>`;
+    const language = lang === "ar" ? "ar" : "en";
+    const configs = FLEX_CHART_GUIDE.map((cfg) => __spreadProps(__spreadValues({}, cfg), {
+      title: cfg.title[language],
+      xLabel: cfg.xLabel[language],
+      yLabel: cfg.yLabel[language],
+      question: cfg.question[language],
+      use: cfg.use[language],
+      limit: cfg.limit[language]
+    }));
+    const guidance = (cfg) => explain ? `<div class="grid three" style="margin:12px 0"><p class="sub"><b>${t("Question", "\u0627\u0644\u0633\u0624\u0627\u0644")}</b><br>${esc(cfg.question)}</p><p class="sub"><b>${t("How to use it", "\u0637\u0631\u064A\u0642\u0629 \u0627\u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645")}</b><br>${esc(cfg.use)}</p><p class="sub"><b>${t("Interpretation limit", "\u062D\u062F\u0648\u062F \u0627\u0644\u062A\u0641\u0633\u064A\u0631")}</b><br>${esc(cfg.limit)}</p></div>` : "";
+    return `<section class="chart-gallery"><div class="section-title"><div><h2>${t("Interactive FLEX research plots", "\u0645\u062E\u0637\u0637\u0627\u062A FLEX \u0627\u0644\u0628\u062D\u062B\u064A\u0629 \u0627\u0644\u062A\u0641\u0627\u0639\u0644\u064A\u0629")}</h2><p>${t("Each dot is one source test. Missing pairs are omitted only from that plot. Fuel is shown by color; fitted lines are exploratory and never establish causation.", "\u0643\u0644 \u0646\u0642\u0637\u0629 \u062A\u0645\u062B\u0644 \u0627\u062E\u062A\u0628\u0627\u0631\u0627\u064B \u0648\u0627\u062D\u062F\u0627\u064B \u0645\u0646 \u0627\u0644\u0645\u0635\u062F\u0631. \u062A\u064F\u0633\u062A\u0628\u0639\u062F \u0627\u0644\u0642\u064A\u0645 \u0627\u0644\u0646\u0627\u0642\u0635\u0629 \u0645\u0646 \u0630\u0644\u0643 \u0627\u0644\u0645\u062E\u0637\u0637 \u0641\u0642\u0637. \u064A\u0645\u064A\u0632 \u0627\u0644\u0644\u0648\u0646 \u0627\u0644\u0648\u0642\u0648\u062F\u061B \u0648\u062E\u0637 \u0627\u0644\u0645\u0644\u0627\u0621\u0645\u0629 \u0627\u0633\u062A\u0643\u0634\u0627\u0641\u064A \u0648\u0644\u0627 \u064A\u062B\u0628\u062A \u0627\u0644\u0633\u0628\u0628\u064A\u0629.")}</p></div></div><div class="grid two">${configs.map((cfg) => `<article class="card" data-chart-guide="${cfg.id}"><h3>${cfg.title}</h3>${guidance(cfg)}${scientificScatter(__spreadProps(__spreadValues({}, cfg), { rows, groupKey: "fuel", labels: labels2 }))}</article>`).join("")}</div></section>`;
+  }
+  function chartGuidePage() {
+    const ar = lang === "ar";
+    const intro = ar ? "\u064A\u062C\u0645\u0639 \u0647\u0630\u0627 \u0627\u0644\u062F\u0644\u064A\u0644 \u0645\u062E\u0637\u0637\u064A \u0627\u0644\u0646\u0638\u0631\u0629 \u0627\u0644\u0639\u0627\u0645\u0629 \u0648\u0645\u062E\u0637\u0637\u0627\u062A \u0645\u0646\u0636\u062F\u0629 \u0627\u0644\u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u0633\u062A\u0629. \u062C\u0645\u064A\u0639 \u0627\u0644\u0646\u0642\u0627\u0637 \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A\u0629 \u0623\u062F\u0646\u0627\u0647 \u0645\u0646 NASA PSI-69 (FLEX)\u060C \u0648\u0644\u064A\u0633\u062A \u062E\u0644\u064A\u0637\u0627\u064B \u0645\u0646 \u0627\u0644\u062A\u062D\u0642\u064A\u0642\u0627\u062A \u0627\u0644\u0645\u062E\u062A\u0644\u0641\u0629." : "This guide collects the two Overview plots and the six Analysis Workbench plots. Experimental points below come from NASA PSI-69 (FLEX); they are not pooled across unrelated investigations.";
+    return `${pageHead(t("Chart Guide", "\u062F\u0644\u064A\u0644 \u0627\u0644\u0645\u062E\u0637\u0637\u0627\u062A"), t("What each plot asks, how to read it, and what it cannot establish.", "\u0633\u0624\u0627\u0644 \u0643\u0644 \u0645\u062E\u0637\u0637 \u0648\u0637\u0631\u064A\u0642\u0629 \u0642\u0631\u0627\u0621\u062A\u0647 \u0648\u0645\u0627 \u0644\u0627 \u064A\u0645\u0643\u0646 \u0627\u0633\u062A\u0646\u062A\u0627\u062C\u0647 \u0645\u0646\u0647."))}
+    <div class="callout" style="margin-bottom:18px">${intro} <a href="https://psi.nasa.gov/physci/repo/data/investigations/PSI-69" target="_blank" rel="noreferrer">NASA PSI-69 \xB7 DOI 10.60555/mbq8-0451 \u2197</a></div>
+    <h2 style="margin:22px 0 12px">${t("Overview plots", "\u0645\u062E\u0637\u0637\u0627 \u0627\u0644\u0646\u0638\u0631\u0629 \u0627\u0644\u0639\u0627\u0645\u0629")}</h2>
+    <div class="grid two">
+      <article class="card"><h3>${t("FLEX burning-rate values by source-row order", "\u0642\u064A\u0645 \u0645\u0639\u062F\u0644 \u0627\u062D\u062A\u0631\u0627\u0642 FLEX \u0628\u062D\u0633\u0628 \u062A\u0631\u062A\u064A\u0628 \u0635\u0641\u0648\u0641 \u0627\u0644\u0645\u0635\u062F\u0631")}</h3><p class="sub">${t("Purpose: scan the spread of reported burning-rate constants and spot values worth inspecting.", "\u0627\u0644\u063A\u0631\u0636: \u0627\u0633\u062A\u0639\u0631\u0627\u0636 \u062A\u0634\u062A\u062A \u062B\u0648\u0627\u0628\u062A \u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642 \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0648\u0631\u0635\u062F \u0627\u0644\u0642\u064A\u0645 \u0627\u0644\u062A\u064A \u062A\u0633\u062A\u062D\u0642 \u0627\u0644\u0641\u062D\u0635.")}</p>${chartSVG(dataset.rows, "burning_rate_mm_s", t("FLEX droplet burning-rate constant", "\u062B\u0627\u0628\u062A \u0627\u062D\u062A\u0631\u0627\u0642 \u0642\u0637\u0631\u0627\u062A FLEX"), "mm\xB2/s")}<div class="callout warn">${t("The horizontal position is source-row order, not elapsed time or another physical variable. Do not read a left-to-right slope as a trend.", "\u0627\u0644\u0645\u0648\u0636\u0639 \u0627\u0644\u0623\u0641\u0642\u064A \u0647\u0648 \u062A\u0631\u062A\u064A\u0628 \u0635\u0641 \u0627\u0644\u0645\u0635\u062F\u0631\u060C \u0648\u0644\u064A\u0633 \u0632\u0645\u0646\u0627\u064B \u0645\u0646\u0642\u0636\u064A\u0627\u064B \u0623\u0648 \u0645\u062A\u063A\u064A\u0631\u0627\u064B \u0641\u064A\u0632\u064A\u0627\u0626\u064A\u0627\u064B. \u0644\u0627 \u062A\u0641\u0633\u0631 \u0645\u064A\u0644\u0627\u064B \u0645\u0646 \u0627\u0644\u064A\u0633\u0627\u0631 \u0625\u0644\u0649 \u0627\u0644\u064A\u0645\u064A\u0646 \u0639\u0644\u0649 \u0623\u0646\u0647 \u0627\u062A\u062C\u0627\u0647 \u0632\u0645\u0646\u064A.")}</div></article>
+      ${flexScatterPanel()}
+    </div>
+    <h2 style="margin:24px 0 12px">${t("Six interactive Workbench plots", "\u0627\u0644\u0645\u062E\u0637\u0637\u0627\u062A \u0627\u0644\u062A\u0641\u0627\u0639\u0644\u064A\u0629 \u0627\u0644\u0633\u062A\u0629 \u0641\u064A \u0645\u0646\u0636\u062F\u0629 \u0627\u0644\u062A\u062D\u0644\u064A\u0644")}</h2>
+    ${scientificChartGallery(dataset.rows, { explain: true })}
+    <div class="callout warn" style="margin-top:16px">${t("The Earth and microgravity flame drawings in Flame Physics are conceptual schematics, not measured NASA plots. The 3D models are research concepts, not validated fire-suppression hardware.", "\u0631\u0633\u0645\u0627 \u0627\u0644\u0644\u0647\u0628 \u0644\u0644\u0623\u0631\u0636 \u0648\u0627\u0644\u062C\u0627\u0630\u0628\u064A\u0629 \u0627\u0644\u0635\u063A\u0631\u0649 \u0641\u064A \u0635\u0641\u062D\u0629 \u0641\u064A\u0632\u064A\u0627\u0621 \u0627\u0644\u0644\u0647\u0628 \u062A\u062E\u0637\u064A\u0637\u064A\u0627\u0646 \u0645\u0641\u0647\u0648\u0645\u0627\u0646 \u0648\u0644\u064A\u0633\u0627 \u0645\u062E\u0637\u0637\u064E\u064A \u0642\u064A\u0627\u0633\u0627\u062A \u0645\u0646 \u0646\u0627\u0633\u0627. \u0648\u0627\u0644\u0646\u0645\u0627\u0630\u062C \u062B\u0644\u0627\u062B\u064A\u0629 \u0627\u0644\u0623\u0628\u0639\u0627\u062F \u0645\u0641\u0627\u0647\u064A\u0645 \u0628\u062D\u062B\u064A\u0629 \u0648\u0644\u064A\u0633\u062A \u0645\u0639\u062F\u0627\u062A \u0625\u062E\u0645\u0627\u062F \u0645\u0639\u062A\u0645\u062F\u0629.")}</div>`;
   }
   async function analysisPage() {
     var _a, _b, _c, _d;
@@ -1548,6 +1650,7 @@
     "Challenge Evidence": () => renderChallengeLibrary(lang),
     "Investigation Lab": () => renderInvestigationLab(lang),
     "Analysis Workbench": analysisPage,
+    "Chart Guide": chartGuidePage,
     "Comparison Studio": comparePage,
     "AI Copilot": copilot,
     Sources: sourcesPage,
@@ -1573,7 +1676,7 @@
       if (id !== navigationId) return;
       c.innerHTML = html;
       bindPage();
-      if (name === "Overview") bindFlexScatter(c);
+      if (name === "Overview" || name === "Chart Guide") bindFlexScatter(c);
       if (name === "Challenge Evidence") bindChallengeLibrary(c, lang);
       if (name === "Investigation Lab") bindInvestigationLab(c, lang);
       if (name === "Flame Physics") bindFlameScene3d(c, lang);

@@ -12,6 +12,7 @@ import { $, esc, toast, pageHead, stat, download } from './lib/dom.js';
 import { get, post } from './lib/api.js';
 import { chartSVG, flexOxygenScatterSVG } from './lib/charts.js';
 import { scientificScatter, bindInteractiveCharts } from './lib/interactive-charts.js';
+import { FLEX_CHART_GUIDE } from './lib/chart-guide.js';
 import { bindFlameScene3d } from './lib/flame-scene3d.js';
 import { renderSystemConcepts, bindSystemConcepts } from './lib/system-concepts.js';
 import { renderModelGallery, bindModelGallery } from './lib/model-gallery.js';
@@ -26,6 +27,7 @@ const nav = [
   ['Challenge Evidence', 'NASA PSI investigation tables', '▤', 'SCIENCE'],
   ['Investigation Lab', 'Study-specific NASA PSI evidence summaries', '◉', 'ANALYSIS'],
   ['Analysis Workbench', 'FLEX-only descriptive analysis', '∑', 'ANALYSIS'],
+  ['Chart Guide', 'Chart purposes, variables & limits', '▥', 'ANALYSIS'],
   ['Comparison Studio', 'Compare matched FLEX tests', '◫', 'ANALYSIS'],
   ['AI Copilot', 'Evidence-grounded research assistant', '✧', 'RESEARCH'],
   ['Sources', 'NASA PSI sources & methods', '◎', 'RESEARCH'],
@@ -107,6 +109,7 @@ const navArabic = {
   'Challenge Evidence': 'أدلة التحدي',
   'Investigation Lab': 'مختبر التحقيقات',
   'Analysis Workbench': 'منضدة التحليل',
+  'Chart Guide': 'دليل المخططات',
   'Comparison Studio': 'مقارنة التجارب',
   'AI Copilot': 'مساعد الأبحاث',
   Sources: 'المصادر والمنهجية',
@@ -252,7 +255,7 @@ function wbGroupRow(label, g, bold = false) {
     name = bold ? `<b>${esc(label)}</b>` : esc(label);
   return `<tr><td>${name}</td><td>${g.records}</td><td>${g.n}</td><td><b>${fmt(g.mean)}</b></td><td>${ciCell(g.ci95)}</td><td>${fmt(g.sampleSd)}</td><td>${a.r === null ? '—' : fmt(a.r)} <span style="color:var(--muted)">(n=${a.n})</span></td><td>${a.r === null ? '—' : ciCell(a.ci95)}</td></tr>`;
 }
-function scientificChartGallery(rows) {
+function scientificChartGallery(rows, { explain = false } = {}) {
   const labels = {
     controls: t('Chart controls', 'أدوات المخطط'),
     zoomIn: t('Zoom in', 'تكبير'),
@@ -267,15 +270,35 @@ function scientificChartGallery(rows) {
     fitNote: t('Exploratory association only; it does not show causation.', 'ارتباط استكشافي فقط؛ لا يثبت السببية.'),
     rows: t('Valid source rows', 'صفوف المصدر الصالحة'),
   };
-  const configs = [
-    { title: t('Oxygen fraction and droplet burning rate', 'نسبة الأكسجين ومعدل احتراق القطرة'), xKey: 'oxygen_mole_fraction', yKey: 'burning_rate_mm_s', xLabel: t('Oxygen mole fraction', 'الكسر المولي للأكسجين'), xUnit: '%', xFactor: 100, yLabel: t('Burning-rate constant', 'ثابت معدل الاحتراق'), yUnit: 'mm²/s' },
-    { title: t('Initial droplet diameter and burning rate', 'قطر القطرة الابتدائي ومعدل الاحتراق'), xKey: 'initial_droplet_diameter_mm', yKey: 'burning_rate_mm_s', xLabel: t('Initial droplet diameter', 'قطر القطرة الابتدائي'), xUnit: 'mm', yLabel: t('Burning-rate constant', 'ثابت معدل الاحتراق'), yUnit: 'mm²/s' },
-    { title: t('Pressure and droplet burning rate', 'الضغط ومعدل احتراق القطرة'), xKey: 'pressure_mmHg', yKey: 'burning_rate_mm_s', xLabel: t('Pressure', 'الضغط'), xUnit: 'mmHg', yLabel: t('Burning-rate constant', 'ثابت معدل الاحتراق'), yUnit: 'mm²/s' },
-    { title: t('Burn time and droplet burning rate', 'زمن الاحتراق ومعدل احتراق القطرة'), xKey: 'burn_time_s', yKey: 'burning_rate_mm_s', xLabel: t('Burn time', 'زمن الاحتراق'), xUnit: 's', yLabel: t('Burning-rate constant', 'ثابت معدل الاحتراق'), yUnit: 'mm²/s' },
-    { title: t('Oxygen fraction and flame-extinction diameter', 'نسبة الأكسجين وقطر انطفاء اللهب'), xKey: 'oxygen_mole_fraction', yKey: 'visible_flame_extinction_diameter_mm', xLabel: t('Oxygen mole fraction', 'الكسر المولي للأكسجين'), xUnit: '%', xFactor: 100, yLabel: t('Visible flame extinction diameter', 'قطر انطفاء اللهب المرئي'), yUnit: 'mm' },
-    { title: t('Pressure and flame-extinction diameter', 'الضغط وقطر انطفاء اللهب'), xKey: 'pressure_mmHg', yKey: 'visible_flame_extinction_diameter_mm', xLabel: t('Pressure', 'الضغط'), xUnit: 'mmHg', yLabel: t('Visible flame extinction diameter', 'قطر انطفاء اللهب المرئي'), yUnit: 'mm' },
-  ];
-  return `<section class="chart-gallery"><div class="section-title"><div><h2>${t('Interactive FLEX research plots', 'مخططات FLEX البحثية التفاعلية')}</h2><p>${t('Each dot is a source test. Missing pairs are excluded for that chart only. Color separates fuel types.', 'كل نقطة تمثل اختباراً من المصدر. تُستبعد القيم الناقصة لكل مخطط فقط. اللون يميز نوع الوقود.')}</p></div></div><div class="grid two">${configs.map((cfg) => `<article class="card"><h3>${cfg.title}</h3>${scientificScatter({ ...cfg, rows, groupKey: 'fuel', labels })}</article>`).join('')}</div></section>`;
+  const language = lang === 'ar' ? 'ar' : 'en';
+  const configs = FLEX_CHART_GUIDE.map((cfg) => ({
+    ...cfg,
+    title: cfg.title[language],
+    xLabel: cfg.xLabel[language],
+    yLabel: cfg.yLabel[language],
+    question: cfg.question[language],
+    use: cfg.use[language],
+    limit: cfg.limit[language],
+  }));
+  const guidance = (cfg) => explain ? `<div class="grid three" style="margin:12px 0"><p class="sub"><b>${t('Question', 'السؤال')}</b><br>${esc(cfg.question)}</p><p class="sub"><b>${t('How to use it', 'طريقة الاستخدام')}</b><br>${esc(cfg.use)}</p><p class="sub"><b>${t('Interpretation limit', 'حدود التفسير')}</b><br>${esc(cfg.limit)}</p></div>` : '';
+  return `<section class="chart-gallery"><div class="section-title"><div><h2>${t('Interactive FLEX research plots', 'مخططات FLEX البحثية التفاعلية')}</h2><p>${t('Each dot is one source test. Missing pairs are omitted only from that plot. Fuel is shown by color; fitted lines are exploratory and never establish causation.', 'كل نقطة تمثل اختباراً واحداً من المصدر. تُستبعد القيم الناقصة من ذلك المخطط فقط. يميز اللون الوقود؛ وخط الملاءمة استكشافي ولا يثبت السببية.')}</p></div></div><div class="grid two">${configs.map((cfg) => `<article class="card" data-chart-guide="${cfg.id}"><h3>${cfg.title}</h3>${guidance(cfg)}${scientificScatter({ ...cfg, rows, groupKey: 'fuel', labels })}</article>`).join('')}</div></section>`;
+}
+
+function chartGuidePage() {
+  const ar = lang === 'ar';
+  const intro = ar
+    ? 'يجمع هذا الدليل مخططي النظرة العامة ومخططات منضدة التحليل الستة. جميع النقاط التجريبية أدناه من NASA PSI-69 (FLEX)، وليست خليطاً من التحقيقات المختلفة.'
+    : 'This guide collects the two Overview plots and the six Analysis Workbench plots. Experimental points below come from NASA PSI-69 (FLEX); they are not pooled across unrelated investigations.';
+  return `${pageHead(t('Chart Guide', 'دليل المخططات'), t('What each plot asks, how to read it, and what it cannot establish.', 'سؤال كل مخطط وطريقة قراءته وما لا يمكن استنتاجه منه.'))}
+    <div class="callout" style="margin-bottom:18px">${intro} <a href="https://psi.nasa.gov/physci/repo/data/investigations/PSI-69" target="_blank" rel="noreferrer">NASA PSI-69 · DOI 10.60555/mbq8-0451 ↗</a></div>
+    <h2 style="margin:22px 0 12px">${t('Overview plots', 'مخططا النظرة العامة')}</h2>
+    <div class="grid two">
+      <article class="card"><h3>${t('FLEX burning-rate values by source-row order', 'قيم معدل احتراق FLEX بحسب ترتيب صفوف المصدر')}</h3><p class="sub">${t('Purpose: scan the spread of reported burning-rate constants and spot values worth inspecting.', 'الغرض: استعراض تشتت ثوابت معدل الاحتراق المسجلة ورصد القيم التي تستحق الفحص.')}</p>${chartSVG(dataset.rows, 'burning_rate_mm_s', t('FLEX droplet burning-rate constant', 'ثابت احتراق قطرات FLEX'), 'mm²/s')}<div class="callout warn">${t('The horizontal position is source-row order, not elapsed time or another physical variable. Do not read a left-to-right slope as a trend.', 'الموضع الأفقي هو ترتيب صف المصدر، وليس زمناً منقضياً أو متغيراً فيزيائياً. لا تفسر ميلاً من اليسار إلى اليمين على أنه اتجاه زمني.')}</div></article>
+      ${flexScatterPanel()}
+    </div>
+    <h2 style="margin:24px 0 12px">${t('Six interactive Workbench plots', 'المخططات التفاعلية الستة في منضدة التحليل')}</h2>
+    ${scientificChartGallery(dataset.rows, { explain: true })}
+    <div class="callout warn" style="margin-top:16px">${t('The Earth and microgravity flame drawings in Flame Physics are conceptual schematics, not measured NASA plots. The 3D models are research concepts, not validated fire-suppression hardware.', 'رسما اللهب للأرض والجاذبية الصغرى في صفحة فيزياء اللهب تخطيطيان مفهومان وليسا مخططَي قياسات من ناسا. والنماذج ثلاثية الأبعاد مفاهيم بحثية وليست معدات إخماد معتمدة.')}</div>`;
 }
 
 async function analysisPage() {
@@ -535,6 +558,7 @@ const pageMap = {
   'Challenge Evidence': () => renderChallengeLibrary(lang),
   'Investigation Lab': () => renderInvestigationLab(lang),
   'Analysis Workbench': analysisPage,
+  'Chart Guide': chartGuidePage,
   'Comparison Studio': comparePage,
   'AI Copilot': copilot,
   Sources: sourcesPage,
@@ -561,7 +585,7 @@ async function go(name) {
     if (id !== navigationId) return;
     c.innerHTML = html;
     bindPage();
-    if (name === 'Overview') bindFlexScatter(c);
+    if (name === 'Overview' || name === 'Chart Guide') bindFlexScatter(c);
     if (name === 'Challenge Evidence') bindChallengeLibrary(c, lang);
     if (name === 'Investigation Lab') bindInvestigationLab(c, lang);
     if (name === 'Flame Physics') bindFlameScene3d(c, lang);
