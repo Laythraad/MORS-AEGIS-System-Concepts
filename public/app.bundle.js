@@ -853,6 +853,15 @@
     }
   ];
 
+  // public/lib/navigation.js
+  function filterNavEntries(entries, query, aliases = {}) {
+    const needle = String(query || "").trim().toLowerCase();
+    if (!needle) return entries;
+    return entries.filter(
+      ([name, label]) => [name, label, aliases[name] || ""].some((value) => String(value).toLowerCase().includes(needle))
+    );
+  }
+
   // public/lib/system-concepts.js
   var copy = {
     en: {
@@ -1270,16 +1279,54 @@
       "Theme \xB7 " + { arctic: "Arctic", space: "Deep Space", observatory: "Observatory" }[theme],
       "\u0627\u0644\u0645\u0638\u0647\u0631 \xB7 " + { arctic: "\u0642\u0637\u0628\u064A", space: "\u0641\u0636\u0627\u0621 \u0639\u0645\u064A\u0642", observatory: "\u0645\u0631\u0635\u062F" }[theme]
     );
+    $("#navSearch").setAttribute("aria-label", t("Find a page", "\u0627\u0628\u062D\u062B \u0639\u0646 \u0635\u0641\u062D\u0629"));
+    $("#navSearch").placeholder = t("Find a page\u2026", "\u0627\u0628\u062D\u062B \u0639\u0646 \u0635\u0641\u062D\u0629\u2026");
   }
   function renderNav() {
     const n = $("#nav");
+    const search = $("#navSearch");
+    const entries = filterNavEntries(nav, search.value, navArabic);
+    if (!entries.length) {
+      n.innerHTML = `<div class="nav-empty" role="status">${t("No pages match this search.", "\u0644\u0627 \u062A\u0648\u062C\u062F \u0635\u0641\u062D\u0627\u062A \u062A\u0637\u0627\u0628\u0642 \u0627\u0644\u0628\u062D\u062B.")}</div><button class="nav-clear" type="button">${t("Clear search", "\u0645\u0633\u062D \u0627\u0644\u0628\u062D\u062B")}</button>`;
+      n.querySelector(".nav-clear").onclick = () => {
+        search.value = "";
+        renderNav();
+        search.focus();
+      };
+      return;
+    }
     let group = "";
-    n.innerHTML = nav.map(([k, label, ico, section]) => {
+    n.innerHTML = entries.map(([k, label, ico, section]) => {
       const heading = section !== group ? `<div class="nav-group">${lang === "ar" ? sectionArabic[section] : section}</div>` : "";
       group = section;
       return `${heading}<button data-page="${k}" title="${esc(lang === "ar" ? label : navArabic[k] || label)}" ${current === k ? 'aria-current="page"' : ""} class="${current === k ? "active" : ""}"><span class="nav-icon">${ico}</span>${esc(lang === "ar" ? navArabic[k] || label : label)}</button>`;
     }).join("");
     n.querySelectorAll("button").forEach((b) => b.onclick = () => go(b.dataset.page));
+  }
+  function bindNavigationSearch() {
+    const search = $("#navSearch");
+    search.addEventListener("input", renderNav);
+    search.addEventListener("keydown", (event) => {
+      var _a;
+      if (event.key === "Enter") {
+        event.preventDefault();
+        (_a = $("#nav [data-page]")) == null ? void 0 : _a.click();
+      } else if (event.key === "Escape") {
+        event.preventDefault();
+        search.value = "";
+        renderNav();
+        search.blur();
+      }
+    });
+    document.addEventListener("keydown", (event) => {
+      var _a;
+      const target = event.target;
+      const editing = (_a = target == null ? void 0 : target.matches) == null ? void 0 : _a.call(target, 'input, textarea, select, [contenteditable="true"]');
+      if (event.key === "/" && !event.ctrlKey && !event.metaKey && !event.altKey && !editing) {
+        event.preventDefault();
+        search.focus();
+      }
+    });
   }
   function rowsTable(rows) {
     return `<div class="table-wrap"><table><thead><tr><th>${t("Test ID", "\u0645\u0639\u0631\u0651\u0641 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631")}</th><th>${t("Date \xB7 UTC", "\u0627\u0644\u062A\u0627\u0631\u064A\u062E \xB7 UTC")}</th><th>${t("Fuel", "\u0627\u0644\u0648\u0642\u0648\u062F")}</th><th>${t("Pressure \xB7 mmHg", "\u0627\u0644\u0636\u063A\u0637 \xB7 mmHg")}</th><th>O\u2082</th><th>CO\u2082</th><th>He</th><th>${t("Droplet \xB7 mm", "\u0627\u0644\u0642\u0637\u0631\u0629 \xB7 mm")}</th><th>${t("Extinction \xB7 mm", "\u0627\u0644\u0625\u062E\u0645\u0627\u062F \xB7 mm")}</th><th>${t("Burn-rate constant \xB7 mm\xB2/s", "\u062B\u0627\u0628\u062A \u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642 \xB7 mm\xB2/s")}</th><th>${t("Burn \xB7 s", "\u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642 \xB7 s")}</th><th>${t("End state", "\u0627\u0644\u062D\u0627\u0644\u0629 \u0627\u0644\u0646\u0647\u0627\u0626\u064A\u0629")}</th></tr></thead><tbody>${rows.map((r) => {
@@ -1660,6 +1707,7 @@
   async function go(name) {
     const id = ++navigationId;
     current = name;
+    $("#navSearch").value = "";
     const nextHash = `#${encodeURIComponent(name)}`;
     if (location.hash !== nextHash) location.hash = nextHash;
     renderNav();
@@ -1928,6 +1976,7 @@
     if (requested !== current) go(requested);
   });
   setTheme();
+  bindNavigationSearch();
   renderNav();
   $("#content").innerHTML = `<div class="empty">${t("Loading research view\u2026", "\u062C\u0627\u0631\u064D \u062A\u062D\u0645\u064A\u0644 \u0635\u0641\u062D\u0629 \u0627\u0644\u0628\u062D\u062B\u2026")}</div>`;
   (async () => {

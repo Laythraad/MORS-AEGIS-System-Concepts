@@ -13,6 +13,7 @@ import { get, post } from './lib/api.js';
 import { chartSVG, flexOxygenScatterSVG } from './lib/charts.js';
 import { scientificScatter, bindInteractiveCharts } from './lib/interactive-charts.js';
 import { FLEX_CHART_GUIDE } from './lib/chart-guide.js';
+import { filterNavEntries } from './lib/navigation.js';
 import { bindFlameScene3d } from './lib/flame-scene3d.js';
 import { renderSystemConcepts, bindSystemConcepts } from './lib/system-concepts.js';
 import { renderModelGallery, bindModelGallery } from './lib/model-gallery.js';
@@ -135,11 +136,24 @@ function setTheme() {
     'Theme · ' + { arctic: 'Arctic', space: 'Deep Space', observatory: 'Observatory' }[theme],
     'المظهر · ' + { arctic: 'قطبي', space: 'فضاء عميق', observatory: 'مرصد' }[theme],
   );
+  $('#navSearch').setAttribute('aria-label', t('Find a page', 'ابحث عن صفحة'));
+  $('#navSearch').placeholder = t('Find a page…', 'ابحث عن صفحة…');
 }
 function renderNav() {
   const n = $('#nav');
+  const search = $('#navSearch');
+  const entries = filterNavEntries(nav, search.value, navArabic);
+  if (!entries.length) {
+    n.innerHTML = `<div class="nav-empty" role="status">${t('No pages match this search.', 'لا توجد صفحات تطابق البحث.')}</div><button class="nav-clear" type="button">${t('Clear search', 'مسح البحث')}</button>`;
+    n.querySelector('.nav-clear').onclick = () => {
+      search.value = '';
+      renderNav();
+      search.focus();
+    };
+    return;
+  }
   let group = '';
-  n.innerHTML = nav
+  n.innerHTML = entries
     .map(([k, label, ico, section]) => {
       const heading =
         section !== group ? `<div class="nav-group">${lang === 'ar' ? sectionArabic[section] : section}</div>` : '';
@@ -148,6 +162,29 @@ function renderNav() {
     })
     .join('');
   n.querySelectorAll('button').forEach((b) => (b.onclick = () => go(b.dataset.page)));
+}
+function bindNavigationSearch() {
+  const search = $('#navSearch');
+  search.addEventListener('input', renderNav);
+  search.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      $('#nav [data-page]')?.click();
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      search.value = '';
+      renderNav();
+      search.blur();
+    }
+  });
+  document.addEventListener('keydown', (event) => {
+    const target = event.target;
+    const editing = target?.matches?.('input, textarea, select, [contenteditable="true"]');
+    if (event.key === '/' && !event.ctrlKey && !event.metaKey && !event.altKey && !editing) {
+      event.preventDefault();
+      search.focus();
+    }
+  });
 }
 function rowsTable(rows) {
   return `<div class="table-wrap"><table><thead><tr><th>${t('Test ID', 'معرّف الاختبار')}</th><th>${t('Date · UTC', 'التاريخ · UTC')}</th><th>${t('Fuel', 'الوقود')}</th><th>${t('Pressure · mmHg', 'الضغط · mmHg')}</th><th>O₂</th><th>CO₂</th><th>He</th><th>${t('Droplet · mm', 'القطرة · mm')}</th><th>${t('Extinction · mm', 'الإخماد · mm')}</th><th>${t('Burn-rate constant · mm²/s', 'ثابت معدل الاحتراق · mm²/s')}</th><th>${t('Burn · s', 'الاحتراق · s')}</th><th>${t('End state', 'الحالة النهائية')}</th></tr></thead><tbody>${rows.map((r) => `<tr><td class="mono">${esc(r.id)}</td><td>${esc(r.date)} <span class="mono">${esc(r.time_utc)}</span></td><td>${esc(r.fuel)}</td><td>${esc(r.pressure_mmHg ?? '—')}</td><td>${esc(r.oxygen_mole_fraction ?? '—')}</td><td>${esc(r.carbon_dioxide_mole_fraction ?? '—')}</td><td>${esc(r.helium_mole_fraction ?? '—')}</td><td>${esc(r.initial_droplet_diameter_mm ?? '—')}</td><td>${esc(r.visible_flame_extinction_diameter_mm ?? '—')}</td><td>${esc(r.burning_rate_mm_s ?? '—')}</td><td>${esc(r.burn_time_s ?? '—')}</td><td>${esc(r.test_end)}</td></tr>`).join('')}</tbody></table></div>`;
@@ -568,6 +605,7 @@ const pageMap = {
 async function go(name) {
   const id = ++navigationId;
   current = name;
+  $('#navSearch').value = '';
   const nextHash = `#${encodeURIComponent(name)}`;
   if (location.hash !== nextHash) location.hash = nextHash;
   renderNav();
@@ -867,6 +905,7 @@ window.addEventListener('hashchange', () => {
   if (requested !== current) go(requested);
 });
 setTheme();
+bindNavigationSearch();
 renderNav();
 $('#content').innerHTML = `<div class="empty">${t('Loading research view…', 'جارٍ تحميل صفحة البحث…')}</div>`;
 (async () => {
