@@ -1584,9 +1584,9 @@
   $("#content").innerHTML = `<div class="empty">${t("Loading research view\u2026", "\u062C\u0627\u0631\u064D \u062A\u062D\u0645\u064A\u0644 \u0635\u0641\u062D\u0629 \u0627\u0644\u0628\u062D\u062B\u2026")}</div>`;
   (async () => {
     try {
-      dataset = await get("/api/datasets/flex");
-      analysis = await get("/api/analysis");
-      await health();
+      [dataset, analysis] = await Promise.all([get("/api/datasets/flex"), get("/api/analysis")]);
+      health().catch(() => {
+      });
       await go(current);
       document.documentElement.dataset.morsAppReady = "true";
     } catch (e) {

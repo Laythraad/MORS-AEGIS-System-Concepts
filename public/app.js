@@ -842,9 +842,11 @@ renderNav();
 $('#content').innerHTML = `<div class="empty">${t('Loading research view…', 'جارٍ تحميل صفحة البحث…')}</div>`;
 (async () => {
   try {
-    dataset = await get('/api/datasets/flex');
-    analysis = await get('/api/analysis');
-    await health();
+    // Fetch startup data together so a high-latency mobile connection does not
+    // spend one full round trip on each request before rendering the interface.
+    [dataset, analysis] = await Promise.all([get('/api/datasets/flex'), get('/api/analysis')]);
+    // Health status is secondary to rendering the research view.
+    health().catch(() => {});
     await go(current);
     document.documentElement.dataset.morsAppReady = 'true';
   } catch (e) {
