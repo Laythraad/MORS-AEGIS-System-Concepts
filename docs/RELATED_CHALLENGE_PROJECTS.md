@@ -1,7 +1,9 @@
 # Public project scan: Flame in Freefall
 
-**Snapshot date:** 2026-11-15  
-**Scope:** public projects and prototypes that describe themselves as work for NASA Space Apps Challenge 2026, “Flame in Freefall.”  
+**Snapshot date:** 2026-11-15
+
+**Scope:** public projects and prototypes that describe themselves as work for NASA Space Apps Challenge 2026, “Flame in Freefall.”
+
 **Status caution:** NASA's official challenge brief defines the task, but I found no official public roster confirming that each site below was formally submitted, judged, or selected. This is a review of self-described public work, not a list of entrants, finalists, winners, or NASA-endorsed projects.
 
 ## What public projects show
@@ -39,4 +41,3 @@ The 950 ppm value appearing in a BASS-II table is therefore a reported endpoint,
 - [Official NASA Space Apps 2026 challenge brief](https://www.spaceappschallenge.org/2026/challenges/flame-in-freefall/): asks teams to build an interactive SI-powered dashboard that summarizes, ranks, and interprets NASA microgravity combustion results.
 - [NASA PSI-25 investigation page](https://psi.nasa.gov/physci/repo/data/investigations/PSI-25): official BASS-II metadata, objectives, conditions, DOI, and files.
 - [NASA BASS-II Summary Report, NASA/TM-20210011385](https://ntrs.nasa.gov/citations/20210011385): CO sensor range, sampling context, test table, and chamber-to-lab dilution estimate.
-
