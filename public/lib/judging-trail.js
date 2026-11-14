@@ -68,7 +68,8 @@ export function judgingTrail(evidence, lang = 'en') {
     <div class="card-head"><div><span class="eyebrow">MORS AEGIS · LIVE DEMO</span><h2 id="judgingTrailTitle">${heading}</h2><p class="sub">${intro}</p></div><span class="tag">90 s</span></div>
     <div class="grid three judging-trail-steps">${steps
       .map(
-        (step) => `<article class="judging-trail-step"><span class="stepnum">${step.number}</span><h3>${step.title}</h3><p class="sub">${step.body}</p><button class="outline-btn" data-go="${esc(step.page)}">${step.action}</button>${step.extraAction ? `<button class="text-btn" data-go="${esc(step.extraPage)}">${step.extraAction} →</button>` : ''}</article>`,
+        (step) =>
+          `<article class="judging-trail-step"><span class="stepnum">${step.number}</span><h3>${step.title}</h3><p class="sub">${step.body}</p><button class="outline-btn" data-go="${esc(step.page)}">${step.action}</button>${step.extraAction ? `<button class="text-btn" data-go="${esc(step.extraPage)}">${step.extraAction} →</button>` : ''}</article>`,
       )
       .join('')}</div>
     <p class="callout judging-trail-pitch">${pitch}</p>

@@ -25,10 +25,21 @@ export const SOURCE_STUDY_CHARTS = [
     'mm',
     'reported daily count',
     bilingual('Reported ignitions by burner size', 'حالات الإشعال المسجلة بحسب حجم الموقد'),
-    bilingual('How do the source-day ignition counts sit across the listed burner sizes?', 'كيف تتوزع أعداد الإشعال اليومية على أحجام المواقد المدرجة؟'),
+    bilingual(
+      'How do the source-day ignition counts sit across the listed burner sizes?',
+      'كيف تتوزع أعداد الإشعال اليومية على أحجام المواقد المدرجة؟',
+    ),
     bilingual('Inspect reported day summaries by burner size.', 'قارن ملخصات الأيام المسجلة بحسب حجم الموقد.'),
-    bilingual('Rows summarize days, not individual trials. Oxygen mixtures and chamber pressure vary and are not paired to each count.', 'الصفوف تلخص أياماً لا تجارب منفردة. تختلف مخاليط الأكسجين وضغط الحجرة ولا ترتبط كل قيمة منها بعدد الإشعال.'),
-    { groupField: 'Fuel Bottle', rowIdField: 'Date', detailFields: ['Year', 'Month', 'Fuel Bottle', 'Oxygen Conc (percent)'], aggregateDuplicates: true },
+    bilingual(
+      'Rows summarize days, not individual trials. Oxygen mixtures and chamber pressure vary and are not paired to each count.',
+      'الصفوف تلخص أياماً لا تجارب منفردة. تختلف مخاليط الأكسجين وضغط الحجرة ولا ترتبط كل قيمة منها بعدد الإشعال.',
+    ),
+    {
+      groupField: 'Fuel Bottle',
+      rowIdField: 'Date',
+      detailFields: ['Year', 'Month', 'Fuel Bottle', 'Oxygen Conc (percent)'],
+      aggregateDuplicates: true,
+    },
   ),
   plot(
     'psi20-ignitions-year',
@@ -38,10 +49,24 @@ export const SOURCE_STUDY_CHARTS = [
     'year',
     'reported daily count',
     bilingual('Reported ignition counts across recorded years', 'أعداد الإشعال المسجلة عبر السنوات الواردة'),
-    bilingual('How do the daily ignition summaries sit across the years listed in the source?', 'كيف تتوزع ملخصات الإشعال اليومية عبر السنوات المدرجة في المصدر؟'),
-    bilingual('Inspect the time coverage and year-to-year source summaries by fuel label.', 'افحص التغطية الزمنية وملخصات المصدر السنوية بحسب تسمية الوقود.'),
-    bilingual('Rows summarize source days; year, fuel, oxygen mixture, and chamber pressure vary together. This is not a controlled performance trend.', 'تلخص الصفوف أيام المصدر؛ وتتغير السنة والوقود ومزيج الأكسجين وضغط الحجرة معاً. لا يمثل ذلك اتجاهاً مضبوطاً للأداء.'),
-    { groupField: 'Fuel Bottle', rowIdField: 'Date', detailFields: ['Month', 'Date', 'Fuel Bottle', 'Oxygen Conc (percent)'], aggregateDuplicates: true },
+    bilingual(
+      'How do the daily ignition summaries sit across the years listed in the source?',
+      'كيف تتوزع ملخصات الإشعال اليومية عبر السنوات المدرجة في المصدر؟',
+    ),
+    bilingual(
+      'Inspect the time coverage and year-to-year source summaries by fuel label.',
+      'افحص التغطية الزمنية وملخصات المصدر السنوية بحسب تسمية الوقود.',
+    ),
+    bilingual(
+      'Rows summarize source days; year, fuel, oxygen mixture, and chamber pressure vary together. This is not a controlled performance trend.',
+      'تلخص الصفوف أيام المصدر؛ وتتغير السنة والوقود ومزيج الأكسجين وضغط الحجرة معاً. لا يمثل ذلك اتجاهاً مضبوطاً للأداء.',
+    ),
+    {
+      groupField: 'Fuel Bottle',
+      rowIdField: 'Date',
+      detailFields: ['Month', 'Date', 'Fuel Bottle', 'Oxygen Conc (percent)'],
+      aggregateDuplicates: true,
+    },
   ),
   plot(
     'psi21-ignitions-fuel-mfc',
@@ -51,10 +76,24 @@ export const SOURCE_STUDY_CHARTS = [
     'source units not stated',
     'reported test-day count',
     bilingual('Reported ignitions by fuel MFC setting', 'الإشعالات المسجلة بحسب إعداد متحكم تدفق الوقود'),
-    bilingual('How are test-day ignition counts distributed across the source fuel-MFC settings?', 'كيف تتوزع أعداد الإشعال اليومية على إعدادات متحكم الوقود كما وردت في المصدر؟'),
-    bilingual('Inspect the recorded settings and counts; values retain the source field and unit convention.', 'افحص الإعدادات والأعداد المسجلة مع الإبقاء على تسمية الحقل ووحدته كما في المصدر.'),
-    bilingual('Rows are test-day summaries. The source does not state MFC units here; fuel, nitrogen setting, and procedure also vary.', 'الصفوف ملخصات لأيام الاختبار. لا يحدد المصدر هنا وحدات MFC؛ كما يتغير الوقود وإعداد النيتروجين والإجراء.'),
-    { groupField: 'Fuel Bottle', rowIdField: 'Test Day', detailFields: ['Test Type', 'Fuel Bottle', 'N2 MFC', 'Fuel conc. Range'], aggregateDuplicates: true },
+    bilingual(
+      'How are test-day ignition counts distributed across the source fuel-MFC settings?',
+      'كيف تتوزع أعداد الإشعال اليومية على إعدادات متحكم الوقود كما وردت في المصدر؟',
+    ),
+    bilingual(
+      'Inspect the recorded settings and counts; values retain the source field and unit convention.',
+      'افحص الإعدادات والأعداد المسجلة مع الإبقاء على تسمية الحقل ووحدته كما في المصدر.',
+    ),
+    bilingual(
+      'Rows are test-day summaries. The source does not state MFC units here; fuel, nitrogen setting, and procedure also vary.',
+      'الصفوف ملخصات لأيام الاختبار. لا يحدد المصدر هنا وحدات MFC؛ كما يتغير الوقود وإعداد النيتروجين والإجراء.',
+    ),
+    {
+      groupField: 'Fuel Bottle',
+      rowIdField: 'Test Day',
+      detailFields: ['Test Type', 'Fuel Bottle', 'N2 MFC', 'Fuel conc. Range'],
+      aggregateDuplicates: true,
+    },
   ),
   plot(
     'psi21-ignitions-n2-mfc',
@@ -64,10 +103,24 @@ export const SOURCE_STUDY_CHARTS = [
     'source units not stated',
     'reported test-day count',
     bilingual('Reported ignitions by nitrogen MFC setting', 'الإشعالات المسجلة بحسب إعداد متحكم تدفق النيتروجين'),
-    bilingual('How are test-day ignition counts distributed across the source nitrogen-MFC settings?', 'كيف تتوزع أعداد الإشعال اليومية على إعدادات متحكم النيتروجين كما وردت في المصدر؟'),
-    bilingual('Inspect the recorded nitrogen settings and counts without inferring a unit.', 'افحص إعدادات النيتروجين والأعداد المسجلة من دون افتراض وحدة قياس.'),
-    bilingual('Rows are test-day summaries and do not isolate nitrogen flow from fuel, concentration, or procedure.', 'الصفوف ملخصات لأيام الاختبار ولا تعزل تدفق النيتروجين عن الوقود أو التركيز أو الإجراء.'),
-    { groupField: 'Fuel Bottle', rowIdField: 'Test Day', detailFields: ['Test Type', 'Fuel Bottle', 'Fuel MFC', 'Fuel conc. Range'], aggregateDuplicates: true },
+    bilingual(
+      'How are test-day ignition counts distributed across the source nitrogen-MFC settings?',
+      'كيف تتوزع أعداد الإشعال اليومية على إعدادات متحكم النيتروجين كما وردت في المصدر؟',
+    ),
+    bilingual(
+      'Inspect the recorded nitrogen settings and counts without inferring a unit.',
+      'افحص إعدادات النيتروجين والأعداد المسجلة من دون افتراض وحدة قياس.',
+    ),
+    bilingual(
+      'Rows are test-day summaries and do not isolate nitrogen flow from fuel, concentration, or procedure.',
+      'الصفوف ملخصات لأيام الاختبار ولا تعزل تدفق النيتروجين عن الوقود أو التركيز أو الإجراء.',
+    ),
+    {
+      groupField: 'Fuel Bottle',
+      rowIdField: 'Test Day',
+      detailFields: ['Test Type', 'Fuel Bottle', 'Fuel MFC', 'Fuel conc. Range'],
+      aggregateDuplicates: true,
+    },
   ),
   plot(
     'psi21-ignitions-test-day',
@@ -77,10 +130,24 @@ export const SOURCE_STUDY_CHARTS = [
     'source test-day label',
     'reported test-day count',
     bilingual('Reported ignition counts across PSI-21 test days', 'أعداد الإشعال المسجلة عبر أيام اختبار PSI-21'),
-    bilingual('How do the ignition summaries vary over the listed test-day sequence?', 'كيف تختلف ملخصات الإشعال عبر تسلسل أيام الاختبار المدرج؟'),
-    bilingual('Review coverage and recorded counts by day, with fuel bottle shown separately.', 'راجع تغطية وعدد الإشعالات بحسب اليوم مع إظهار عبوة الوقود منفصلة.'),
-    bilingual('These are day summaries, not independent flames. Fuel, nitrogen flow, concentration, and procedures change across days.', 'هذه ملخصات أيام وليست ألسنة لهب مستقلة. يتغير الوقود وتدفق النيتروجين والتركيز والإجراء بين الأيام.'),
-    { groupField: 'Fuel Bottle', rowIdField: 'Test Day', detailFields: ['Test Type', 'Fuel Bottle', 'Fuel MFC', 'N2 MFC', 'Fuel conc. Range'], aggregateDuplicates: true },
+    bilingual(
+      'How do the ignition summaries vary over the listed test-day sequence?',
+      'كيف تختلف ملخصات الإشعال عبر تسلسل أيام الاختبار المدرج؟',
+    ),
+    bilingual(
+      'Review coverage and recorded counts by day, with fuel bottle shown separately.',
+      'راجع تغطية وعدد الإشعالات بحسب اليوم مع إظهار عبوة الوقود منفصلة.',
+    ),
+    bilingual(
+      'These are day summaries, not independent flames. Fuel, nitrogen flow, concentration, and procedures change across days.',
+      'هذه ملخصات أيام وليست ألسنة لهب مستقلة. يتغير الوقود وتدفق النيتروجين والتركيز والإجراء بين الأيام.',
+    ),
+    {
+      groupField: 'Fuel Bottle',
+      rowIdField: 'Test Day',
+      detailFields: ['Test Type', 'Fuel Bottle', 'Fuel MFC', 'N2 MFC', 'Fuel conc. Range'],
+      aggregateDuplicates: true,
+    },
   ),
   plot(
     'psi22-ignitions-fuel-concentration',
@@ -90,10 +157,25 @@ export const SOURCE_STUDY_CHARTS = [
     'as labelled in source',
     'reported count',
     bilingual('Reported ignitions by fuel concentration label', 'الإشعالات المسجلة بحسب تسمية تركيز الوقود'),
-    bilingual('What ignition counts were reported for each source concentration label and mesh polarity?', 'ما أعداد الإشعال المسجلة لكل تسمية تركيز وقطبية شبكة في المصدر؟'),
-    bilingual('Compare the observed day summaries by concentration label; colors separate mesh polarity.', 'قارن ملخصات الأيام المرصودة بحسب تسمية التركيز؛ ويفصل اللون قطبية الشبكة.'),
-    bilingual('Only 21 rows have a numeric ignition count. These are day summaries, not per-flame outcomes or a controlled concentration-only test.', 'يوجد عدد إشعال رقمي في 21 صفاً فقط. هذه ملخصات أيام وليست نتائج لكل لهب أو اختباراً مضبوطاً للتركيز وحده.'),
-    { xCategory: true, groupField: 'Mesh Polarity', rowIdField: 'Test Day', detailFields: ['Mesh Polarity', 'Fuel Bottle', 'Fuel Conc'], aggregateDuplicates: true },
+    bilingual(
+      'What ignition counts were reported for each source concentration label and mesh polarity?',
+      'ما أعداد الإشعال المسجلة لكل تسمية تركيز وقطبية شبكة في المصدر؟',
+    ),
+    bilingual(
+      'Compare the observed day summaries by concentration label; colors separate mesh polarity.',
+      'قارن ملخصات الأيام المرصودة بحسب تسمية التركيز؛ ويفصل اللون قطبية الشبكة.',
+    ),
+    bilingual(
+      'Only 21 rows have a numeric ignition count. These are day summaries, not per-flame outcomes or a controlled concentration-only test.',
+      'يوجد عدد إشعال رقمي في 21 صفاً فقط. هذه ملخصات أيام وليست نتائج لكل لهب أو اختباراً مضبوطاً للتركيز وحده.',
+    ),
+    {
+      xCategory: true,
+      groupField: 'Mesh Polarity',
+      rowIdField: 'Test Day',
+      detailFields: ['Mesh Polarity', 'Fuel Bottle', 'Fuel Conc'],
+      aggregateDuplicates: true,
+    },
   ),
   plot(
     'psi22-ignitions-test-day',
@@ -103,10 +185,24 @@ export const SOURCE_STUDY_CHARTS = [
     'source test-day label',
     'reported count',
     bilingual('Reported ignition counts across PSI-22 test days', 'أعداد الإشعال المسجلة عبر أيام اختبار PSI-22'),
-    bilingual('How do the daily ignition summaries vary across the PSI-22 source sequence?', 'كيف تختلف ملخصات الإشعال اليومية عبر تسلسل PSI-22 في المصدر؟'),
-    bilingual('Inspect reported day coverage and retain mesh polarity as a color group.', 'افحص تغطية الأيام المسجلة مع تمييز قطبية الشبكة بالألوان.'),
-    bilingual('These are daily summaries; fuel concentration, mesh polarity, and other conditions vary. They are not per-flame outcomes.', 'هذه ملخصات يومية؛ ويتغير تركيز الوقود وقطبية الشبكة وظروف أخرى. ليست نتائج لكل لهب.'),
-    { groupField: 'Mesh Polarity', rowIdField: 'Test Day', detailFields: ['Mesh Polarity', 'Fuel Bottle', 'Fuel Conc'], aggregateDuplicates: true },
+    bilingual(
+      'How do the daily ignition summaries vary across the PSI-22 source sequence?',
+      'كيف تختلف ملخصات الإشعال اليومية عبر تسلسل PSI-22 في المصدر؟',
+    ),
+    bilingual(
+      'Inspect reported day coverage and retain mesh polarity as a color group.',
+      'افحص تغطية الأيام المسجلة مع تمييز قطبية الشبكة بالألوان.',
+    ),
+    bilingual(
+      'These are daily summaries; fuel concentration, mesh polarity, and other conditions vary. They are not per-flame outcomes.',
+      'هذه ملخصات يومية؛ ويتغير تركيز الوقود وقطبية الشبكة وظروف أخرى. ليست نتائج لكل لهب.',
+    ),
+    {
+      groupField: 'Mesh Polarity',
+      rowIdField: 'Test Day',
+      detailFields: ['Mesh Polarity', 'Fuel Bottle', 'Fuel Conc'],
+      aggregateDuplicates: true,
+    },
   ),
   plot(
     'psi23-ignitions-test-day',
@@ -116,9 +212,18 @@ export const SOURCE_STUDY_CHARTS = [
     'source test-day label',
     'reported daily count',
     bilingual('Reported ignitions by PSI-23 test-day label', 'الإشعالات المسجلة بحسب تسمية يوم الاختبار PSI-23'),
-    bilingual('How do the reported ignition counts vary across the source test-day labels?', 'كيف تختلف أعداد الإشعال المسجلة عبر تسميات أيام الاختبار في المصدر؟'),
-    bilingual('Inspect the source-day sequence with atmosphere labels in each point detail.', 'استعرض تسلسل أيام المصدر مع تسمية الجو داخل تفاصيل كل نقطة.'),
-    bilingual('The asterisked fields and source notation are preserved. Test-day labels are not elapsed time, and the table does not report flame structure or extinction rate.', 'أُبقيت الحقول ذات النجمة وتدوين المصدر كما هي. تسميات يوم الاختبار ليست زمناً منقضياً، والجدول لا يسجل بنية اللهب أو معدل الانطفاء.'),
+    bilingual(
+      'How do the reported ignition counts vary across the source test-day labels?',
+      'كيف تختلف أعداد الإشعال المسجلة عبر تسميات أيام الاختبار في المصدر؟',
+    ),
+    bilingual(
+      'Inspect the source-day sequence with atmosphere labels in each point detail.',
+      'استعرض تسلسل أيام المصدر مع تسمية الجو داخل تفاصيل كل نقطة.',
+    ),
+    bilingual(
+      'The asterisked fields and source notation are preserved. Test-day labels are not elapsed time, and the table does not report flame structure or extinction rate.',
+      'أُبقيت الحقول ذات النجمة وتدوين المصدر كما هي. تسميات يوم الاختبار ليست زمناً منقضياً، والجدول لا يسجل بنية اللهب أو معدل الانطفاء.',
+    ),
     { rowIdField: 'Test Day*', detailFields: ['Atmosphere*', 'Fuel Bottle'], aggregateDuplicates: true },
   ),
   plot(
@@ -129,10 +234,24 @@ export const SOURCE_STUDY_CHARTS = [
     '% by volume',
     '% by volume',
     bilingual('Initial versus final oxygen readings', 'قراءات الأكسجين الابتدائية والنهائية'),
-    bilingual('Which source records show a change between the initial and final O₂ readings?', 'أي سجلات المصدر تظهر فرقاً بين قراءتي O₂ الابتدائية والنهائية؟'),
-    bilingual('The dashed 1:1 line marks equal readings; select a point to inspect its test and material.', 'يمثل الخط المتقطع 1:1 تساوي القراءتين؛ اختر نقطة لفحص الاختبار والمادة.'),
-    bilingual('This is a paired sensor-reading comparison, not a controlled oxygen-effect or flame-spread analysis. Missing final readings are omitted.', 'هذه مقارنة بين قراءتين للحساس في السجل نفسه، وليست تحليلاً مضبوطاً لأثر الأكسجين أو انتشار اللهب. تُستبعد القراءات النهائية المفقودة.'),
-    { rowIdField: 'Test #', detailFields: ['Date', 'Fuel Sample Material'], aggregateDuplicates: true, identityReference: true },
+    bilingual(
+      'Which source records show a change between the initial and final O₂ readings?',
+      'أي سجلات المصدر تظهر فرقاً بين قراءتي O₂ الابتدائية والنهائية؟',
+    ),
+    bilingual(
+      'The dashed 1:1 line marks equal readings; select a point to inspect its test and material.',
+      'يمثل الخط المتقطع 1:1 تساوي القراءتين؛ اختر نقطة لفحص الاختبار والمادة.',
+    ),
+    bilingual(
+      'This is a paired sensor-reading comparison, not a controlled oxygen-effect or flame-spread analysis. Missing final readings are omitted.',
+      'هذه مقارنة بين قراءتين للحساس في السجل نفسه، وليست تحليلاً مضبوطاً لأثر الأكسجين أو انتشار اللهب. تُستبعد القراءات النهائية المفقودة.',
+    ),
+    {
+      rowIdField: 'Test #',
+      detailFields: ['Date', 'Fuel Sample Material'],
+      aggregateDuplicates: true,
+      identityReference: true,
+    },
   ),
   plot(
     'psi25-o2-change',
@@ -142,9 +261,18 @@ export const SOURCE_STUDY_CHARTS = [
     '% by volume',
     'percentage points',
     bilingual('Within-record oxygen change', 'التغير في الأكسجين داخل سجل الاختبار'),
-    bilingual('How large and in which direction is the final-minus-initial O₂ change in each paired record?', 'ما مقدار واتجاه فرق O₂ النهائي ناقص الابتدائي في كل سجل مزدوج؟'),
-    bilingual('The zero line separates records with no net change from positive or negative changes; select a point to inspect both readings.', 'يفصل الصفر السجلات بلا تغير صافٍ عن التغير الموجب أو السالب؛ اختر نقطة لفحص القراءتين.'),
-    bilingual('The paired difference is descriptive for this test record. Conditions and material vary, and it does not establish a suppression effect.', 'الفرق المزدوج وصف لهذا السجل؛ تختلف الظروف والمادة ولا يثبت أثر الإخماد.'),
+    bilingual(
+      'How large and in which direction is the final-minus-initial O₂ change in each paired record?',
+      'ما مقدار واتجاه فرق O₂ النهائي ناقص الابتدائي في كل سجل مزدوج؟',
+    ),
+    bilingual(
+      'The zero line separates records with no net change from positive or negative changes; select a point to inspect both readings.',
+      'يفصل الصفر السجلات بلا تغير صافٍ عن التغير الموجب أو السالب؛ اختر نقطة لفحص القراءتين.',
+    ),
+    bilingual(
+      'The paired difference is descriptive for this test record. Conditions and material vary, and it does not establish a suppression effect.',
+      'الفرق المزدوج وصف لهذا السجل؛ تختلف الظروف والمادة ولا يثبت أثر الإخماد.',
+    ),
     {
       yDeltaFrom: 'Calibrated  initial O2 % by vol',
       zeroReference: true,
@@ -163,10 +291,24 @@ export const SOURCE_STUDY_CHARTS = [
     '% by volume',
     '% by volume',
     bilingual('Initial versus final carbon-dioxide readings', 'قراءات ثاني أكسيد الكربون الابتدائية والنهائية'),
-    bilingual('Which source records differ between initial and final CO₂ readings?', 'أي سجلات المصدر تختلف فيها قراءة CO₂ الابتدائية عن النهائية؟'),
-    bilingual('The dashed 1:1 line marks equal readings; select a point to inspect its test and material.', 'يمثل الخط المتقطع 1:1 تساوي القراءتين؛ اختر نقطة لفحص الاختبار والمادة.'),
-    bilingual('Values are paired source readings; material, ventilation display, and test conditions vary. Missing cells remain missing.', 'القيم قراءات مصدر مزدوجة؛ وتختلف المواد وعرض التهوية وظروف الاختبار. تبقى الخلايا المفقودة مفقودة.'),
-    { rowIdField: 'Test #', detailFields: ['Date', 'Fuel Sample Material'], aggregateDuplicates: true, identityReference: true },
+    bilingual(
+      'Which source records differ between initial and final CO₂ readings?',
+      'أي سجلات المصدر تختلف فيها قراءة CO₂ الابتدائية عن النهائية؟',
+    ),
+    bilingual(
+      'The dashed 1:1 line marks equal readings; select a point to inspect its test and material.',
+      'يمثل الخط المتقطع 1:1 تساوي القراءتين؛ اختر نقطة لفحص الاختبار والمادة.',
+    ),
+    bilingual(
+      'Values are paired source readings; material, ventilation display, and test conditions vary. Missing cells remain missing.',
+      'القيم قراءات مصدر مزدوجة؛ وتختلف المواد وعرض التهوية وظروف الاختبار. تبقى الخلايا المفقودة مفقودة.',
+    ),
+    {
+      rowIdField: 'Test #',
+      detailFields: ['Date', 'Fuel Sample Material'],
+      aggregateDuplicates: true,
+      identityReference: true,
+    },
   ),
   plot(
     'psi25-co2-change',
@@ -176,9 +318,18 @@ export const SOURCE_STUDY_CHARTS = [
     '% by volume',
     'percentage points',
     bilingual('Within-record carbon-dioxide change', 'التغير في ثاني أكسيد الكربون داخل سجل الاختبار'),
-    bilingual('What final-minus-initial CO₂ change is recorded for each paired observation?', 'ما فرق CO₂ النهائي ناقص الابتدائي المسجل لكل ملاحظة مزدوجة؟'),
-    bilingual('Inspect the signed paired change and read both original concentrations from a selected point.', 'افحص الفرق المزدوج بإشارته واقرأ التركيزين الأصليين عند اختيار النقطة.'),
-    bilingual('The table combines different material and test conditions. A paired change is not a causal material or ventilation effect.', 'يجمع الجدول مواد وظروف اختبار مختلفة؛ والفرق المزدوج لا يثبت أثراً سببياً للمادة أو التهوية.'),
+    bilingual(
+      'What final-minus-initial CO₂ change is recorded for each paired observation?',
+      'ما فرق CO₂ النهائي ناقص الابتدائي المسجل لكل ملاحظة مزدوجة؟',
+    ),
+    bilingual(
+      'Inspect the signed paired change and read both original concentrations from a selected point.',
+      'افحص الفرق المزدوج بإشارته واقرأ التركيزين الأصليين عند اختيار النقطة.',
+    ),
+    bilingual(
+      'The table combines different material and test conditions. A paired change is not a causal material or ventilation effect.',
+      'يجمع الجدول مواد وظروف اختبار مختلفة؛ والفرق المزدوج لا يثبت أثراً سببياً للمادة أو التهوية.',
+    ),
     {
       yDeltaFrom: 'Initial CO2 % by vol',
       zeroReference: true,
@@ -197,10 +348,24 @@ export const SOURCE_STUDY_CHARTS = [
     'ppm',
     'ppm',
     bilingual('Initial versus final carbon-monoxide readings', 'قراءات أول أكسيد الكربون الابتدائية والنهائية'),
-    bilingual('Which source records differ between initial and final CO readings?', 'أي سجلات المصدر تختلف فيها قراءة CO الابتدائية عن النهائية؟'),
-    bilingual('The dashed 1:1 line marks equal readings; negative values are retained as published.', 'يمثل الخط المتقطع 1:1 تساوي القراءتين؛ وتُحفظ القيم السالبة كما نُشرت.'),
-    bilingual('This describes paired readings across varied materials and conditions; it does not estimate a material effect. Missing cells remain missing.', 'هذا وصف لقراءات مزدوجة عبر مواد وظروف مختلفة؛ ولا يقدّر أثر المادة. تبقى الخلايا المفقودة مفقودة.'),
-    { rowIdField: 'Test #', detailFields: ['Date', 'Fuel Sample Material'], aggregateDuplicates: true, identityReference: true },
+    bilingual(
+      'Which source records differ between initial and final CO readings?',
+      'أي سجلات المصدر تختلف فيها قراءة CO الابتدائية عن النهائية؟',
+    ),
+    bilingual(
+      'The dashed 1:1 line marks equal readings; negative values are retained as published.',
+      'يمثل الخط المتقطع 1:1 تساوي القراءتين؛ وتُحفظ القيم السالبة كما نُشرت.',
+    ),
+    bilingual(
+      'This describes paired readings across varied materials and conditions; it does not estimate a material effect. Missing cells remain missing.',
+      'هذا وصف لقراءات مزدوجة عبر مواد وظروف مختلفة؛ ولا يقدّر أثر المادة. تبقى الخلايا المفقودة مفقودة.',
+    ),
+    {
+      rowIdField: 'Test #',
+      detailFields: ['Date', 'Fuel Sample Material'],
+      aggregateDuplicates: true,
+      identityReference: true,
+    },
   ),
   plot(
     'psi25-co-change',
@@ -210,9 +375,18 @@ export const SOURCE_STUDY_CHARTS = [
     'ppm',
     'ppm',
     bilingual('Within-record carbon-monoxide change', 'التغير في أول أكسيد الكربون داخل سجل الاختبار'),
-    bilingual('What final-minus-initial CO change is recorded for each paired observation?', 'ما فرق CO النهائي ناقص الابتدائي المسجل لكل ملاحظة مزدوجة؟'),
-    bilingual('Compare the signed change directly; selected-point details retain the raw source readings.', 'قارن مقدار التغير وإشارته مباشرة؛ وتحتفظ تفاصيل النقطة بقراءات المصدر.'),
-    bilingual('This describes paired sensor readings across different tests and materials; negative values stay as published and are not clipped.', 'هذا وصف لقراءات حساسات مزدوجة عبر اختبارات ومواد مختلفة؛ وتبقى القيم السالبة كما نُشرت ولا تُقص.'),
+    bilingual(
+      'What final-minus-initial CO change is recorded for each paired observation?',
+      'ما فرق CO النهائي ناقص الابتدائي المسجل لكل ملاحظة مزدوجة؟',
+    ),
+    bilingual(
+      'Compare the signed change directly; selected-point details retain the raw source readings.',
+      'قارن مقدار التغير وإشارته مباشرة؛ وتحتفظ تفاصيل النقطة بقراءات المصدر.',
+    ),
+    bilingual(
+      'This describes paired sensor readings across different tests and materials; negative values stay as published and are not clipped.',
+      'هذا وصف لقراءات حساسات مزدوجة عبر اختبارات ومواد مختلفة؛ وتبقى القيم السالبة كما نُشرت ولا تُقص.',
+    ),
     {
       yDeltaFrom: 'Initial CO (ppm)',
       zeroReference: true,
@@ -231,10 +405,24 @@ export const SOURCE_STUDY_CHARTS = [
     'source units not stated',
     'source units not stated',
     bilingual('Recorded oxygen and helium condition values', 'قيم ظروف الأكسجين والهيليوم المسجلة'),
-    bilingual('Which oxygen–helium value combinations appear in the PSI-39 condition records?', 'ما تراكيب قيم الأكسجين والهيليوم الظاهرة في سجلات ظروف PSI-39؟'),
-    bilingual('Colors separate nitrogen values; larger circles indicate more source rows with the same combination.', 'تفصل الألوان قيم النيتروجين؛ وتشير الدوائر الأكبر إلى صفوف مصدر أكثر بالقيم نفسها.'),
-    bilingual('The source table does not state units in these headers. This plots reported conditions, not combustion outcomes or a flammability limit.', 'لا يذكر جدول المصدر وحدات هذه الحقول. يعرض الرسم ظروفاً مسجلة لا نواتج احتراق أو حدود قابلية اشتعال.'),
-    { groupField: 'Nitrogen', rowIdField: 'Flex Number', detailFields: ['Flex Number', 'Nitrogen', 'Pressure', 'Fuel'], aggregateDuplicates: true },
+    bilingual(
+      'Which oxygen–helium value combinations appear in the PSI-39 condition records?',
+      'ما تراكيب قيم الأكسجين والهيليوم الظاهرة في سجلات ظروف PSI-39؟',
+    ),
+    bilingual(
+      'Colors separate nitrogen values; larger circles indicate more source rows with the same combination.',
+      'تفصل الألوان قيم النيتروجين؛ وتشير الدوائر الأكبر إلى صفوف مصدر أكثر بالقيم نفسها.',
+    ),
+    bilingual(
+      'The source table does not state units in these headers. This plots reported conditions, not combustion outcomes or a flammability limit.',
+      'لا يذكر جدول المصدر وحدات هذه الحقول. يعرض الرسم ظروفاً مسجلة لا نواتج احتراق أو حدود قابلية اشتعال.',
+    ),
+    {
+      groupField: 'Nitrogen',
+      rowIdField: 'Flex Number',
+      detailFields: ['Flex Number', 'Nitrogen', 'Pressure', 'Fuel'],
+      aggregateDuplicates: true,
+    },
   ),
   plot(
     'psi69-nitrogen-burning-rate',
@@ -244,10 +432,30 @@ export const SOURCE_STUDY_CHARTS = [
     'mole fraction',
     'mm²/s',
     bilingual('Recorded nitrogen fraction and droplet burning rate', 'نسبة النيتروجين المسجلة ومعدل احتراق القطرة'),
-    bilingual('How do recorded droplet burning-rate constants sit across the nitrogen fractions in FLEX tests?', 'كيف تتوزع ثوابت معدل احتراق القطرة عبر نسب النيتروجين في اختبارات FLEX؟'),
-    bilingual('Inspect measured conditions and outcomes by fuel; source points remain individual test records.', 'افحص الظروف والنتائج المقاسة بحسب الوقود؛ وتمثل النقاط سجلات اختبارات المصدر.'),
-    bilingual('Pressure, fuel, oxygen and other diluents also vary. This descriptive view cannot isolate nitrogen or establish causality.', 'يتغير الضغط والوقود والأكسجين والغازات المخففة الأخرى أيضاً؛ لذلك لا يعزل هذا العرض الوصفي أثر النيتروجين ولا يثبت السببية.'),
-    { groupField: 'Fuel', rowIdField: 'FLEX Test #', detailFields: ['Fuel', 'Ambient pressure; mmHg', 'O initial ambient composition; mole fraction', 'CO initial ambient composition; mole fraction', 'He initial ambient composition; mole fraction'], aggregateDuplicates: true },
+    bilingual(
+      'How do recorded droplet burning-rate constants sit across the nitrogen fractions in FLEX tests?',
+      'كيف تتوزع ثوابت معدل احتراق القطرة عبر نسب النيتروجين في اختبارات FLEX؟',
+    ),
+    bilingual(
+      'Inspect measured conditions and outcomes by fuel; source points remain individual test records.',
+      'افحص الظروف والنتائج المقاسة بحسب الوقود؛ وتمثل النقاط سجلات اختبارات المصدر.',
+    ),
+    bilingual(
+      'Pressure, fuel, oxygen and other diluents also vary. This descriptive view cannot isolate nitrogen or establish causality.',
+      'يتغير الضغط والوقود والأكسجين والغازات المخففة الأخرى أيضاً؛ لذلك لا يعزل هذا العرض الوصفي أثر النيتروجين ولا يثبت السببية.',
+    ),
+    {
+      groupField: 'Fuel',
+      rowIdField: 'FLEX Test #',
+      detailFields: [
+        'Fuel',
+        'Ambient pressure; mmHg',
+        'O initial ambient composition; mole fraction',
+        'CO initial ambient composition; mole fraction',
+        'He initial ambient composition; mole fraction',
+      ],
+      aggregateDuplicates: true,
+    },
   ),
   plot(
     'psi69-carbon-monoxide-burning-rate',
@@ -256,11 +464,34 @@ export const SOURCE_STUDY_CHARTS = [
     'Burning rate; mm',
     'mole fraction',
     'mm²/s',
-    bilingual('Recorded carbon-monoxide fraction and droplet burning rate', 'نسبة أول أكسيد الكربون المسجلة ومعدل احتراق القطرة'),
-    bilingual('What burning-rate constants are recorded across tests with different CO fractions?', 'ما ثوابت معدل الاحتراق المسجلة عبر اختبارات تختلف فيها نسبة CO؟'),
-    bilingual('Review the recorded diluent conditions alongside each measured test result.', 'راجع ظروف الغاز المخفف المسجلة إلى جانب نتيجة كل اختبار مقاسة.'),
-    bilingual('Fuel, pressure, oxygen and helium vary across tests. The pattern is descriptive and does not establish a CO effect.', 'يختلف الوقود والضغط والأكسجين والهيليوم بين الاختبارات؛ والنمط وصفي ولا يثبت أثر CO.'),
-    { groupField: 'Fuel', rowIdField: 'FLEX Test #', detailFields: ['Fuel', 'Ambient pressure; mmHg', 'O initial ambient composition; mole fraction', 'N initial ambient composition; mole fraction', 'He initial ambient composition; mole fraction'], aggregateDuplicates: true },
+    bilingual(
+      'Recorded carbon-monoxide fraction and droplet burning rate',
+      'نسبة أول أكسيد الكربون المسجلة ومعدل احتراق القطرة',
+    ),
+    bilingual(
+      'What burning-rate constants are recorded across tests with different CO fractions?',
+      'ما ثوابت معدل الاحتراق المسجلة عبر اختبارات تختلف فيها نسبة CO؟',
+    ),
+    bilingual(
+      'Review the recorded diluent conditions alongside each measured test result.',
+      'راجع ظروف الغاز المخفف المسجلة إلى جانب نتيجة كل اختبار مقاسة.',
+    ),
+    bilingual(
+      'Fuel, pressure, oxygen and helium vary across tests. The pattern is descriptive and does not establish a CO effect.',
+      'يختلف الوقود والضغط والأكسجين والهيليوم بين الاختبارات؛ والنمط وصفي ولا يثبت أثر CO.',
+    ),
+    {
+      groupField: 'Fuel',
+      rowIdField: 'FLEX Test #',
+      detailFields: [
+        'Fuel',
+        'Ambient pressure; mmHg',
+        'O initial ambient composition; mole fraction',
+        'N initial ambient composition; mole fraction',
+        'He initial ambient composition; mole fraction',
+      ],
+      aggregateDuplicates: true,
+    },
   ),
   plot(
     'psi69-helium-burning-rate',
@@ -270,10 +501,30 @@ export const SOURCE_STUDY_CHARTS = [
     'mole fraction',
     'mm²/s',
     bilingual('Recorded helium fraction and droplet burning rate', 'نسبة الهيليوم المسجلة ومعدل احتراق القطرة'),
-    bilingual('How do recorded burning-rate constants distribute across tests with varying helium fraction?', 'كيف تتوزع ثوابت معدل الاحتراق المسجلة عبر اختبارات تختلف فيها نسبة الهيليوم؟'),
-    bilingual('Inspect test-level values by fuel, with other reported composition and pressure in the point details.', 'افحص القيم على مستوى الاختبار بحسب الوقود، مع بقية تركيب الجو والضغط في التفاصيل.'),
-    bilingual('Oxygen, pressure, fuel, nitrogen and CO also vary. This does not isolate helium or define a safe limit.', 'يتغير الأكسجين والضغط والوقود والنيتروجين وCO أيضاً؛ ولا يعزل هذا أثر الهيليوم ولا يحدد حداً آمناً.'),
-    { groupField: 'Fuel', rowIdField: 'FLEX Test #', detailFields: ['Fuel', 'Ambient pressure; mmHg', 'O initial ambient composition; mole fraction', 'N initial ambient composition; mole fraction', 'CO initial ambient composition; mole fraction'], aggregateDuplicates: true },
+    bilingual(
+      'How do recorded burning-rate constants distribute across tests with varying helium fraction?',
+      'كيف تتوزع ثوابت معدل الاحتراق المسجلة عبر اختبارات تختلف فيها نسبة الهيليوم؟',
+    ),
+    bilingual(
+      'Inspect test-level values by fuel, with other reported composition and pressure in the point details.',
+      'افحص القيم على مستوى الاختبار بحسب الوقود، مع بقية تركيب الجو والضغط في التفاصيل.',
+    ),
+    bilingual(
+      'Oxygen, pressure, fuel, nitrogen and CO also vary. This does not isolate helium or define a safe limit.',
+      'يتغير الأكسجين والضغط والوقود والنيتروجين وCO أيضاً؛ ولا يعزل هذا أثر الهيليوم ولا يحدد حداً آمناً.',
+    ),
+    {
+      groupField: 'Fuel',
+      rowIdField: 'FLEX Test #',
+      detailFields: [
+        'Fuel',
+        'Ambient pressure; mmHg',
+        'O initial ambient composition; mole fraction',
+        'N initial ambient composition; mole fraction',
+        'CO initial ambient composition; mole fraction',
+      ],
+      aggregateDuplicates: true,
+    },
   ),
   plot(
     'psi98-sample-burn-time',
@@ -283,10 +534,24 @@ export const SOURCE_STUDY_CHARTS = [
     'source sample label',
     's',
     bilingual('Burn time for PSI-98 material-fire samples', 'زمن الاحتراق لعينات حرائق المواد PSI-98'),
-    bilingual('What burn times are listed for the S-number material-fire samples?', 'ما أزمنة الاحتراق المدرجة لعينات حرائق المواد ذات الرمز S؟'),
-    bilingual('Each point is one S# sample; flow-visualisation references are excluded.', 'كل نقطة عينة واحدة برمز S؛ واستُبعدت مراجع تصوير الجريان.'),
-    bilingual('Only two material-fire samples are present. Their difference does not establish a reliable material or flow-direction effect.', 'توجد عينتا حريق مواد فقط. ولا يثبت اختلافهما أثراً موثوقاً للمادة أو اتجاه الجريان.'),
-    { xCategory: true, rowIdField: 'Sample Number', detailFields: ['Material', 'Air Flow (cm/s)', 'Percent O2', 'Flow Direction'], rowFilter: 'sample-only' },
+    bilingual(
+      'What burn times are listed for the S-number material-fire samples?',
+      'ما أزمنة الاحتراق المدرجة لعينات حرائق المواد ذات الرمز S؟',
+    ),
+    bilingual(
+      'Each point is one S# sample; flow-visualisation references are excluded.',
+      'كل نقطة عينة واحدة برمز S؛ واستُبعدت مراجع تصوير الجريان.',
+    ),
+    bilingual(
+      'Only two material-fire samples are present. Their difference does not establish a reliable material or flow-direction effect.',
+      'توجد عينتا حريق مواد فقط. ولا يثبت اختلافهما أثراً موثوقاً للمادة أو اتجاه الجريان.',
+    ),
+    {
+      xCategory: true,
+      rowIdField: 'Sample Number',
+      detailFields: ['Material', 'Air Flow (cm/s)', 'Percent O2', 'Flow Direction'],
+      rowFilter: 'sample-only',
+    },
   ),
   plot(
     'psi101-inlet-velocity-rt-r0',
@@ -296,10 +561,24 @@ export const SOURCE_STUDY_CHARTS = [
     'cm/s',
     'ratio as published',
     bilingual('Inlet velocity and reported Rt/R0', 'سرعة الدخول ونسبة Rt/R0 المنشورة'),
-    bilingual('How are source inlet-velocity settings distributed alongside Rt/R0 readings?', 'كيف تتوزع إعدادات سرعة الدخول المسجلة إلى جانب قراءات Rt/R0؟'),
-    bilingual('Select a point to inspect sample type and source description; repeated records are combined into larger bubbles.', 'اختر نقطة لفحص نوع العينة ووصف المصدر؛ وتُجمع السجلات المتكررة في دوائر أكبر.'),
-    bilingual('This is smoke/aerosol measurement evidence, not flame spread. Test identifiers repeat, so points are source records and not independent burns.', 'هذه أدلة قياس دخان/هباء وليست انتشار لهب. تتكرر معرّفات الاختبار، لذا تمثل النقاط سجلات مصدر لا حرائق مستقلة.'),
-    { groupField: 'Sample Type', rowIdField: 'SAME Test #', detailFields: ['Sample Type', 'Description'], aggregateDuplicates: true },
+    bilingual(
+      'How are source inlet-velocity settings distributed alongside Rt/R0 readings?',
+      'كيف تتوزع إعدادات سرعة الدخول المسجلة إلى جانب قراءات Rt/R0؟',
+    ),
+    bilingual(
+      'Select a point to inspect sample type and source description; repeated records are combined into larger bubbles.',
+      'اختر نقطة لفحص نوع العينة ووصف المصدر؛ وتُجمع السجلات المتكررة في دوائر أكبر.',
+    ),
+    bilingual(
+      'This is smoke/aerosol measurement evidence, not flame spread. Test identifiers repeat, so points are source records and not independent burns.',
+      'هذه أدلة قياس دخان/هباء وليست انتشار لهب. تتكرر معرّفات الاختبار، لذا تمثل النقاط سجلات مصدر لا حرائق مستقلة.',
+    ),
+    {
+      groupField: 'Sample Type',
+      rowIdField: 'SAME Test #',
+      detailFields: ['Sample Type', 'Description'],
+      aggregateDuplicates: true,
+    },
   ),
   plot(
     'psi101-aging-rt-r0',
@@ -309,10 +588,24 @@ export const SOURCE_STUDY_CHARTS = [
     's',
     'ratio as published',
     bilingual('Net aging time and reported Rt/R0', 'زمن التقادم الصافي ونسبة Rt/R0 المنشورة'),
-    bilingual('How are reported aerosol aging times distributed alongside Rt/R0 readings?', 'كيف تتوزع أزمنة تقادم الهباء المسجلة إلى جانب قراءات Rt/R0؟'),
-    bilingual('The bubble size reveals repeated source-record values; inspect descriptions before interpreting a pattern.', 'يكشف حجم الدائرة تكرار قيم سجلات المصدر؛ افحص الأوصاف قبل تفسير أي نمط.'),
-    bilingual('Repeated test identifiers and incomplete fields mean rows are not assumed to be independent samples.', 'تكرار معرّفات الاختبار ونقص الحقول يعني أننا لا نفترض استقلال الصفوف كعينات.'),
-    { groupField: 'Sample Type', rowIdField: 'SAME Test #', detailFields: ['Sample Type', 'Description'], aggregateDuplicates: true },
+    bilingual(
+      'How are reported aerosol aging times distributed alongside Rt/R0 readings?',
+      'كيف تتوزع أزمنة تقادم الهباء المسجلة إلى جانب قراءات Rt/R0؟',
+    ),
+    bilingual(
+      'The bubble size reveals repeated source-record values; inspect descriptions before interpreting a pattern.',
+      'يكشف حجم الدائرة تكرار قيم سجلات المصدر؛ افحص الأوصاف قبل تفسير أي نمط.',
+    ),
+    bilingual(
+      'Repeated test identifiers and incomplete fields mean rows are not assumed to be independent samples.',
+      'تكرار معرّفات الاختبار ونقص الحقول يعني أننا لا نفترض استقلال الصفوف كعينات.',
+    ),
+    {
+      groupField: 'Sample Type',
+      rowIdField: 'SAME Test #',
+      detailFields: ['Sample Type', 'Description'],
+      aggregateDuplicates: true,
+    },
   ),
   plot(
     'psi101-duration-rt-r0',
@@ -322,10 +615,24 @@ export const SOURCE_STUDY_CHARTS = [
     's',
     'ratio as published',
     bilingual('Reported test duration and Rt/R0', 'مدة الاختبار المسجلة ونسبة Rt/R0'),
-    bilingual('How do the listed measurement durations sit alongside the reported aerosol size ratios?', 'كيف تقع مدد القياس المدرجة مقارنة بنسب أحجام الهباء المسجلة؟'),
-    bilingual('Inspect sample-level records by sample type and retain the source description.', 'افحص سجلات العينات بحسب نوعها مع الإبقاء على وصف المصدر.'),
-    bilingual('Only rows with both numeric fields are shown. Repeated test IDs and changing samples mean points are not assumed independent.', 'تُعرض الصفوف التي تحوي الحقلين الرقميين فقط. تتكرر معرّفات الاختبار وتتغير العينات، لذلك لا نفترض استقلال النقاط.'),
-    { groupField: 'Sample Type', rowIdField: 'SAME Test #', detailFields: ['Sample Type', 'Description', 'Date'], aggregateDuplicates: true },
+    bilingual(
+      'How do the listed measurement durations sit alongside the reported aerosol size ratios?',
+      'كيف تقع مدد القياس المدرجة مقارنة بنسب أحجام الهباء المسجلة؟',
+    ),
+    bilingual(
+      'Inspect sample-level records by sample type and retain the source description.',
+      'افحص سجلات العينات بحسب نوعها مع الإبقاء على وصف المصدر.',
+    ),
+    bilingual(
+      'Only rows with both numeric fields are shown. Repeated test IDs and changing samples mean points are not assumed independent.',
+      'تُعرض الصفوف التي تحوي الحقلين الرقميين فقط. تتكرر معرّفات الاختبار وتتغير العينات، لذلك لا نفترض استقلال النقاط.',
+    ),
+    {
+      groupField: 'Sample Type',
+      rowIdField: 'SAME Test #',
+      detailFields: ['Sample Type', 'Description', 'Date'],
+      aggregateDuplicates: true,
+    },
   ),
   plot(
     'psi101-primary-aging-rt-r0',
@@ -335,10 +642,24 @@ export const SOURCE_STUDY_CHARTS = [
     's',
     'ratio as published',
     bilingual('Primary aerosol aging time and Rt/R0', 'زمن تقادم الهباء الأولي ونسبة Rt/R0'),
-    bilingual('What Rt/R0 values accompany the reported primary aging-time settings?', 'ما قيم Rt/R0 المصاحبة لإعدادات زمن التقادم الأولي المسجلة؟'),
-    bilingual('Compare the instrument-recorded aging-time fields with the same-row ratio and sample type.', 'قارن حقول زمن التقادم المسجلة مع النسبة ونوع العينة في الصف نفسه.'),
-    bilingual('The dataset has incomplete fields and repeated test IDs; this is descriptive, not an isolated aging-time effect.', 'تحتوي البيانات حقولاً ناقصة ومعرّفات اختبار متكررة؛ وهذا وصف وليس أثراً معزولاً لزمن التقادم.'),
-    { groupField: 'Sample Type', rowIdField: 'SAME Test #', detailFields: ['Sample Type', 'Description', 'Primary mixing time (sec)', 'Net aging time (sec)'], aggregateDuplicates: true },
+    bilingual(
+      'What Rt/R0 values accompany the reported primary aging-time settings?',
+      'ما قيم Rt/R0 المصاحبة لإعدادات زمن التقادم الأولي المسجلة؟',
+    ),
+    bilingual(
+      'Compare the instrument-recorded aging-time fields with the same-row ratio and sample type.',
+      'قارن حقول زمن التقادم المسجلة مع النسبة ونوع العينة في الصف نفسه.',
+    ),
+    bilingual(
+      'The dataset has incomplete fields and repeated test IDs; this is descriptive, not an isolated aging-time effect.',
+      'تحتوي البيانات حقولاً ناقصة ومعرّفات اختبار متكررة؛ وهذا وصف وليس أثراً معزولاً لزمن التقادم.',
+    ),
+    {
+      groupField: 'Sample Type',
+      rowIdField: 'SAME Test #',
+      detailFields: ['Sample Type', 'Description', 'Primary mixing time (sec)', 'Net aging time (sec)'],
+      aggregateDuplicates: true,
+    },
   ),
   plot(
     'psi101-primary-mixing-rt-r0',
@@ -348,10 +669,24 @@ export const SOURCE_STUDY_CHARTS = [
     's',
     'ratio as published',
     bilingual('Primary aerosol mixing time and Rt/R0', 'زمن خلط الهباء الأولي ونسبة Rt/R0'),
-    bilingual('What Rt/R0 values accompany the recorded primary mixing times?', 'ما قيم Rt/R0 المصاحبة لأزمنة الخلط الأولية المسجلة؟'),
-    bilingual('Inspect the mixing-time field separately from inlet velocity and net aging time.', 'افحص حقل زمن الخلط منفصلاً عن سرعة الدخول وزمن التقادم الصافي.'),
-    bilingual('Fields are incomplete and test identifiers repeat. The displayed association is not a causal or independent-sample estimate.', 'الحقول ناقصة ومعرّفات الاختبار تتكرر؛ والارتباط الظاهر ليس تقديراً سببياً أو لعينات مستقلة.'),
-    { groupField: 'Sample Type', rowIdField: 'SAME Test #', detailFields: ['Sample Type', 'Description', 'Primary aging time (sec)', 'Net aging time (sec)'], aggregateDuplicates: true },
+    bilingual(
+      'What Rt/R0 values accompany the recorded primary mixing times?',
+      'ما قيم Rt/R0 المصاحبة لأزمنة الخلط الأولية المسجلة؟',
+    ),
+    bilingual(
+      'Inspect the mixing-time field separately from inlet velocity and net aging time.',
+      'افحص حقل زمن الخلط منفصلاً عن سرعة الدخول وزمن التقادم الصافي.',
+    ),
+    bilingual(
+      'Fields are incomplete and test identifiers repeat. The displayed association is not a causal or independent-sample estimate.',
+      'الحقول ناقصة ومعرّفات الاختبار تتكرر؛ والارتباط الظاهر ليس تقديراً سببياً أو لعينات مستقلة.',
+    ),
+    {
+      groupField: 'Sample Type',
+      rowIdField: 'SAME Test #',
+      detailFields: ['Sample Type', 'Description', 'Primary aging time (sec)', 'Net aging time (sec)'],
+      aggregateDuplicates: true,
+    },
   ),
   plot(
     'psi102-airflow-weight-loss',
@@ -361,9 +696,18 @@ export const SOURCE_STUDY_CHARTS = [
     'cm/s',
     'mg/min',
     bilingual('Weight-loss rate by source airflow setting', 'معدل فقدان الوزن بحسب إعداد تدفق الهواء في المصدر'),
-    bilingual('What weight-loss values are reported at the listed airflow settings?', 'ما قيم فقدان الوزن المسجلة عند إعدادات تدفق الهواء المدرجة؟'),
-    bilingual('Inspect the four numeric Teflon entries and their sample descriptions.', 'افحص إدخالات التفلون الرقمية الأربعة وأوصاف عيناتها.'),
-    bilingual('n=4, with differing aging conditions. This is not a flame-spread rate and cannot establish a general airflow effect.', 'عددها 4 مع اختلاف ظروف التقادم. هذا ليس معدل انتشار لهب ولا يثبت أثراً عاماً لتدفق الهواء.'),
+    bilingual(
+      'What weight-loss values are reported at the listed airflow settings?',
+      'ما قيم فقدان الوزن المسجلة عند إعدادات تدفق الهواء المدرجة؟',
+    ),
+    bilingual(
+      'Inspect the four numeric Teflon entries and their sample descriptions.',
+      'افحص إدخالات التفلون الرقمية الأربعة وأوصاف عيناتها.',
+    ),
+    bilingual(
+      'n=4, with differing aging conditions. This is not a flame-spread rate and cannot establish a general airflow effect.',
+      'عددها 4 مع اختلاف ظروف التقادم. هذا ليس معدل انتشار لهب ولا يثبت أثراً عاماً لتدفق الهواء.',
+    ),
     { rowIdField: 'Sample #', detailFields: ['Sample Material', 'Aging Duration (minutes)'] },
   ),
   plot(
@@ -374,9 +718,15 @@ export const SOURCE_STUDY_CHARTS = [
     'min',
     'mg/min',
     bilingual('Weight-loss rate by aerosol aging duration', 'معدل فقدان الوزن بحسب مدة تقادم الهباء'),
-    bilingual('How do the four listed weight-loss readings sit across their source aging durations?', 'كيف تقع قراءات فقدان الوزن الأربع عبر مدد التقادم المسجلة؟'),
+    bilingual(
+      'How do the four listed weight-loss readings sit across their source aging durations?',
+      'كيف تقع قراءات فقدان الوزن الأربع عبر مدد التقادم المسجلة؟',
+    ),
     bilingual('Select a point for sample material and airflow.', 'اختر نقطة لرؤية مادة العينة وتدفق الهواء.'),
-    bilingual('Only four numeric entries are available and other settings vary; no causal trend is inferred.', 'لا تتوفر إلا أربعة إدخالات رقمية وتختلف إعدادات أخرى؛ ولا نستنتج اتجاهاً سببياً.'),
+    bilingual(
+      'Only four numeric entries are available and other settings vary; no causal trend is inferred.',
+      'لا تتوفر إلا أربعة إدخالات رقمية وتختلف إعدادات أخرى؛ ولا نستنتج اتجاهاً سببياً.',
+    ),
     { rowIdField: 'Sample #', detailFields: ['Sample Material', 'Air Flow (cm/s)'] },
   ),
   plot(
@@ -387,10 +737,24 @@ export const SOURCE_STUDY_CHARTS = [
     'cm/s',
     'mg/s',
     bilingual('Recorded air and fuel operating rates', 'معدلات الهواء والوقود التشغيلية المسجلة'),
-    bilingual('What air-rate and fuel-rate combinations occur in the SPICE source log?', 'ما تراكيب معدلي الهواء والوقود في سجل SPICE المصدري؟'),
-    bilingual('Colors distinguish fuel labels; bubble size shows repeated source-record combinations.', 'تميز الألوان تسميات الوقود؛ ويبين حجم الدائرة تكرار تراكيب سجلات المصدر.'),
-    bilingual('The 469 rows repeat event times and operating conditions; they are not 469 independent fires and do not prove a causal relation.', 'تكرر الصفوف الـ469 أوقات الأحداث وظروف التشغيل؛ وليست 469 حريقاً مستقلاً ولا تثبت علاقة سببية.'),
-    { groupField: 'Fuel', rowIdField: 'GMT ignition', detailFields: ['GMT date', 'Fuel', 'Nozzle (mm)'], aggregateDuplicates: true },
+    bilingual(
+      'What air-rate and fuel-rate combinations occur in the SPICE source log?',
+      'ما تراكيب معدلي الهواء والوقود في سجل SPICE المصدري؟',
+    ),
+    bilingual(
+      'Colors distinguish fuel labels; bubble size shows repeated source-record combinations.',
+      'تميز الألوان تسميات الوقود؛ ويبين حجم الدائرة تكرار تراكيب سجلات المصدر.',
+    ),
+    bilingual(
+      'The 469 rows repeat event times and operating conditions; they are not 469 independent fires and do not prove a causal relation.',
+      'تكرر الصفوف الـ469 أوقات الأحداث وظروف التشغيل؛ وليست 469 حريقاً مستقلاً ولا تثبت علاقة سببية.',
+    ),
+    {
+      groupField: 'Fuel',
+      rowIdField: 'GMT ignition',
+      detailFields: ['GMT date', 'Fuel', 'Nozzle (mm)'],
+      aggregateDuplicates: true,
+    },
   ),
   plot(
     'psi107-nozzle-fuel-rate',
@@ -400,10 +764,24 @@ export const SOURCE_STUDY_CHARTS = [
     'mm',
     'mg/s',
     bilingual('Recorded nozzle size and fuel rate', 'حجم الفوهة ومعدل الوقود المسجلان'),
-    bilingual('Which nozzle-size and fuel-rate combinations are recorded for each fuel?', 'ما تراكيب حجم الفوهة ومعدل الوقود المسجلة لكل وقود؟'),
-    bilingual('Inspect the source operating-condition records; bubble size reveals repeated combinations.', 'افحص سجلات ظروف التشغيل المصدرية؛ ويكشف حجم الدائرة التراكيب المتكررة.'),
-    bilingual('The rows are repeated SPICE log entries, not independent fire trials. Nozzle and fuel-rate association is descriptive only.', 'الصفوف إدخالات متكررة في سجل SPICE وليست تجارب حريق مستقلة. الارتباط بين الفوهة ومعدل الوقود وصفي فقط.'),
-    { groupField: 'Fuel', rowIdField: 'GMT ignition', detailFields: ['GMT date', 'Fuel', 'Air Rate (cm/s)'], aggregateDuplicates: true },
+    bilingual(
+      'Which nozzle-size and fuel-rate combinations are recorded for each fuel?',
+      'ما تراكيب حجم الفوهة ومعدل الوقود المسجلة لكل وقود؟',
+    ),
+    bilingual(
+      'Inspect the source operating-condition records; bubble size reveals repeated combinations.',
+      'افحص سجلات ظروف التشغيل المصدرية؛ ويكشف حجم الدائرة التراكيب المتكررة.',
+    ),
+    bilingual(
+      'The rows are repeated SPICE log entries, not independent fire trials. Nozzle and fuel-rate association is descriptive only.',
+      'الصفوف إدخالات متكررة في سجل SPICE وليست تجارب حريق مستقلة. الارتباط بين الفوهة ومعدل الوقود وصفي فقط.',
+    ),
+    {
+      groupField: 'Fuel',
+      rowIdField: 'GMT ignition',
+      detailFields: ['GMT date', 'Fuel', 'Air Rate (cm/s)'],
+      aggregateDuplicates: true,
+    },
   ),
   plot(
     'psi107-volumetric-mass-fuel-rate',
@@ -413,21 +791,50 @@ export const SOURCE_STUDY_CHARTS = [
     'sccm',
     'mg/s',
     bilingual('Volumetric and mass fuel-rate records', 'معدلات الوقود الحجمية والكتلية المسجلة'),
-    bilingual('How do source volumetric fuel rates correspond to the reported mass rates for each fuel?', 'كيف تقابل معدلات الوقود الحجمية في المصدر معدلات الكتلة المسجلة لكل وقود؟'),
-    bilingual('Inspect the reported conversion relationship, with fuel identity shown by color.', 'افحص علاقة التحويل المسجلة مع تمييز نوع الوقود باللون.'),
-    bilingual('These are repeated SPICE log conditions, not independent flame trials. This checks paired rate records and does not establish combustion performance.', 'هذه ظروف متكررة من سجل SPICE وليست تجارب لهب مستقلة. يقارن الرسم معدلي التدفق في السجل ولا يثبت أداء الاحتراق.'),
-    { groupField: 'Fuel', rowIdField: 'GMT ignition', detailFields: ['GMT date', 'Fuel', 'Nozzle (mm)', 'HC Fuel Rate (mg/s)'], aggregateDuplicates: true },
+    bilingual(
+      'How do source volumetric fuel rates correspond to the reported mass rates for each fuel?',
+      'كيف تقابل معدلات الوقود الحجمية في المصدر معدلات الكتلة المسجلة لكل وقود؟',
+    ),
+    bilingual(
+      'Inspect the reported conversion relationship, with fuel identity shown by color.',
+      'افحص علاقة التحويل المسجلة مع تمييز نوع الوقود باللون.',
+    ),
+    bilingual(
+      'These are repeated SPICE log conditions, not independent flame trials. This checks paired rate records and does not establish combustion performance.',
+      'هذه ظروف متكررة من سجل SPICE وليست تجارب لهب مستقلة. يقارن الرسم معدلي التدفق في السجل ولا يثبت أداء الاحتراق.',
+    ),
+    {
+      groupField: 'Fuel',
+      rowIdField: 'GMT ignition',
+      detailFields: ['GMT date', 'Fuel', 'Nozzle (mm)', 'HC Fuel Rate (mg/s)'],
+      aggregateDuplicates: true,
+    },
   ),
 ];
 
 export const SOURCE_STUDY_NO_PLOT_REASON = {
-  'PSI-26': bilingual('The bundled table is a material/sample inventory with no numeric combustion outcome.', 'الجدول المرفق جرد للمواد والعينات ولا يحتوي نتيجة احتراق رقمية.'),
-  'PSI-47': bilingual('The bundled table contains two dust/aerosol sampling-session descriptions and no numeric combustion outcome.', 'الجدول المرفق يصف جلستي أخذ عينات غبار/هباء ولا يحتوي نتيجة احتراق رقمية.'),
-  'PSI-68': bilingual('The table contains test-envelope ranges and alternatives, not individual numeric test observations; parsing those strings as points would invent data.', 'يحتوي الجدول نطاقات وظروف اختبار بديلة لا قياسات رقمية لاختبارات منفردة؛ وتحويل تلك النصوص إلى نقاط سيختلق بيانات.'),
-  'PSI-99': bilingual('The bundled table mixes labels and text values. Its microgravity field is named “?-g”, so a gravity classification or numeric comparison is not safe.', 'يخلط الجدول المرفق بين تسميات وقيم نصية. وحقل الجاذبية الصغرى اسمه «?-g»، لذلك لا يصح تصنيف الجاذبية أو إجراء مقارنة رقمية.'),
-  'PSI-100': bilingual('The two rows describe sample conditions and camera identifiers; no measured flame-spread outcome is present.', 'يصف الصفان ظروف العينات ومعرّفات الكاميرات؛ ولا توجد نتيجة مقاسة لانتشار اللهب.'),
+  'PSI-26': bilingual(
+    'The bundled table is a material/sample inventory with no numeric combustion outcome.',
+    'الجدول المرفق جرد للمواد والعينات ولا يحتوي نتيجة احتراق رقمية.',
+  ),
+  'PSI-47': bilingual(
+    'The bundled table contains two dust/aerosol sampling-session descriptions and no numeric combustion outcome.',
+    'الجدول المرفق يصف جلستي أخذ عينات غبار/هباء ولا يحتوي نتيجة احتراق رقمية.',
+  ),
+  'PSI-68': bilingual(
+    'The table contains test-envelope ranges and alternatives, not individual numeric test observations; parsing those strings as points would invent data.',
+    'يحتوي الجدول نطاقات وظروف اختبار بديلة لا قياسات رقمية لاختبارات منفردة؛ وتحويل تلك النصوص إلى نقاط سيختلق بيانات.',
+  ),
+  'PSI-99': bilingual(
+    'The bundled table mixes labels and text values. Its microgravity field is named “?-g”, so a gravity classification or numeric comparison is not safe.',
+    'يخلط الجدول المرفق بين تسميات وقيم نصية. وحقل الجاذبية الصغرى اسمه «?-g»، لذلك لا يصح تصنيف الجاذبية أو إجراء مقارنة رقمية.',
+  ),
+  'PSI-100': bilingual(
+    'The two rows describe sample conditions and camera identifiers; no measured flame-spread outcome is present.',
+    'يصف الصفان ظروف العينات ومعرّفات الكاميرات؛ ولا توجد نتيجة مقاسة لانتشار اللهب.',
+  ),
 };
 
 export function sourceChartsForStudy(studyId) {
-  return SOURCE_STUDY_CHARTS.filter(chart => chart.studyId === studyId);
+  return SOURCE_STUDY_CHARTS.filter((chart) => chart.studyId === studyId);
 }

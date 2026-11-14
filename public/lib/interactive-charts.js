@@ -62,12 +62,15 @@ export function zoomChartView(current, factor, anchorX, anchorY, original) {
   const height = original.height * scale;
   const rx = (anchorX - current.x) / current.width;
   const ry = (anchorY - current.y) / current.height;
-  return clampChartView({
-    x: anchorX - width * rx,
-    y: anchorY - height * ry,
-    width,
-    height,
-  }, original);
+  return clampChartView(
+    {
+      x: anchorX - width * rx,
+      y: anchorY - height * ry,
+      width,
+      height,
+    },
+    original,
+  );
 }
 
 export function panChartView(current, deltaX, deltaY, original) {
@@ -210,8 +213,12 @@ export function scientificSourceScatter({
     yMin: zeroReference ? Math.min(0, yDataMin - yPad) : yDataMin - yPad,
     yMax: zeroReference ? Math.max(0, yDataMax + yPad) : yDataMax + yPad,
   };
-  const sx = (value) => plot.left + ((value - domain.xMin) / (domain.xMax - domain.xMin)) * (base.width - plot.left - plot.right);
-  const sy = (value) => base.height - plot.bottom - ((value - domain.yMin) / (domain.yMax - domain.yMin || 1)) * (base.height - plot.top - plot.bottom);
+  const sx = (value) =>
+    plot.left + ((value - domain.xMin) / (domain.xMax - domain.xMin)) * (base.width - plot.left - plot.right);
+  const sy = (value) =>
+    base.height -
+    plot.bottom -
+    ((value - domain.yMin) / (domain.yMax - domain.yMin || 1)) * (base.height - plot.top - plot.bottom);
   const groups = [...new Set(points.map((point) => point.group).filter(Boolean))];
   const colors = ['#1688be', '#d59a3d', '#39a77e', '#7d73d3', '#d36d7c', '#5077a8'];
   const groupColor = new Map(groups.map((group, index) => [group, colors[index % colors.length]]));
@@ -225,61 +232,211 @@ export function scientificSourceScatter({
     const value = domain.yMin + ((domain.yMax - domain.yMin) * index) / 5;
     return { value, label: Number(value.toFixed(3)).toString() };
   });
-  const grid = xTicks.map(({ value, label }) => [
-    '<line x1="', sx(value), '" y1="', plot.top, '" x2="', sx(value), '" y2="', base.height - plot.bottom, '" class="chart-gridline"/>',
-    '<text x="', sx(value), '" y="', base.height - plot.bottom + 19, '" class="chart-tick" text-anchor="middle">', esc(label), '</text>',
-  ].join('')).join('') + yTicks.map(({ value, label }) => [
-    '<line x1="', plot.left, '" y1="', sy(value), '" x2="', base.width - plot.right, '" y2="', sy(value), '" class="chart-gridline"/>',
-    '<text x="', plot.left - 10, '" y="', sy(value) + 4, '" class="chart-tick" text-anchor="end">', esc(label), '</text>',
-  ].join('')).join('');
-  const marks = points.map((point) => {
-    const radius = Math.min(12, 4 + Math.sqrt(Math.max(1, point.count || 1)) * 1.25);
-    const info = point.info + ' · ' + xLabel + ': ' + point.xDisplay + (xUnit ? ' ' + xUnit : '') + ' · ' + yLabel + ': ' + Number(point.y.toFixed(4)) + (yUnit ? ' ' + yUnit : '');
-    const fill = groupColor.get(point.group) || '#1688be';
-    return [
-      '<circle class="chart-point" cx="', sx(point.x), '" cy="', sy(point.y), '" r="', radius, '" fill="', fill,
-      '" fill-opacity=".82" tabindex="0" role="button" aria-label="', esc(info), '" data-info="', esc(info), '"><title>', esc(info), '</title></circle>',
-    ].join('');
-  }).join('');
-  const groupLegend = groups.map((group) => [
-    '<span><i style="--legend-color:', groupColor.get(group), '"></i>', esc(group), '</span>',
-  ].join('')).join('');
+  const grid =
+    xTicks
+      .map(({ value, label }) =>
+        [
+          '<line x1="',
+          sx(value),
+          '" y1="',
+          plot.top,
+          '" x2="',
+          sx(value),
+          '" y2="',
+          base.height - plot.bottom,
+          '" class="chart-gridline"/>',
+          '<text x="',
+          sx(value),
+          '" y="',
+          base.height - plot.bottom + 19,
+          '" class="chart-tick" text-anchor="middle">',
+          esc(label),
+          '</text>',
+        ].join(''),
+      )
+      .join('') +
+    yTicks
+      .map(({ value, label }) =>
+        [
+          '<line x1="',
+          plot.left,
+          '" y1="',
+          sy(value),
+          '" x2="',
+          base.width - plot.right,
+          '" y2="',
+          sy(value),
+          '" class="chart-gridline"/>',
+          '<text x="',
+          plot.left - 10,
+          '" y="',
+          sy(value) + 4,
+          '" class="chart-tick" text-anchor="end">',
+          esc(label),
+          '</text>',
+        ].join(''),
+      )
+      .join('');
+  const marks = points
+    .map((point) => {
+      const radius = Math.min(12, 4 + Math.sqrt(Math.max(1, point.count || 1)) * 1.25);
+      const info =
+        point.info +
+        ' · ' +
+        xLabel +
+        ': ' +
+        point.xDisplay +
+        (xUnit ? ' ' + xUnit : '') +
+        ' · ' +
+        yLabel +
+        ': ' +
+        Number(point.y.toFixed(4)) +
+        (yUnit ? ' ' + yUnit : '');
+      const fill = groupColor.get(point.group) || '#1688be';
+      return [
+        '<circle class="chart-point" cx="',
+        sx(point.x),
+        '" cy="',
+        sy(point.y),
+        '" r="',
+        radius,
+        '" fill="',
+        fill,
+        '" fill-opacity=".82" tabindex="0" role="button" aria-label="',
+        esc(info),
+        '" data-info="',
+        esc(info),
+        '"><title>',
+        esc(info),
+        '</title></circle>',
+      ].join('');
+    })
+    .join('');
+  const groupLegend = groups
+    .map((group) =>
+      ['<span><i style="--legend-color:', groupColor.get(group), '"></i>', esc(group), '</span>'].join(''),
+    )
+    .join('');
   let reference = '';
   let referenceLegend = '';
   if (identityReference) {
     const start = Math.max(domain.xMin, domain.yMin);
     const end = Math.min(domain.xMax, domain.yMax);
     if (end > start) {
-      reference = '<line class="chart-reference-line" x1="' + sx(start) + '" y1="' + sy(start) + '" x2="' + sx(end) + '" y2="' + sy(end) + '"/>';
+      reference =
+        '<line class="chart-reference-line" x1="' +
+        sx(start) +
+        '" y1="' +
+        sy(start) +
+        '" x2="' +
+        sx(end) +
+        '" y2="' +
+        sy(end) +
+        '"/>';
       referenceLegend = '<span class="chart-reference-key"><i></i>' + esc(labels.reference) + ' · y=x</span>';
     }
   }
   if (zeroReference && domain.yMin <= 0 && domain.yMax >= 0) {
-    reference += '<line class="chart-reference-line" x1="' + plot.left + '" y1="' + sy(0) + '" x2="' + (base.width - plot.right) + '" y2="' + sy(0) + '"/>';
+    reference +=
+      '<line class="chart-reference-line" x1="' +
+      plot.left +
+      '" y1="' +
+      sy(0) +
+      '" x2="' +
+      (base.width - plot.right) +
+      '" y2="' +
+      sy(0) +
+      '"/>';
     referenceLegend += '<span class="chart-reference-key"><i></i>' + esc(labels.zeroReference) + '</span>';
   }
   const legend = groupLegend + referenceLegend;
-  const caption = labels.rows + ': n=' + validRowCount + '/' + sourceRowCount + ' · ' + labels.points + ': ' + points.length + (captionNote ? ' · ' + captionNote : '');
+  const caption =
+    labels.rows +
+    ': n=' +
+    validRowCount +
+    '/' +
+    sourceRowCount +
+    ' · ' +
+    labels.points +
+    ': ' +
+    points.length +
+    (captionNote ? ' · ' + captionNote : '');
   return [
     '<section class="scientific-chart" data-chart-panel>',
-    '<div class="chart-toolbar" role="group" aria-label="', esc(labels.controls), '">',
-    '<button type="button" data-chart-action="zoom-in" aria-label="', esc(labels.zoomIn), '">＋</button>',
-    '<button type="button" data-chart-action="zoom-out" aria-label="', esc(labels.zoomOut), '">−</button>',
-    '<button type="button" data-chart-action="reset">', esc(labels.reset), '</button>',
-    '<button type="button" data-chart-action="draw" aria-pressed="false" data-idle-label="', esc(labels.drawLine), '" data-active-label="', esc(labels.drawLineActive), '">', esc(labels.drawLine), '</button>',
-    '<button type="button" data-chart-action="undo">', esc(labels.undo), '</button></div>',
-    '<p class="chart-interaction-hint">', esc(labels.interactionHint), '</p>',
-    '<div class="chart-viewport"><svg class="scientific-plot" viewBox="0 0 800 400" role="group" aria-label="', esc(xLabel + ' versus ' + yLabel), '">',
-    '<g class="chart-grid">', grid, '</g>',
-    '<line class="chart-axis" x1="', plot.left, '" y1="', plot.top, '" x2="', plot.left, '" y2="', base.height - plot.bottom, '"/>',
-    '<line class="chart-axis" x1="', plot.left, '" y1="', base.height - plot.bottom, '" x2="', base.width - plot.right, '" y2="', base.height - plot.bottom, '"/>',
-    reference, '<g class="chart-annotations"></g>', marks,
-    '<text x="', (plot.left + base.width - plot.right) / 2, '" y="', base.height - 12, '" class="chart-axis-label" text-anchor="middle">', esc(xLabel), xUnit ? ' (' + esc(xUnit) + ')' : '', '</text>',
-    '<text transform="translate(18 ', (plot.top + base.height - plot.bottom) / 2, ') rotate(-90)" class="chart-axis-label" text-anchor="middle">', esc(yLabel), yUnit ? ' (' + esc(yUnit) + ')' : '', '</text>',
+    '<div class="chart-toolbar" role="group" aria-label="',
+    esc(labels.controls),
+    '">',
+    '<button type="button" data-chart-action="zoom-in" aria-label="',
+    esc(labels.zoomIn),
+    '">＋</button>',
+    '<button type="button" data-chart-action="zoom-out" aria-label="',
+    esc(labels.zoomOut),
+    '">−</button>',
+    '<button type="button" data-chart-action="reset">',
+    esc(labels.reset),
+    '</button>',
+    '<button type="button" data-chart-action="draw" aria-pressed="false" data-idle-label="',
+    esc(labels.drawLine),
+    '" data-active-label="',
+    esc(labels.drawLineActive),
+    '">',
+    esc(labels.drawLine),
+    '</button>',
+    '<button type="button" data-chart-action="undo">',
+    esc(labels.undo),
+    '</button></div>',
+    '<p class="chart-interaction-hint">',
+    esc(labels.interactionHint),
+    '</p>',
+    '<div class="chart-viewport"><svg class="scientific-plot" viewBox="0 0 800 400" role="group" aria-label="',
+    esc(xLabel + ' versus ' + yLabel),
+    '">',
+    '<g class="chart-grid">',
+    grid,
+    '</g>',
+    '<line class="chart-axis" x1="',
+    plot.left,
+    '" y1="',
+    plot.top,
+    '" x2="',
+    plot.left,
+    '" y2="',
+    base.height - plot.bottom,
+    '"/>',
+    '<line class="chart-axis" x1="',
+    plot.left,
+    '" y1="',
+    base.height - plot.bottom,
+    '" x2="',
+    base.width - plot.right,
+    '" y2="',
+    base.height - plot.bottom,
+    '"/>',
+    reference,
+    '<g class="chart-annotations"></g>',
+    marks,
+    '<text x="',
+    (plot.left + base.width - plot.right) / 2,
+    '" y="',
+    base.height - 12,
+    '" class="chart-axis-label" text-anchor="middle">',
+    esc(xLabel),
+    xUnit ? ' (' + esc(xUnit) + ')' : '',
+    '</text>',
+    '<text transform="translate(18 ',
+    (plot.top + base.height - plot.bottom) / 2,
+    ') rotate(-90)" class="chart-axis-label" text-anchor="middle">',
+    esc(yLabel),
+    yUnit ? ' (' + esc(yUnit) + ')' : '',
+    '</text>',
     '</svg><div class="chart-tooltip" aria-hidden="true" hidden></div></div>',
-    '<div class="chart-selection" role="status" aria-live="polite" hidden><b>', esc(labels.selectedPoint), '</b><span data-chart-selection-text></span></div>',
+    '<div class="chart-selection" role="status" aria-live="polite" hidden><b>',
+    esc(labels.selectedPoint),
+    '</b><span data-chart-selection-text></span></div>',
     legend ? '<div class="chart-legend">' + legend + '</div>' : '',
-    '<p class="sub chart-caption">', esc(caption), '</p></section>',
+    '<p class="sub chart-caption">',
+    esc(caption),
+    '</p></section>',
   ].join('');
 }
 
@@ -310,44 +467,167 @@ export function scientificHistogram({ rows, key, label, unit = '', labels, idFie
   const sy = (value) => base.height - plot.bottom - (value / yMax) * (base.height - plot.top - plot.bottom);
   const xTicks = Array.from({ length: 6 }, (_, index) => xMin + ((xMax - xMin) * index) / 5);
   const yTicks = Array.from({ length: 6 }, (_, index) => (yMax * index) / 5);
-  const grid = xTicks.map((value) => [
-    '<line x1="', sx(value), '" y1="', plot.top, '" x2="', sx(value), '" y2="', base.height - plot.bottom, '" class="chart-gridline"/>',
-    '<text x="', sx(value), '" y="', base.height - plot.bottom + 19, '" class="chart-tick" text-anchor="middle">', Number(value.toFixed(3)).toString(), '</text>',
-  ].join('')).join('') + yTicks.map((value) => [
-    '<line x1="', plot.left, '" y1="', sy(value), '" x2="', base.width - plot.right, '" y2="', sy(value), '" class="chart-gridline"/>',
-    '<text x="', plot.left - 10, '" y="', sy(value) + 4, '" class="chart-tick" text-anchor="end">', Math.round(value), '</text>',
-  ].join('')).join('');
-  const bars = groups.map((group) => {
-    if (!group.rows.length) return '';
-    const ids = group.rows.map((row) => row[idField] || row.test || 'source row').slice(0, 6).join(', ');
-    const remainder = group.rows.length > 6 ? ', +' + (group.rows.length - 6) : '';
-    const info = label + ': ' + Number(group.min.toFixed(4)) + '–' + Number(group.max.toFixed(4)) + (unit ? ' ' + unit : '') + ' · ' + labels.binRows + ': ' + group.rows.length + ' · ' + ids + remainder;
-    const left = sx(group.min);
-    const right = sx(group.max);
-    return [
-      '<rect class="chart-point chart-histogram-bin" x="', left + 1, '" y="', sy(group.rows.length), '" width="', Math.max(1, right - left - 2),
-      '" height="', base.height - plot.bottom - sy(group.rows.length), '" fill="#1688be" fill-opacity=".78" tabindex="0" role="button" aria-label="', esc(info), '" data-info="', esc(info), '"><title>', esc(info), '</title></rect>',
-    ].join('');
-  }).join('');
+  const grid =
+    xTicks
+      .map((value) =>
+        [
+          '<line x1="',
+          sx(value),
+          '" y1="',
+          plot.top,
+          '" x2="',
+          sx(value),
+          '" y2="',
+          base.height - plot.bottom,
+          '" class="chart-gridline"/>',
+          '<text x="',
+          sx(value),
+          '" y="',
+          base.height - plot.bottom + 19,
+          '" class="chart-tick" text-anchor="middle">',
+          Number(value.toFixed(3)).toString(),
+          '</text>',
+        ].join(''),
+      )
+      .join('') +
+    yTicks
+      .map((value) =>
+        [
+          '<line x1="',
+          plot.left,
+          '" y1="',
+          sy(value),
+          '" x2="',
+          base.width - plot.right,
+          '" y2="',
+          sy(value),
+          '" class="chart-gridline"/>',
+          '<text x="',
+          plot.left - 10,
+          '" y="',
+          sy(value) + 4,
+          '" class="chart-tick" text-anchor="end">',
+          Math.round(value),
+          '</text>',
+        ].join(''),
+      )
+      .join('');
+  const bars = groups
+    .map((group) => {
+      if (!group.rows.length) return '';
+      const ids = group.rows
+        .map((row) => row[idField] || row.test || 'source row')
+        .slice(0, 6)
+        .join(', ');
+      const remainder = group.rows.length > 6 ? ', +' + (group.rows.length - 6) : '';
+      const info =
+        label +
+        ': ' +
+        Number(group.min.toFixed(4)) +
+        '–' +
+        Number(group.max.toFixed(4)) +
+        (unit ? ' ' + unit : '') +
+        ' · ' +
+        labels.binRows +
+        ': ' +
+        group.rows.length +
+        ' · ' +
+        ids +
+        remainder;
+      const left = sx(group.min);
+      const right = sx(group.max);
+      return [
+        '<rect class="chart-point chart-histogram-bin" x="',
+        left + 1,
+        '" y="',
+        sy(group.rows.length),
+        '" width="',
+        Math.max(1, right - left - 2),
+        '" height="',
+        base.height - plot.bottom - sy(group.rows.length),
+        '" fill="#1688be" fill-opacity=".78" tabindex="0" role="button" aria-label="',
+        esc(info),
+        '" data-info="',
+        esc(info),
+        '"><title>',
+        esc(info),
+        '</title></rect>',
+      ].join('');
+    })
+    .join('');
   const caption = labels.rows + ': n=' + data.length + '/' + rows.length + ' · ' + labels.points + ': ' + bins;
   return [
-    '<section class="scientific-chart" data-chart-panel><div class="chart-toolbar" role="group" aria-label="', esc(labels.controls), '">',
-    '<button type="button" data-chart-action="zoom-in" aria-label="', esc(labels.zoomIn), '">＋</button>',
-    '<button type="button" data-chart-action="zoom-out" aria-label="', esc(labels.zoomOut), '">−</button>',
-    '<button type="button" data-chart-action="reset">', esc(labels.reset), '</button>',
-    '<button type="button" data-chart-action="draw" aria-pressed="false" data-idle-label="', esc(labels.drawLine), '" data-active-label="', esc(labels.drawLineActive), '">', esc(labels.drawLine), '</button>',
-    '<button type="button" data-chart-action="undo">', esc(labels.undo), '</button></div>',
-    '<p class="chart-interaction-hint">', esc(labels.interactionHint), '</p>',
-    '<div class="chart-viewport"><svg class="scientific-plot" viewBox="0 0 800 400" role="group" aria-label="', esc(label + ' distribution'), '">',
-    '<g class="chart-grid">', grid, '</g>',
-    '<line class="chart-axis" x1="', plot.left, '" y1="', plot.top, '" x2="', plot.left, '" y2="', base.height - plot.bottom, '"/>',
-    '<line class="chart-axis" x1="', plot.left, '" y1="', base.height - plot.bottom, '" x2="', base.width - plot.right, '" y2="', base.height - plot.bottom, '"/>',
-    '<g class="chart-annotations"></g>', bars,
-    '<text x="', (plot.left + base.width - plot.right) / 2, '" y="', base.height - 12, '" class="chart-axis-label" text-anchor="middle">', esc(label), unit ? ' (' + esc(unit) + ')' : '', '</text>',
-    '<text transform="translate(18 ', (plot.top + base.height - plot.bottom) / 2, ') rotate(-90)" class="chart-axis-label" text-anchor="middle">', esc(labels.binRows), '</text>',
+    '<section class="scientific-chart" data-chart-panel><div class="chart-toolbar" role="group" aria-label="',
+    esc(labels.controls),
+    '">',
+    '<button type="button" data-chart-action="zoom-in" aria-label="',
+    esc(labels.zoomIn),
+    '">＋</button>',
+    '<button type="button" data-chart-action="zoom-out" aria-label="',
+    esc(labels.zoomOut),
+    '">−</button>',
+    '<button type="button" data-chart-action="reset">',
+    esc(labels.reset),
+    '</button>',
+    '<button type="button" data-chart-action="draw" aria-pressed="false" data-idle-label="',
+    esc(labels.drawLine),
+    '" data-active-label="',
+    esc(labels.drawLineActive),
+    '">',
+    esc(labels.drawLine),
+    '</button>',
+    '<button type="button" data-chart-action="undo">',
+    esc(labels.undo),
+    '</button></div>',
+    '<p class="chart-interaction-hint">',
+    esc(labels.interactionHint),
+    '</p>',
+    '<div class="chart-viewport"><svg class="scientific-plot" viewBox="0 0 800 400" role="group" aria-label="',
+    esc(label + ' distribution'),
+    '">',
+    '<g class="chart-grid">',
+    grid,
+    '</g>',
+    '<line class="chart-axis" x1="',
+    plot.left,
+    '" y1="',
+    plot.top,
+    '" x2="',
+    plot.left,
+    '" y2="',
+    base.height - plot.bottom,
+    '"/>',
+    '<line class="chart-axis" x1="',
+    plot.left,
+    '" y1="',
+    base.height - plot.bottom,
+    '" x2="',
+    base.width - plot.right,
+    '" y2="',
+    base.height - plot.bottom,
+    '"/>',
+    '<g class="chart-annotations"></g>',
+    bars,
+    '<text x="',
+    (plot.left + base.width - plot.right) / 2,
+    '" y="',
+    base.height - 12,
+    '" class="chart-axis-label" text-anchor="middle">',
+    esc(label),
+    unit ? ' (' + esc(unit) + ')' : '',
+    '</text>',
+    '<text transform="translate(18 ',
+    (plot.top + base.height - plot.bottom) / 2,
+    ') rotate(-90)" class="chart-axis-label" text-anchor="middle">',
+    esc(labels.binRows),
+    '</text>',
     '</svg><div class="chart-tooltip" aria-hidden="true" hidden></div></div>',
-    '<div class="chart-selection" role="status" aria-live="polite" hidden><b>', esc(labels.selectedPoint), '</b><span data-chart-selection-text></span></div>',
-    '<p class="sub chart-caption">', esc(caption), '</p></section>',
+    '<div class="chart-selection" role="status" aria-live="polite" hidden><b>',
+    esc(labels.selectedPoint),
+    '</b><span data-chart-selection-text></span></div>',
+    '<p class="sub chart-caption">',
+    esc(caption),
+    '</p></section>',
   ].join('');
 }
 

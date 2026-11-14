@@ -10,7 +10,12 @@ import {
 import { csvCell } from './csv-safe.js';
 import { $, esc, toast, pageHead, stat, download } from './lib/dom.js';
 import { get, post } from './lib/api.js';
-import { scientificScatter, bindInteractiveCharts, chartControlLabels, scientificHistogram } from './lib/interactive-charts.js';
+import {
+  scientificScatter,
+  bindInteractiveCharts,
+  chartControlLabels,
+  scientificHistogram,
+} from './lib/interactive-charts.js';
 import { FLEX_CHART_GUIDE } from './lib/chart-guide.js';
 import { filterNavEntries } from './lib/navigation.js';
 import { bindFlameScene3d } from './lib/flame-scene3d.js';
@@ -341,7 +346,10 @@ function scientificChartGallery(rows, { explain = false } = {}) {
     use: cfg.use[language],
     limit: cfg.limit[language],
   }));
-  const guidance = (cfg) => explain ? `<div class="grid three" style="margin:12px 0"><p class="sub"><b>${t('Question', 'السؤال')}</b><br>${esc(cfg.question)}</p><p class="sub"><b>${t('How to use it', 'طريقة الاستخدام')}</b><br>${esc(cfg.use)}</p><p class="sub"><b>${t('Interpretation limit', 'حدود التفسير')}</b><br>${esc(cfg.limit)}</p></div>` : '';
+  const guidance = (cfg) =>
+    explain
+      ? `<div class="grid three" style="margin:12px 0"><p class="sub"><b>${t('Question', 'السؤال')}</b><br>${esc(cfg.question)}</p><p class="sub"><b>${t('How to use it', 'طريقة الاستخدام')}</b><br>${esc(cfg.use)}</p><p class="sub"><b>${t('Interpretation limit', 'حدود التفسير')}</b><br>${esc(cfg.limit)}</p></div>`
+      : '';
   return `<section class="chart-gallery"><div class="section-title"><div><h2>${t('Interactive FLEX research plots', 'مخططات FLEX البحثية التفاعلية')}</h2><p>${t('Each dot is one source test. Missing pairs are omitted only from that plot. Fuel is shown by color; fitted lines are exploratory and never establish causation.', 'كل نقطة تمثل اختباراً واحداً من المصدر. تُستبعد القيم الناقصة من ذلك المخطط فقط. يميز اللون الوقود؛ وخط الملاءمة استكشافي ولا يثبت السببية.')}</p></div></div><div class="grid two">${configs.map((cfg) => `<article class="card" data-chart-guide="${cfg.id}"><h3>${cfg.title}</h3>${guidance(cfg)}${scientificScatter({ ...cfg, rows, groupKey: 'fuel', labels })}</article>`).join('')}</div></section>`;
 }
 
@@ -653,14 +661,16 @@ async function go(name) {
       sourceCharts.className = 'source-chart-guide-loading';
       sourceCharts.innerHTML = `<div class="empty" role="status">${t('Loading source-table plots…', 'جارٍ تحميل مخططات جداول المصدر…')}</div>`;
       c.append(sourceCharts);
-      renderSourceChartGuide(lang).then((markup) => {
-        if (id !== navigationId) return;
-        sourceCharts.outerHTML = markup;
-        bindInteractiveCharts(c);
-      }).catch((error) => {
-        if (id !== navigationId) return;
-        sourceCharts.innerHTML = `<div class="callout warn">${t('Source-table plots could not load:', 'تعذر تحميل مخططات جداول المصدر:')} ${esc(error.message)}</div>`;
-      });
+      renderSourceChartGuide(lang)
+        .then((markup) => {
+          if (id !== navigationId) return;
+          sourceCharts.outerHTML = markup;
+          bindInteractiveCharts(c);
+        })
+        .catch((error) => {
+          if (id !== navigationId) return;
+          sourceCharts.innerHTML = `<div class="callout warn">${t('Source-table plots could not load:', 'تعذر تحميل مخططات جداول المصدر:')} ${esc(error.message)}</div>`;
+        });
     }
     if (name === 'Challenge Evidence') bindChallengeLibrary(c, lang);
     if (name === 'Investigation Lab') bindInvestigationLab(c, lang);

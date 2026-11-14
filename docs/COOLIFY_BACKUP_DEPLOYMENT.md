@@ -6,7 +6,7 @@ This runbook is for the MORS AEGIS project team. It covers the separate public, 
 
 Configure the Coolify application to use:
 
-- Repository: `Laythraad/MORS-AEGIS-System-Concepts`
+- Repository: `Laythraad/mors-aegis-flame-in-freefall-2026` (new competition-ready backup repository)
 - Branch: `main`
 - Build method: the root `Dockerfile`
 - Container port: `4173`
@@ -21,7 +21,7 @@ Set these values in Coolify's private environment settings, never in GitHub:
 | Variable | Value |
 | --- | --- |
 | `MORS_PUBLIC_READONLY` | `1` |
-| `MORS_ACCESS_TOKEN` | A unique random value of at least 32 characters. It is required by network-binding validation even though public read-only pages do not prompt for it. |
+| `MORS_ACCESS_TOKEN` | Keep the existing private deployment value or replace it with a unique random value of 32+ characters. The server minimum is 12 characters. Network access still requires token login before any page or API is served, including in read-only mode. Never put the value in GitHub, slides, URLs, or logs. |
 | `MORS_TRUSTED_ORIGINS` | The exact HTTPS origin configured for this application, with no path or wildcard. |
 | `MORS_COOKIE_SECURE` | `1` when the app is accessed through HTTPS. |
 
@@ -30,10 +30,11 @@ Leave Gemini credentials unset for this public copy. The public-only server reje
 ## Redeploying from GitHub
 
 1. Push the reviewed source commit to `main`.
-2. In Coolify, open the backup application and select **Deploy** for the latest `main` commit. This deployment is currently manual; a Git push alone has not been observed to update the running application.
-3. Wait for the deployment and application health check to report healthy.
-4. Confirm the deployed commit is the intended GitHub commit.
-5. Check the public read-only behavior:
+2. In Coolify, set the application's source repository to `Laythraad/mors-aegis-flame-in-freefall-2026` (branch `main`) if it is still connected to the previous repository. Keep the root Dockerfile, port `4173`, and `/api/health` check.
+3. Select **Deploy** for the latest `main` commit. This deployment is manual; a Git push alone does not update the running application.
+4. Wait for the deployment and application health check to report healthy.
+5. Confirm the deployed commit is the intended GitHub commit.
+6. Check the public read-only behavior:
 
    - `/` returns the MORS AEGIS page.
    - `/api/health` returns `200`.
@@ -41,7 +42,7 @@ Leave Gemini credentials unset for this public copy. The public-only server reje
    - `/vendor/model-viewer.min.js` and a selected `.glb` return `200`.
    - Application-changing `POST` routes return `405`.
 
-   The direct System Concepts page link (`/#System%20Concepts`) requires commit `cc060e6` or newer. Verify the deployed JavaScript includes hash navigation before using that link in a presentation.
+   The direct navigation routes are `/#Chart%20Guide` and `/#3D%20Models`; verify both after deployment.
 
 ## Public routing and recovery
 
@@ -55,7 +56,7 @@ systemctl --user is-enabled mors-aegis-concepts-backup.service
 journalctl --user -u mors-aegis-concepts-backup.service --no-pager | grep -Eo 'https://[[:alnum:]-]+\.trycloudflare\.com' | tail -n 1
 ```
 
-The Quick Tunnel hostname is temporary and can change when the process is recreated. The user service restarts on failure and starts with the user manager. With systemd lingering disabled, it may not run after logout or before the next login following a reboot. To make user services start at boot and survive logout, an administrator must run `sudo loginctl enable-linger mors` once.
+The currently observed Quick Tunnel hostname is `https://halifax-accent-berlin-mystery.trycloudflare.com`. It is temporary and can change when the process is recreated. The user service restarts on failure and starts with the user manager. With systemd lingering disabled, it may not run after logout or before the next login following a reboot. To make user services start at boot and survive logout, an administrator must run `sudo loginctl enable-linger mors` once.
 
 The tunnel uses `--no-tls-verify` only for its loopback connection to the Coolify proxy because that origin certificate does not match the local loopback address. Do not reuse this setting for a remote origin. For a durable public hostname, configure a named Cloudflare Tunnel and a domain; do not publish the Coolify dashboard, SSH, Docker socket, Tailscale address, or database ports.
 
