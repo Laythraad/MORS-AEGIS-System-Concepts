@@ -1,0 +1,13 @@
+{
+  "assembly": "HARBOR-PERIMETER-SCAN-assembly.glb",
+  "ring_translation_m": [
+    0,
+    -0.1,
+    -0.1
+  ],
+  "hood_mesh_found": true,
+  "minimum_sampled_surface_distance_m": 0.014995992183685303,
+  "bvh_overlap_objects": [],
+  "status": "no sampled BVH overlap",
+  "qualification": "visual CAD clearance only; no tolerances, deflection, loads, installation envelope, or flight qualification assessed"
+}

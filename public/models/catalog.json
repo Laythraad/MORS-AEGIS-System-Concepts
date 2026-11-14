@@ -1,0 +1,207 @@
+[
+  {
+    "file": "BURST-LINK-optics.glb",
+    "title": "BURST LINK optics",
+    "sizeBytes": 91288
+  },
+  {
+    "file": "CAGE-GAP-RING-fixture.glb",
+    "title": "CAGE GAP RING fixture",
+    "sizeBytes": 874664
+  },
+  {
+    "file": "CAGE-Loop-concept.glb",
+    "title": "CAGE Loop concept",
+    "sizeBytes": 1616492
+  },
+  {
+    "file": "CASCADE-RECOVERY-MATRIX.glb",
+    "title": "CASCADE RECOVERY MATRIX",
+    "sizeBytes": 605828
+  },
+  {
+    "file": "DEPTH-MEMORY-cell.glb",
+    "title": "DEPTH MEMORY cell",
+    "sizeBytes": 107676
+  },
+  {
+    "file": "DOCK-MIST-port.glb",
+    "title": "DOCK MIST port",
+    "sizeBytes": 909052
+  },
+  {
+    "file": "E-FIELD-DOSE-rig.glb",
+    "title": "E FIELD DOSE rig",
+    "sizeBytes": 400520
+  },
+  {
+    "file": "EXTINCTION-PATHWAY-MAP-rig.glb",
+    "title": "EXTINCTION PATHWAY MAP rig",
+    "sizeBytes": 96780
+  },
+  {
+    "file": "FILTER-LAG-test-spool.glb",
+    "title": "FILTER LAG test spool",
+    "sizeBytes": 297660
+  },
+  {
+    "file": "FLOW-SHAPE-duct.glb",
+    "title": "FLOW SHAPE duct",
+    "sizeBytes": 300240
+  },
+  {
+    "file": "HARBOR-DOCK-MIST-robot.glb",
+    "title": "HARBOR DOCK MIST robot",
+    "sizeBytes": 1853432
+  },
+  {
+    "file": "HARBOR-handrail-robot.glb",
+    "title": "HARBOR handrail robot",
+    "sizeBytes": 1079832
+  },
+  {
+    "file": "HARBOR-PERIMETER-SCAN-assembly.glb",
+    "title": "HARBOR PERIMETER SCAN assembly",
+    "sizeBytes": 1826676
+  },
+  {
+    "file": "HARBOR-perimeter-sensor-ring.glb",
+    "title": "HARBOR perimeter sensor ring",
+    "sizeBytes": 625684
+  },
+  {
+    "file": "LIQUID-DOSE-MAP-insert.glb",
+    "title": "LIQUID DOSE MAP insert",
+    "sizeBytes": 488584
+  },
+  {
+    "file": "MirrorSig-vent-spool.glb",
+    "title": "MirrorSig vent spool",
+    "sizeBytes": 464196
+  },
+  {
+    "file": "MIST-ARRIVAL-LAG-MAP.glb",
+    "title": "MIST ARRIVAL LAG MAP",
+    "sizeBytes": 325556
+  },
+  {
+    "file": "MIST-ORIENT-turret.glb",
+    "title": "MIST ORIENT turret",
+    "sizeBytes": 456232
+  },
+  {
+    "file": "MIST-PAIR-recovery-dock.glb",
+    "title": "MIST PAIR recovery dock",
+    "sizeBytes": 785036
+  },
+  {
+    "file": "MIST-PAIR-test-rig.glb",
+    "title": "MIST PAIR test rig",
+    "sizeBytes": 261252
+  },
+  {
+    "file": "MIST-SENSOR-BIAS-rig.glb",
+    "title": "MIST SENSOR BIAS rig",
+    "sizeBytes": 82184
+  },
+  {
+    "file": "MOSAIC-optical-cage.glb",
+    "title": "MOSAIC optical cage",
+    "sizeBytes": 404076
+  },
+  {
+    "file": "PRISM-postfire-recovery.glb",
+    "title": "PRISM postfire recovery",
+    "sizeBytes": 205252
+  },
+  {
+    "file": "PULSE-MIST-cassette.glb",
+    "title": "PULSE MIST cassette",
+    "sizeBytes": 381472
+  },
+  {
+    "file": "PULSE-PHASE-MAP-head.glb",
+    "title": "PULSE PHASE MAP head",
+    "sizeBytes": 59204
+  },
+  {
+    "file": "RADIANT-CUT-shadow-shield.glb",
+    "title": "RADIANT CUT shadow shield",
+    "sizeBytes": 46240
+  },
+  {
+    "file": "REBOUND-MAP-cell.glb",
+    "title": "REBOUND MAP cell",
+    "sizeBytes": 202532
+  },
+  {
+    "file": "SIGHTLINE-MIST-GATE.glb",
+    "title": "SIGHTLINE MIST GATE",
+    "sizeBytes": 292652
+  },
+  {
+    "file": "SLIP-MAP-optical-gate.glb",
+    "title": "SLIP MAP optical gate",
+    "sizeBytes": 91140
+  },
+  {
+    "file": "SPLIT-SPECTRUM-MIST-cassette.glb",
+    "title": "SPLIT SPECTRUM MIST cassette",
+    "sizeBytes": 1000748
+  },
+  {
+    "file": "SPRAY-CLOSURE-rig.glb",
+    "title": "SPRAY CLOSURE rig",
+    "sizeBytes": 788204
+  },
+  {
+    "file": "STANDOFF-TRACE-rig.glb",
+    "title": "STANDOFF TRACE rig",
+    "sizeBytes": 220584
+  },
+  {
+    "file": "SWIRL-SUMP-separator.glb",
+    "title": "SWIRL SUMP separator",
+    "sizeBytes": 320900
+  },
+  {
+    "file": "THERMAL-DOSE-COUPON-holder.glb",
+    "title": "THERMAL DOSE COUPON holder",
+    "sizeBytes": 110864
+  },
+  {
+    "file": "TRI-WICK-comparator.glb",
+    "title": "TRI WICK comparator",
+    "sizeBytes": 219772
+  },
+  {
+    "file": "VAPOR-TRACE-spool.glb",
+    "title": "VAPOR TRACE spool",
+    "sizeBytes": 180148
+  },
+  {
+    "file": "VECTOR-LOCK-cassette.glb",
+    "title": "VECTOR LOCK cassette",
+    "sizeBytes": 326716
+  },
+  {
+    "file": "VIRA-GATE-sensor-head.glb",
+    "title": "VIRA GATE sensor head",
+    "sizeBytes": 201176
+  },
+  {
+    "file": "WakeMap-array.glb",
+    "title": "WakeMap array",
+    "sizeBytes": 379180
+  },
+  {
+    "file": "WETDRY-O2-REF-head.glb",
+    "title": "WETDRY O2 REF head",
+    "sizeBytes": 84064
+  },
+  {
+    "file": "WITNESS-BOX-fixture.glb",
+    "title": "WITNESS BOX fixture",
+    "sizeBytes": 698532
+  }
+]

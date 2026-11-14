@@ -8,3 +8,4 @@ dist/
 .DS_Store
 launcher/bin/
 launcher/obj/
+/public/vendor/model-viewer-module.min.js

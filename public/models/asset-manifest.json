@@ -1,0 +1,222 @@
+{
+  "assetSet": "Flame in Freefall 3D concept archive",
+  "modelCount": 41,
+  "source": "Original concept assets recovered from the project authoring folder",
+  "files": [
+    {
+      "file": "BURST-LINK-optics.glb",
+      "bytes": 91288,
+      "sha256": "0839942957aeaf70d10e86732e0eb2e09d4ca542114f934a5401e0c1f5c0b8f9"
+    },
+    {
+      "file": "CAGE-GAP-RING-fixture.glb",
+      "bytes": 874664,
+      "sha256": "5c9f725e9b09cb508118c8ff7851a9804264658c7175adfa156291f915fd032f"
+    },
+    {
+      "file": "CAGE-Loop-concept.glb",
+      "bytes": 1616492,
+      "sha256": "60ffb6bbab1b63b8bb7e0539c2da6b7def79e07cb91f5e3ae1017c403a13582c"
+    },
+    {
+      "file": "CASCADE-RECOVERY-MATRIX.glb",
+      "bytes": 605828,
+      "sha256": "4d93d115cf8ade41e6f4075b53b526b9708efc592c1993d596d9347ece8e3986"
+    },
+    {
+      "file": "DEPTH-MEMORY-cell.glb",
+      "bytes": 107676,
+      "sha256": "17d460362ee80fa284fdd5607afa8057d8d74d3a902b7f03538b5f3c2ec5393c"
+    },
+    {
+      "file": "DOCK-MIST-port.glb",
+      "bytes": 909052,
+      "sha256": "33c571a63b202a28d52bf5774b533aa79c7a82dfe39f7f79453636ad8f909c44"
+    },
+    {
+      "file": "E-FIELD-DOSE-rig.glb",
+      "bytes": 400520,
+      "sha256": "2b011d9a47fdd74967a10dc389aadd4a32f55f7a66e446762cc439d82cc2ba90"
+    },
+    {
+      "file": "EXTINCTION-PATHWAY-MAP-rig.glb",
+      "bytes": 96780,
+      "sha256": "1f4f61b7797be7ce8bb88fd3e14876fa2e6f37828d5b0926c3208178305c5e05"
+    },
+    {
+      "file": "FILTER-LAG-test-spool.glb",
+      "bytes": 297660,
+      "sha256": "d2ca8e248a3b1075111f8647efe0a72ffe0958651d596db300ce064aac68a23a"
+    },
+    {
+      "file": "FLOW-SHAPE-duct.glb",
+      "bytes": 300240,
+      "sha256": "1944f371256b28b0fa4fb306339034e0662b64bbd83333f8571df3f4f136ee99"
+    },
+    {
+      "file": "HARBOR-DOCK-MIST-robot.glb",
+      "bytes": 1853432,
+      "sha256": "662f7696b660b4bb081449eae34f3d5d35306ef4794f794f2bd168fe07f9f012"
+    },
+    {
+      "file": "HARBOR-handrail-robot.glb",
+      "bytes": 1079832,
+      "sha256": "6c2048d8912350c3c2ffd10651a1cd1dc87e5ec2bf430270046219bba7547aac"
+    },
+    {
+      "file": "HARBOR-PERIMETER-SCAN-assembly.glb",
+      "bytes": 1826676,
+      "sha256": "c735eabebf221d846fa025833698c64403a24fd275882d63e4db5fabff616eff"
+    },
+    {
+      "file": "HARBOR-perimeter-sensor-ring.glb",
+      "bytes": 625684,
+      "sha256": "e43a047a3e620c9128b7e376c9734716f0ae5e9000837f35f7c7a98fc305f031"
+    },
+    {
+      "file": "LIQUID-DOSE-MAP-insert.glb",
+      "bytes": 488584,
+      "sha256": "234184a61754425b559e0ad5d12d75523c102fe8cdbbe9046eeacb6acf1a0caf"
+    },
+    {
+      "file": "MirrorSig-vent-spool.glb",
+      "bytes": 464196,
+      "sha256": "032e8f304df96b973126cdb88763ed235ae19fd97eec74e24b7f9ede8272821d"
+    },
+    {
+      "file": "MIST-ARRIVAL-LAG-MAP.glb",
+      "bytes": 325556,
+      "sha256": "cd857a6c0e124e6985857fcf9eaf27c597f8ae4aa48642c7778faca44b2f2558"
+    },
+    {
+      "file": "MIST-ORIENT-turret.glb",
+      "bytes": 456232,
+      "sha256": "afdfed6b1158a989103162dda5c006c815298d4691ff9c0df80372f74930c59a"
+    },
+    {
+      "file": "MIST-PAIR-recovery-dock.glb",
+      "bytes": 785036,
+      "sha256": "21936c707947b1416f8b8741eaee52acf6b0571b3e2cf8f103cb31e653b35cd1"
+    },
+    {
+      "file": "MIST-PAIR-test-rig.glb",
+      "bytes": 261252,
+      "sha256": "84cecc4b3e0101af079a18e5558c5218f627a3896a40b9eaa28d29efa308ec9e"
+    },
+    {
+      "file": "MIST-SENSOR-BIAS-rig.glb",
+      "bytes": 82184,
+      "sha256": "f074c34b85e1a51d2fd2c0d842198b7a3ec5abf52061cbfd756638283410bcba"
+    },
+    {
+      "file": "MOSAIC-optical-cage.glb",
+      "bytes": 404076,
+      "sha256": "95a31a5fda232792aeacb713d4f25ad187437b561258a63eae57d48aaa33c698"
+    },
+    {
+      "file": "PRISM-postfire-recovery.glb",
+      "bytes": 205252,
+      "sha256": "3e554fd490e96101476e329d68ece32386c09d30e019098fd4692e7d09b643e2"
+    },
+    {
+      "file": "PULSE-MIST-cassette.glb",
+      "bytes": 381472,
+      "sha256": "ecfbd3ab9dba1cbe2592f139638ab7b322311845b449732dee73d715de475723"
+    },
+    {
+      "file": "PULSE-PHASE-MAP-head.glb",
+      "bytes": 59204,
+      "sha256": "563372d8a79dd47471af81b1069c41df66f8a3034c1bc88620bf8338cb2f7578"
+    },
+    {
+      "file": "RADIANT-CUT-shadow-shield.glb",
+      "bytes": 46240,
+      "sha256": "864678772a83ed9b54b084cada5889922bd5ec1e0ab73bb9e97bbc8ca2af7700"
+    },
+    {
+      "file": "REBOUND-MAP-cell.glb",
+      "bytes": 202532,
+      "sha256": "0825d2427a44c17ce085a7bd24e59547af2499a7e5a9d2d873ea1fa60c75c839"
+    },
+    {
+      "file": "SIGHTLINE-MIST-GATE.glb",
+      "bytes": 292652,
+      "sha256": "87d0102081fdf9a69c9f1eb119c044d3ddd69455f5885801541736a7cf8849ea"
+    },
+    {
+      "file": "SLIP-MAP-optical-gate.glb",
+      "bytes": 91140,
+      "sha256": "4661e956f3d18eb13669de1e141c887226d65cc3e51b7675d41065b3de8efe5f"
+    },
+    {
+      "file": "SPLIT-SPECTRUM-MIST-cassette.glb",
+      "bytes": 1000748,
+      "sha256": "fa25f83ed7add57178a90a2a4976cb0c860ae72019071bfd300cfb4c09366b29"
+    },
+    {
+      "file": "SPRAY-CLOSURE-rig.glb",
+      "bytes": 788204,
+      "sha256": "dce01fa5dfa1ea8cef3335263e465aca1396ef22e8f1f9e5ff1e88ca6e1daa35"
+    },
+    {
+      "file": "STANDOFF-TRACE-rig.glb",
+      "bytes": 220584,
+      "sha256": "93f4adaa42700f4ce3838614b22ca0e759a97f029bb20f71443419624c26b1e8"
+    },
+    {
+      "file": "SWIRL-SUMP-separator.glb",
+      "bytes": 320900,
+      "sha256": "8e761cec9cab43583e197f7cc29917c078db93efda2dcf00ad6e30596ade1ed9"
+    },
+    {
+      "file": "THERMAL-DOSE-COUPON-holder.glb",
+      "bytes": 110864,
+      "sha256": "f8edba8e75f27f39796d7b95ad9a9355abbd82f3780ff97460dde21f85ed039c"
+    },
+    {
+      "file": "TRI-WICK-comparator.glb",
+      "bytes": 219772,
+      "sha256": "23b4611583fdfb7a2876bd009a7050e0c9554b38254a50483498041ca5758b61"
+    },
+    {
+      "file": "VAPOR-TRACE-spool.glb",
+      "bytes": 180148,
+      "sha256": "996757f342410a1922bdca3427bf861b83d16c8f23a540110e3d215a46ead5dc"
+    },
+    {
+      "file": "VECTOR-LOCK-cassette.glb",
+      "bytes": 326716,
+      "sha256": "cadd99ecb97a37bb312f30d68b591baa3224462f84d722cd1757f0081c3c9912"
+    },
+    {
+      "file": "VIRA-GATE-sensor-head.glb",
+      "bytes": 201176,
+      "sha256": "e297025906ee71e67dbddfd5fcc840be02161da97ca015c8a4e554c4848e261f"
+    },
+    {
+      "file": "WakeMap-array.glb",
+      "bytes": 379180,
+      "sha256": "ebf00da6a9461d1ecc011a5c52e0b9e9aaba730cb1ee0ada8db74d367bb34797"
+    },
+    {
+      "file": "WETDRY-O2-REF-head.glb",
+      "bytes": 84064,
+      "sha256": "2f10abb01d77d2b054fb5f60c2b53d3bf3ba02f6a137ec653d7a093c89184132"
+    },
+    {
+      "file": "WITNESS-BOX-fixture.glb",
+      "bytes": 698532,
+      "sha256": "dc8552844ea7c3df1bb4657868c8838ff4778d8a44b3c434e899ff3f3180172e"
+    },
+    {
+      "file": "FLAME-IN-FREEFALL-3D-GALLERY.blend",
+      "bytes": 5091227,
+      "sha256": "955306e1d0b3527cfcbe53697d3de5a6e80d631576ff8e7cdbce32fbae34855b"
+    },
+    {
+      "file": "FLAME-IN-FREEFALL-3D-GALLERY-preview.png",
+      "bytes": 167233,
+      "sha256": "a69678b1aaeb84a752807a208132e408e32015f2490b40caefc53a9527e82cfc"
+    }
+  ]
+}

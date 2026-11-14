@@ -7,3 +7,4 @@ node_modules
 work
 tests
 docs
+/public/vendor/model-viewer-module.min.js
