@@ -169,38 +169,110 @@
   // public/lib/flame-scene3d.js
   function flameScene3d(lang2 = "en") {
     const ar = lang2 === "ar";
-    return `<article class="card flame-scene-card"><div class="card-head"><div><h2>${ar ? "\u0645\u0634\u0647\u062F \u062B\u0644\u0627\u062B\u064A \u0627\u0644\u0623\u0628\u0639\u0627\u062F \u0644\u0627\u0646\u062A\u0642\u0627\u0644 \u0627\u0644\u062D\u0631\u0627\u0631\u0629 \u0648\u0627\u0644\u062C\u0631\u064A\u0627\u0646" : "3D heat-transport and airflow scene"}</h2><p class="sub">${ar ? "\u063A\u064A\u0651\u0631 \u0627\u0644\u062D\u0627\u0644\u0629 \u0648\u0627\u0633\u062D\u0628 \u0623\u0648 \u0627\u0633\u062A\u062E\u062F\u0645 \u0627\u0644\u0623\u0633\u0647\u0645 \u0644\u062A\u062F\u0648\u064A\u0631 \u0627\u0644\u0646\u0645\u0648\u0630\u062C. \u064A\u0634\u0631\u062D \u0627\u0644\u0645\u0641\u0647\u0648\u0645 \u0648\u0644\u0627 \u064A\u0639\u0631\u0636 \u0628\u064A\u0627\u0646\u0627\u062A \u062A\u062C\u0631\u0628\u0629 \u0623\u0648 \u0646\u0638\u0627\u0645 \u0625\u062E\u0645\u0627\u062F \u0645\u064F\u062E\u062A\u0628\u0631\u0627\u064B." : "Change the conceptual state, then drag or use arrow keys to rotate. This is an explanatory model, not experimental data or a tested suppression system."}</p></div><span class="badge-sim">${ar ? "\u0631\u0633\u0645 \u062A\u0648\u0636\u064A\u062D\u064A \xB7 \u0644\u064A\u0633 \u0642\u064A\u0627\u0633\u0627\u064B" : "ILLUSTRATIVE \xB7 NOT MEASURED"}</span></div><div class="scene-controls" role="group" aria-label="${ar ? "\u062D\u0627\u0644\u0629 \u0627\u0644\u0645\u0634\u0647\u062F" : "Scene state"}"><button type="button" class="outline-btn active" data-scene-gravity="earth">${ar ? "\u062C\u0627\u0630\u0628\u064A\u0629 \u0623\u0631\u0636\u064A\u0629" : "Earth gravity"}</button><button type="button" class="outline-btn" data-scene-gravity="micro">${ar ? "\u062C\u0627\u0630\u0628\u064A\u0629 \u0635\u063A\u0631\u0649" : "Microgravity"}</button><button type="button" class="outline-btn active" data-scene-air="on">${ar ? "\u062A\u0647\u0648\u064A\u0629 \u0645\u0641\u0631\u0648\u0636\u0629: \u062A\u0634\u063A\u064A\u0644" : "Forced airflow: on"}</button><button type="button" class="outline-btn" data-scene-air="off">${ar ? "\u062A\u0647\u0648\u064A\u0629 \u0645\u0641\u0631\u0648\u0636\u0629: \u0625\u064A\u0642\u0627\u0641" : "Forced airflow: off"}</button><button type="button" class="quiet-btn" data-scene-reset>${ar ? "\u0625\u0639\u0627\u062F\u0629 \u0632\u0627\u0648\u064A\u0629 \u0627\u0644\u0639\u0631\u0636" : "Reset view"}</button></div><div class="scene3d-stage" tabindex="0" role="group" aria-label="${ar ? "\u0645\u0634\u0647\u062F \u062B\u0644\u0627\u062B\u064A \u0627\u0644\u0623\u0628\u0639\u0627\u062F\u060C \u0627\u0633\u062D\u0628 \u0644\u062A\u062F\u0648\u064A\u0631\u0647" : "Interactive 3D schematic; drag to rotate"}"><div class="scene3d-room" data-gravity="earth" data-air="on"><div class="scene-cube"><i class="cube-face cube-front"></i><i class="cube-face cube-back"></i><i class="cube-face cube-left"></i><i class="cube-face cube-right"></i><i class="cube-face cube-top"></i><i class="cube-face cube-bottom"></i></div><div class="scene-flame"><i></i><i></i><i></i></div><div class="scene-plume"><i></i><i></i><i></i></div><div class="scene-streams"><i></i><i></i><i></i><i></i></div><div class="scene-fan"><b></b><b></b><b></b><span></span></div><div class="scene-caption scene-label-earth">${ar ? "\u0637\u0641\u0648 / \u062D\u0645\u0644 \u0637\u0628\u064A\u0639\u064A" : "BUOYANCY / NATURAL CONVECTION"}</div><div class="scene-caption scene-label-micro">${ar ? "\u0627\u0646\u062A\u0634\u0627\u0631 + \u062A\u0647\u0648\u064A\u0629 \u0639\u0646\u062F \u0648\u062C\u0648\u062F\u0647\u0627" : "DIFFUSION + FORCED FLOW IF PRESENT"}</div></div></div><p class="sub scene-state-note" aria-live="polite">${ar ? "\u064A\u0636\u0639\u0641 \u0627\u0644\u062D\u0645\u0644 \u0627\u0644\u0637\u0628\u064A\u0639\u064A \u0641\u064A \u0627\u0644\u062C\u0627\u0630\u0628\u064A\u0629 \u0627\u0644\u0635\u063A\u0631\u0649\u061B \u0644\u0627 \u062A\u062E\u062A\u0641\u064A \u062D\u0631\u0643\u0629 \u0627\u0644\u0647\u0648\u0627\u0621 \u0627\u0644\u0642\u0633\u0631\u064A\u0629." : "Natural convection weakens in microgravity; forced airflow can remain."}</p><div class="callout">${ar ? "\u0645\u062E\u0637\u0637 \u0645\u0641\u0627\u0647\u064A\u0645\u064A \u0628\u0644\u0627 \u0645\u0642\u064A\u0627\u0633 \u0643\u0645\u064A. \u0634\u0643\u0644 \u0627\u0644\u0644\u0647\u0628 \u0648\u0645\u0633\u0627\u0631\u0627\u062A \u0627\u0644\u062C\u0631\u064A\u0627\u0646 \u0647\u0646\u0627 \u0644\u064A\u0633\u062A \u0645\u062D\u0627\u0643\u0627\u0629 CFD \u0648\u0644\u0627 \u0635\u0648\u0631\u0627\u064B \u0645\u0646 NASA\u061B \u0623\u0631\u0628\u0637 \u0627\u0644\u062A\u0635\u0627\u0645\u064A\u0645 \u0627\u0644\u0639\u0645\u0644\u064A\u0629 \u0644\u0644\u0625\u062E\u0645\u0627\u062F \u0628\u0628\u064A\u0627\u0646\u0627\u062A\u0647\u0627 \u0648\u0645\u0635\u0627\u062F\u0631\u0647\u0627 \u0639\u0646\u062F \u0625\u0636\u0627\u0641\u062A\u0647\u0627." : "Conceptual and not to scale. Flame shape and flow paths are not CFD results or NASA imagery. Suppression designs can be added later as a separate, source-linked layer."} <a href="https://www.nasa.gov/missions/station/studying-combustion-and-fire-safety/" target="_blank" rel="noreferrer">NASA fire-safety research \u2197</a></div></article>`;
+    const labels2 = ar ? {
+      title: "\u0645\u0634\u0647\u062F \u062B\u0644\u0627\u062B\u064A \u0627\u0644\u0623\u0628\u0639\u0627\u062F \u0644\u062A\u063A\u064A\u0651\u0631 \u0627\u0644\u0644\u0647\u0628 \u0648\u0627\u0644\u062C\u0631\u064A\u0627\u0646",
+      intro: "\u063A\u064A\u0651\u0631 \u062D\u0627\u0644\u0629 \u0627\u0644\u0645\u0635\u062F\u0631 \u0648\u0627\u0644\u062C\u0627\u0630\u0628\u064A\u0629 \u0648\u0627\u0644\u0647\u0648\u0627\u0621 \u0648\u0627\u0644\u0631\u0630\u0627\u0630\u060C \u062B\u0645 \u0627\u0633\u062D\u0628 \u0627\u0644\u0645\u0634\u0647\u062F \u0623\u0648 \u0627\u0633\u062A\u062E\u062F\u0645 \u0627\u0644\u0623\u0633\u0647\u0645 \u0644\u062A\u062F\u0648\u064A\u0631\u0647.",
+      source: "\u0645\u0635\u062F\u0631 \u0627\u0644\u0644\u0647\u0628",
+      on: "\u062A\u0634\u063A\u064A\u0644",
+      off: "\u0625\u064A\u0642\u0627\u0641",
+      gravity: "\u0627\u0644\u062C\u0627\u0630\u0628\u064A\u0629",
+      earth: "\u0623\u0631\u0636\u064A\u0629",
+      micro: "\u0635\u063A\u0631\u0649",
+      airflow: "\u0627\u0644\u0647\u0648\u0627\u0621 \u0627\u0644\u0642\u0633\u0631\u064A",
+      mist: "\u0631\u0630\u0627\u0630 \u0627\u0644\u0645\u0627\u0621",
+      reset: "\u0625\u0639\u0627\u062F\u0629 \u0632\u0627\u0648\u064A\u0629 \u0627\u0644\u0639\u0631\u0636",
+      stage: "\u0645\u0634\u0647\u062F \u062A\u0641\u0633\u064A\u0631\u064A \u062B\u0644\u0627\u062B\u064A \u0627\u0644\u0623\u0628\u0639\u0627\u062F\u060C \u0627\u0633\u062D\u0628 \u0644\u062A\u062F\u0648\u064A\u0631\u0647",
+      earthLabel: "\u0637\u0641\u0648 \xB7 \u062D\u0645\u0644 \u0637\u0628\u064A\u0639\u064A \u0635\u0627\u0639\u062F",
+      microLabel: "\u0627\u0646\u062A\u0634\u0627\u0631 \xB7 \u062D\u0645\u0644 \u0637\u0628\u064A\u0639\u064A \u0623\u0636\u0639\u0641",
+      note: "\u064A\u062A\u063A\u064A\u0631 \u0634\u0643\u0644 \u0627\u0644\u0644\u0647\u0628 \u0625\u064A\u0636\u0627\u062D\u064A\u0627\u064B \u0628\u062D\u0633\u0628 \u0627\u0644\u062D\u0627\u0644\u0629 \u0627\u0644\u0645\u062E\u062A\u0627\u0631\u0629. \u0627\u0644\u0631\u0630\u0627\u0630 \u0644\u0627 \u064A\u0637\u0641\u0626 \u0627\u0644\u0644\u0647\u0628 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0641\u064A \u0647\u0630\u0627 \u0627\u0644\u0646\u0645\u0648\u0630\u062C.",
+      boundary: "\u0631\u0633\u0645 \u0645\u0641\u0627\u0647\u064A\u0645\u064A \u0645\u062A\u0639\u062F\u062F \u0627\u0644\u0637\u0628\u0642\u0627\u062A\u060C \u0628\u0644\u0627 \u0645\u0642\u064A\u0627\u0633 \u0643\u0645\u064A. \u0644\u064A\u0633 \u0645\u062D\u0627\u0643\u0627\u0629 CFD \u0648\u0644\u0627 \u0635\u0648\u0631\u0629 \u0645\u0646 NASA \u0648\u0644\u0627 \u0646\u062A\u064A\u062C\u0629 \u062A\u062C\u0631\u0628\u0629. \u0644\u0627 \u064A\u0633\u062A\u0646\u062A\u062C \u0625\u062E\u0645\u0627\u062F \u0627\u0644\u062D\u0631\u064A\u0642 \u0623\u0648 \u0623\u062F\u0627\u0621 \u0623\u064A \u062C\u0647\u0627\u0632."
+    } : {
+      title: "3D flame and transport scene",
+      intro: "Change the source, gravity, airflow, and mist state, then drag or use arrow keys to rotate the volume.",
+      source: "Flame source",
+      on: "On",
+      off: "Off",
+      gravity: "Gravity",
+      earth: "Earth",
+      micro: "Microgravity",
+      airflow: "Forced airflow",
+      mist: "Water mist",
+      reset: "Reset view",
+      stage: "Interactive 3D explanatory scene; drag to rotate",
+      earthLabel: "BUOYANCY \xB7 UPWARD NATURAL CONVECTION",
+      microLabel: "DIFFUSION \xB7 WEAKER NATURAL CONVECTION",
+      note: "Flame shape changes illustratively with the selected state. Mist does not extinguish the flame in this model.",
+      boundary: "Layered conceptual rendering with no quantitative scale. It is not CFD, NASA imagery, or an experiment result. It does not predict extinction or device performance."
+    };
+    const group = (key, title, values, selected) => `<div class="scene-control-group" role="group" aria-label="${title}"><span>${title}</span><div>${values.map(([value, label]) => `<button type="button" class="outline-btn${value === selected ? " active" : ""}" data-scene-key="${key}" data-scene-value="${value}" aria-pressed="${value === selected}">${label}</button>`).join("")}</div></div>`;
+    return `<article class="card flame-scene-card"><div class="card-head"><div><h2>${labels2.title}</h2><p class="sub">${labels2.intro}</p></div><span class="badge-sim">${ar ? "\u062A\u0648\u0636\u064A\u062D\u064A \xB7 \u0644\u064A\u0633 \u0642\u064A\u0627\u0633\u0627\u064B" : "ILLUSTRATIVE \xB7 NOT MEASURED"}</span></div>
+    <div class="scene-controls" aria-label="${ar ? "\u062D\u0627\u0644\u0627\u062A \u0627\u0644\u0645\u0634\u0647\u062F" : "Scene conditions"}">
+      ${group("fire", labels2.source, [["on", labels2.on], ["off", labels2.off]], "on")}
+      ${group("gravity", labels2.gravity, [["earth", labels2.earth], ["micro", labels2.micro]], "earth")}
+      ${group("air", labels2.airflow, [["on", labels2.on], ["off", labels2.off]], "on")}
+      ${group("mist", labels2.mist, [["on", labels2.on], ["off", labels2.off]], "off")}
+      <button type="button" class="quiet-btn" data-scene-reset>${labels2.reset}</button>
+    </div>
+    <div class="scene3d-stage" tabindex="0" role="group" aria-label="${labels2.stage}">
+      <div class="scene3d-room" data-fire="on" data-gravity="earth" data-air="on" data-mist="off">
+        <div class="scene-cube" aria-hidden="true"><i class="cube-face cube-front"></i><i class="cube-face cube-back"></i><i class="cube-face cube-left"></i><i class="cube-face cube-right"></i><i class="cube-face cube-top"></i><i class="cube-face cube-bottom"></i></div>
+        <div class="scene-plume" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+        <div class="scene-streams" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+        <div class="scene-flame" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="scene-source" aria-hidden="true"><i></i><b></b><span>${ar ? "\u0645\u0635\u062F\u0631" : "SOURCE"}</span></div>
+        <div class="scene-droplets" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="scene-fan" aria-hidden="true"><div class="scene-fan-rotor"><b></b><b></b><b></b></div><span></span></div>
+        <div class="scene-caption scene-label-earth">${labels2.earthLabel}</div>
+        <div class="scene-caption scene-label-micro">${labels2.microLabel}</div>
+      </div>
+    </div>
+    <p class="sub scene-state-note" aria-live="polite">${labels2.note}</p>
+    <div class="callout">${labels2.boundary} <a href="https://www.nasa.gov/missions/station/studying-combustion-and-fire-safety/" target="_blank" rel="noopener noreferrer">NASA fire-safety research \u2197</a></div></article>`;
   }
   function bindFlameScene3d(root, lang2 = "en") {
     var _a;
     const stage = root.querySelector(".scene3d-stage");
     const room = root.querySelector(".scene3d-room");
-    const note = root.querySelector(".scene-state-note");
-    if (!stage || !room) return;
-    let rx = -16, ry = -28, dragging = false, sx = 0, sy = 0;
+    const scene = stage == null ? void 0 : stage.closest(".flame-scene-card");
+    const note = scene == null ? void 0 : scene.querySelector(".scene-state-note");
+    if (!stage || !room || !scene) return;
+    let rx = -16;
+    let ry = -28;
+    let dragging = false;
+    let sx = 0;
+    let sy = 0;
     const applyRotation = () => {
       room.style.setProperty("--rx", `${rx}deg`);
       room.style.setProperty("--ry", `${ry}deg`);
     };
+    const updateState = () => {
+      const ar = lang2 === "ar";
+      const state = {
+        fire: room.dataset.fire === "on" ? ar ? "\u0645\u0634\u063A\u0651\u0644" : "on" : ar ? "\u0645\u062A\u0648\u0642\u0641" : "off",
+        gravity: room.dataset.gravity === "earth" ? ar ? "\u0623\u0631\u0636\u064A\u0629" : "Earth" : ar ? "\u0635\u063A\u0631\u0649" : "microgravity",
+        air: room.dataset.air === "on" ? ar ? "\u0645\u0641\u0639\u0644" : "on" : ar ? "\u0645\u062A\u0648\u0642\u0641" : "off",
+        mist: room.dataset.mist === "on" ? ar ? "\u0638\u0627\u0647\u0631" : "shown" : ar ? "\u063A\u064A\u0631 \u0638\u0627\u0647\u0631" : "off"
+      };
+      if (note)
+        note.textContent = ar ? `\u0627\u0644\u0645\u0635\u062F\u0631 ${state.fire} \xB7 \u0627\u0644\u062C\u0627\u0630\u0628\u064A\u0629 ${state.gravity} \xB7 \u0627\u0644\u0647\u0648\u0627\u0621 \u0627\u0644\u0642\u0633\u0631\u064A ${state.air} \xB7 \u0627\u0644\u0631\u0630\u0627\u0630 ${state.mist}. \u064A\u062A\u063A\u064A\u0631 \u0627\u0644\u0631\u0633\u0645 \u0646\u0648\u0639\u064A\u0627\u064B \u0641\u0642\u0637\u061B \u0644\u0627 \u064A\u062D\u0633\u0628 \u0627\u0644\u0625\u062E\u0645\u0627\u062F.` : `Source ${state.fire} \xB7 gravity ${state.gravity} \xB7 forced airflow ${state.air} \xB7 mist ${state.mist}. The illustration is qualitative; extinction is not calculated.`;
+      for (const button of scene.querySelectorAll("[data-scene-key]")) {
+        const active = room.dataset[button.dataset.sceneKey] === button.dataset.sceneValue;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-pressed", String(active));
+      }
+    };
     applyRotation();
-    root.querySelectorAll("[data-scene-gravity]").forEach(
-      (button) => button.addEventListener("click", () => {
-        room.dataset.gravity = button.dataset.sceneGravity;
-        root.querySelectorAll("[data-scene-gravity]").forEach((item) => item.classList.toggle("active", item === button));
-        if (note)
-          note.textContent = lang2 === "ar" ? room.dataset.gravity === "earth" ? "\u0641\u064A \u0647\u0630\u0627 \u0627\u0644\u0631\u0633\u0645 \u0627\u0644\u0645\u0641\u0627\u0647\u064A\u0645\u064A \u064A\u0638\u0647\u0631 \u0645\u0633\u0627\u0631 \u0635\u0627\u0639\u062F \u0644\u0644\u063A\u0627\u0632 \u0627\u0644\u0633\u0627\u062E\u0646 \u0628\u0641\u0639\u0644 \u0627\u0644\u0637\u0641\u0648." : "\u064A\u0636\u0639\u0641 \u0627\u0644\u062D\u0645\u0644 \u0627\u0644\u0637\u0628\u064A\u0639\u064A \u0641\u064A \u0627\u0644\u062C\u0627\u0630\u0628\u064A\u0629 \u0627\u0644\u0635\u063A\u0631\u0649\u061B \u0644\u0627 \u062A\u062E\u062A\u0641\u064A \u062D\u0631\u0643\u0629 \u0627\u0644\u0647\u0648\u0627\u0621 \u0627\u0644\u0642\u0633\u0631\u064A\u0629." : room.dataset.gravity === "earth" ? "The conceptual plume indicates hot-gas buoyancy." : "Natural convection weakens in microgravity; forced airflow can remain.";
-      })
-    );
-    root.querySelectorAll("[data-scene-air]").forEach(
-      (button) => button.addEventListener("click", () => {
-        room.dataset.air = button.dataset.sceneAir;
-        root.querySelectorAll("[data-scene-air]").forEach((item) => item.classList.toggle("active", item === button));
-      })
-    );
-    (_a = root.querySelector("[data-scene-reset]")) == null ? void 0 : _a.addEventListener("click", () => {
+    scene.querySelectorAll("[data-scene-key]").forEach((button) => {
+      button.addEventListener("click", () => {
+        room.dataset[button.dataset.sceneKey] = button.dataset.sceneValue;
+        updateState();
+      });
+    });
+    (_a = scene.querySelector("[data-scene-reset]")) == null ? void 0 : _a.addEventListener("click", () => {
       rx = -16;
       ry = -28;
       applyRotation();
+      stage.focus();
     });
     stage.addEventListener("pointerdown", (event) => {
       dragging = true;
@@ -216,12 +288,12 @@
       sy = event.clientY;
       applyRotation();
     });
-    stage.addEventListener("pointerup", () => {
+    const stopDrag = () => {
       dragging = false;
-    });
-    stage.addEventListener("pointercancel", () => {
-      dragging = false;
-    });
+    };
+    stage.addEventListener("pointerup", stopDrag);
+    stage.addEventListener("pointercancel", stopDrag);
+    stage.addEventListener("lostpointercapture", stopDrag);
     stage.addEventListener("keydown", (event) => {
       const step = event.shiftKey ? 12 : 5;
       if (event.key === "ArrowLeft") ry -= step;
@@ -840,6 +912,175 @@
     });
   }
 
+  // public/lib/model-gallery.js
+  var copy2 = {
+    en: {
+      title: "Interactive 3D model library",
+      intro: "Explore all MORS system concepts, what each one is for, and the research question it can help investigate.",
+      search: "Search models and descriptions",
+      category: "Filter by category",
+      all: "All categories",
+      shown: "models shown",
+      loading: "Loading model\u2026",
+      ready: "3D model ready \xB7 drag to rotate \xB7 scroll or pinch to zoom",
+      unavailable: "This browser could not start the 3D viewer. The model description and direct download are still available.",
+      failed: "Model could not be rendered. Use its direct GLB download.",
+      purpose: "What it represents",
+      value: "Why it is useful",
+      download: "Download GLB",
+      viewer: "Interactive 3D view",
+      select: "Select any model below to inspect it.",
+      noResults: "No models match these filters.",
+      catalogError: "The model library could not load. Reload this page to try again.",
+      disclaimer: "These are research concepts and visual CAD models, not qualified hardware. The condition controls below change a separate explanatory scene; they do not alter the CAD model or predict fire suppression.",
+      conditions: "Illustrative conditions",
+      noMeasured: "Schematic only \xB7 not CFD \xB7 not a test result"
+    },
+    ar: {
+      title: "\u0645\u0643\u062A\u0628\u0629 \u0627\u0644\u0646\u0645\u0627\u0630\u062C \u0627\u0644\u062A\u0641\u0627\u0639\u0644\u064A\u0629 \u062B\u0644\u0627\u062B\u064A\u0629 \u0627\u0644\u0623\u0628\u0639\u0627\u062F",
+      intro: "\u062A\u0635\u0641\u0651\u062D \u062C\u0645\u064A\u0639 \u0645\u0641\u0627\u0647\u064A\u0645 \u0623\u0646\u0638\u0645\u0629 MORS\u060C \u0648\u0627\u0644\u063A\u0631\u0636 \u0645\u0646 \u0643\u0644 \u0646\u0645\u0648\u0630\u062C\u060C \u0648\u0627\u0644\u0633\u0624\u0627\u0644 \u0627\u0644\u0628\u062D\u062B\u064A \u0627\u0644\u0630\u064A \u0642\u062F \u064A\u0633\u0627\u0639\u062F \u0641\u064A \u062F\u0631\u0627\u0633\u062A\u0647.",
+      search: "\u0627\u0628\u062D\u062B \u0641\u064A \u0627\u0644\u0646\u0645\u0627\u0630\u062C \u0648\u0627\u0644\u0634\u0631\u0648\u062D",
+      category: "\u062A\u0635\u0641\u064A\u0629 \u062D\u0633\u0628 \u0627\u0644\u0641\u0626\u0629",
+      all: "\u0643\u0644 \u0627\u0644\u0641\u0626\u0627\u062A",
+      shown: "\u0646\u0645\u0648\u0630\u062C \u0645\u0639\u0631\u0648\u0636",
+      loading: "\u062C\u0627\u0631\u064D \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0646\u0645\u0648\u0630\u062C\u2026",
+      ready: "\u0627\u0644\u0646\u0645\u0648\u0630\u062C \u062C\u0627\u0647\u0632 \xB7 \u0627\u0633\u062D\u0628 \u0644\u0644\u062A\u062F\u0648\u064A\u0631 \xB7 \u0643\u0628\u0651\u0631 \u0628\u0627\u0644\u0639\u062C\u0644\u0629 \u0623\u0648 \u0628\u0625\u0635\u0628\u0639\u064A\u0646",
+      unavailable: "\u062A\u0639\u0630\u0631 \u062A\u0634\u063A\u064A\u0644 \u0639\u0627\u0631\u0636 3D \u0641\u064A \u0647\u0630\u0627 \u0627\u0644\u0645\u062A\u0635\u0641\u062D. \u064A\u0628\u0642\u0649 \u0627\u0644\u0634\u0631\u062D \u0648\u0627\u0644\u062A\u0646\u0632\u064A\u0644 \u0627\u0644\u0645\u0628\u0627\u0634\u0631 \u0645\u062A\u0627\u062D\u064A\u0646.",
+      failed: "\u062A\u0639\u0630\u0631 \u0639\u0631\u0636 \u0627\u0644\u0646\u0645\u0648\u0630\u062C. \u0627\u0633\u062A\u062E\u062F\u0645 \u0631\u0627\u0628\u0637 \u062A\u0646\u0632\u064A\u0644 GLB \u0627\u0644\u0645\u0628\u0627\u0634\u0631.",
+      purpose: "\u0645\u0627\u0630\u0627 \u064A\u0645\u062B\u0651\u0644",
+      value: "\u0645\u0627 \u0641\u0627\u0626\u062F\u062A\u0647 \u0627\u0644\u0628\u062D\u062B\u064A\u0629",
+      download: "\u062A\u0646\u0632\u064A\u0644 GLB",
+      viewer: "\u0639\u0631\u0636 \u062B\u0644\u0627\u062B\u064A \u0627\u0644\u0623\u0628\u0639\u0627\u062F \u062A\u0641\u0627\u0639\u0644\u064A",
+      select: "\u0627\u062E\u062A\u0631 \u0623\u064A \u0646\u0645\u0648\u0630\u062C \u0623\u062F\u0646\u0627\u0647 \u0644\u0645\u0639\u0627\u064A\u0646\u062A\u0647.",
+      noResults: "\u0644\u0627 \u062A\u0648\u062C\u062F \u0646\u0645\u0627\u0630\u062C \u062A\u0637\u0627\u0628\u0642 \u0639\u0648\u0627\u0645\u0644 \u0627\u0644\u062A\u0635\u0641\u064A\u0629.",
+      catalogError: "\u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0645\u0643\u062A\u0628\u0629 \u0627\u0644\u0646\u0645\u0627\u0630\u062C. \u0623\u0639\u062F \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0635\u0641\u062D\u0629 \u0644\u0644\u0645\u062D\u0627\u0648\u0644\u0629.",
+      disclaimer: "\u0647\u0630\u0647 \u0645\u0641\u0627\u0647\u064A\u0645 \u0628\u062D\u062B\u064A\u0629 \u0648\u0646\u0645\u0627\u0630\u062C CAD \u0628\u0635\u0631\u064A\u0629 \u0648\u0644\u064A\u0633\u062A \u0645\u0639\u062F\u0627\u062A \u0645\u0624\u0647\u0644\u0629. \u062A\u063A\u064A\u0651\u0631 \u062E\u064A\u0627\u0631\u0627\u062A \u0627\u0644\u062D\u0627\u0644\u0629 \u0623\u062F\u0646\u0627\u0647 \u0645\u0634\u0647\u062F\u0627\u064B \u062A\u0641\u0633\u064A\u0631\u064A\u0627\u064B \u0645\u0646\u0641\u0635\u0644\u0627\u064B\u061B \u0648\u0644\u0627 \u062A\u0639\u062F\u0651\u0644 \u0646\u0645\u0648\u0630\u062C CAD \u0648\u0644\u0627 \u062A\u062A\u0646\u0628\u0623 \u0628\u0625\u062E\u0645\u0627\u062F \u0627\u0644\u062D\u0631\u064A\u0642.",
+      conditions: "\u062D\u0627\u0644\u0627\u062A \u062A\u0648\u0636\u064A\u062D\u064A\u0629",
+      noMeasured: "\u0631\u0633\u0645 \u062A\u062E\u0637\u064A\u0637\u064A \u0641\u0642\u0637 \xB7 \u0644\u064A\u0633 CFD \xB7 \u0648\u0644\u064A\u0633 \u0646\u062A\u064A\u062C\u0629 \u0627\u062E\u062A\u0628\u0627\u0631"
+    }
+  };
+  var escPath = (file) => `/models/${encodeURIComponent(file)}`;
+  async function renderModelGallery(lang2 = "en") {
+    const ar = lang2 === "ar";
+    const t2 = copy2[ar ? "ar" : "en"];
+    let models;
+    let descriptions;
+    let viewerAvailable = true;
+    try {
+      const [catalogResponse, descriptionsResponse] = await Promise.all([
+        fetch("/models/catalog.json"),
+        fetch("/models/descriptions.json")
+      ]);
+      if (!catalogResponse.ok || !descriptionsResponse.ok) throw new Error("Model catalogue request failed.");
+      [models, descriptions] = await Promise.all([catalogResponse.json(), descriptionsResponse.json()]);
+      if (!Array.isArray(models) || models.length === 0 || models.some((model) => !descriptions[model.file]))
+        throw new Error("Model catalogue is incomplete.");
+    } catch (e) {
+      return `${pageHead(t2.title, t2.catalogError)}<div class="callout warn" role="alert">${t2.catalogError}</div>`;
+    }
+    try {
+      await import("/vendor/model-viewer.min.js");
+    } catch (e) {
+      viewerAvailable = false;
+    }
+    const categories = [...new Set(models.map((model) => descriptions[model.file][ar ? "categoryAr" : "categoryEn"]))].sort();
+    const first = models[0];
+    const initial = descriptions[first.file];
+    const itemCards = models.map((model) => {
+      const detail = descriptions[model.file];
+      const title = model.title.replace(/-/g, " ");
+      const category = detail[ar ? "categoryAr" : "categoryEn"];
+      const value = detail[ar ? "valueAr" : "valueEn"];
+      const search = `${title} ${detail.categoryEn} ${detail.categoryAr} ${detail.purposeEn} ${detail.purposeAr} ${detail.valueEn} ${detail.valueAr}`;
+      const selected = model.file === first.file;
+      return `<button class="model-gallery-item${selected ? " selected" : ""}" type="button" data-model-file="${esc(model.file)}" data-model-title="${esc(title)}" data-category-en="${esc(detail.categoryEn)}" data-category-ar="${esc(detail.categoryAr)}" data-purpose-en="${esc(detail.purposeEn)}" data-purpose-ar="${esc(detail.purposeAr)}" data-value-en="${esc(detail.valueEn)}" data-value-ar="${esc(detail.valueAr)}" data-search="${esc(search.toLocaleLowerCase())}" data-category="${esc(detail.categoryEn)}" aria-pressed="${selected}"><span class="model-gallery-item-top"><b>${esc(title)}</b><small>${esc(category)}</small></span><span class="model-gallery-item-summary">${esc(value)}</span></button>`;
+    }).join("");
+    return `<div class="model-gallery">
+    ${pageHead(t2.title, t2.intro)}
+    <div class="callout model-gallery-boundary">${t2.disclaimer}</div>
+    <section class="card model-inspector" aria-label="${esc(t2.viewer)}">
+      <div class="model-inspector-viewer">
+        <div class="card-head"><div><h2 id="galleryModelTitle">${esc(first.title.replace(/-/g, " "))}</h2><p class="sub">${t2.viewer}</p></div><span class="concept-badge">${models.length} ${ar ? "\u0646\u0645\u0648\u0630\u062C\u0627\u064B" : "models"}</span></div>
+        <model-viewer id="galleryModelViewer" class="model-viewer" src="${escPath(first.file)}" alt="${esc(first.title)}" camera-controls shadow-intensity="0.8" exposure="1" interaction-prompt="auto" loading="eager" reveal="auto"></model-viewer>
+        <div class="concept-model-meta"><span id="galleryModelStatus" class="sub" role="status" aria-live="polite">${viewerAvailable ? t2.loading : t2.unavailable}</span><a id="galleryModelDownload" class="outline-btn" href="${escPath(first.file)}" download>${t2.download}</a></div>
+      </div>
+      <div class="model-inspector-details">
+        <div><span class="eyebrow" id="galleryModelCategory">${esc(initial[ar ? "categoryAr" : "categoryEn"])}</span><h3>${t2.purpose}</h3><p id="galleryModelPurpose" class="sub">${esc(initial[ar ? "purposeAr" : "purposeEn"])}</p></div>
+        <div><h3>${t2.value}</h3><p id="galleryModelValue" class="sub">${esc(initial[ar ? "valueAr" : "valueEn"])}</p></div>
+      </div>
+    </section>
+    <section class="card model-catalog" aria-label="${esc(t2.title)}">
+      <div class="card-head"><div><h2>${ar ? "\u0643\u0644 \u0627\u0644\u0646\u0645\u0627\u0630\u062C" : "Browse every model"}</h2><p id="modelGalleryCount" class="sub">${models.length} ${t2.shown}</p></div></div>
+      <div class="model-gallery-filters"><label>${t2.search}<input id="modelGallerySearch" type="search" autocomplete="off" placeholder="${esc(t2.search)}"></label><label>${t2.category}<select id="modelGalleryCategory"><option value="">${t2.all}</option>${categories.map((category) => `<option value="${esc(descriptions[models.find((item) => descriptions[item.file][ar ? "categoryAr" : "categoryEn"] === category).file].categoryEn)}">${esc(category)}</option>`).join("")}</select></label></div>
+      <div id="modelGalleryEmpty" class="callout" hidden>${t2.noResults}</div>
+      <div id="modelGalleryItems" class="model-gallery-grid">${itemCards}</div>
+    </section>
+    <section class="model-scenario-wrap"><div class="model-scenario-heading"><div><span class="eyebrow">${t2.conditions}</span><p class="sub">${t2.disclaimer}</p></div><span class="concept-badge">${t2.noMeasured}</span></div>${flameScene3d(lang2)}</section>
+  </div>`;
+  }
+  function bindModelGallery(root, lang2 = "en") {
+    var _a;
+    const ar = lang2 === "ar";
+    const t2 = copy2[ar ? "ar" : "en"];
+    const viewer = root.querySelector("#galleryModelViewer");
+    const status = root.querySelector("#galleryModelStatus");
+    const download2 = root.querySelector("#galleryModelDownload");
+    const search = root.querySelector("#modelGallerySearch");
+    const category = root.querySelector("#modelGalleryCategory");
+    const items = [...root.querySelectorAll(".model-gallery-item")];
+    const empty = root.querySelector("#modelGalleryEmpty");
+    const count = root.querySelector("#modelGalleryCount");
+    bindFlameScene3d(root, lang2);
+    if (!viewer || !items.length) return;
+    if (!((_a = window.customElements) == null ? void 0 : _a.get("model-viewer"))) {
+      if (status) status.textContent = t2.unavailable;
+    } else {
+      viewer.addEventListener("load", () => {
+        if (status) status.textContent = t2.ready;
+      });
+      viewer.addEventListener("error", () => {
+        if (status) status.textContent = t2.failed;
+      });
+      if (viewer.loaded && status) status.textContent = t2.ready;
+    }
+    const filter = () => {
+      const query = ((search == null ? void 0 : search.value) || "").trim().toLocaleLowerCase();
+      const selectedCategory = (category == null ? void 0 : category.value) || "";
+      let visible = 0;
+      for (const item of items) {
+        const matches = (!query || item.dataset.search.includes(query)) && (!selectedCategory || item.dataset.category === selectedCategory);
+        item.hidden = !matches;
+        if (matches) visible++;
+      }
+      if (count) count.textContent = `${visible} ${t2.shown}`;
+      if (empty) empty.hidden = visible > 0;
+    };
+    search == null ? void 0 : search.addEventListener("input", filter);
+    category == null ? void 0 : category.addEventListener("change", filter);
+    for (const item of items) {
+      item.addEventListener("click", () => {
+        var _a2;
+        const file = item.dataset.modelFile;
+        const title = item.dataset.modelTitle || file;
+        const path = escPath(file);
+        for (const candidate of items) {
+          candidate.setAttribute("aria-pressed", candidate === item ? "true" : "false");
+          candidate.classList.toggle("selected", candidate === item);
+        }
+        root.querySelector("#galleryModelTitle").textContent = title;
+        root.querySelector("#galleryModelCategory").textContent = item.dataset[ar ? "categoryAr" : "categoryEn"];
+        root.querySelector("#galleryModelPurpose").textContent = item.dataset[ar ? "purposeAr" : "purposeEn"];
+        root.querySelector("#galleryModelValue").textContent = item.dataset[ar ? "valueAr" : "valueEn"];
+        if (download2) download2.href = path;
+        if (viewer && ((_a2 = window.customElements) == null ? void 0 : _a2.get("model-viewer"))) {
+          if (status) status.textContent = t2.loading;
+          viewer.alt = title;
+          viewer.src = path;
+        }
+      });
+    }
+  }
+
   // public/app.js
   var nav = [
     ["Overview", "Challenge overview", "\u2302", "COMMAND"],
@@ -847,6 +1088,7 @@
     ["Mission Atmospheres", "Oxygen, pressure & EVA transitions", "\u25C9", "SCIENCE"],
     ["Safety Insights", "Prevention, detection & suppression", "\u25C7", "SCIENCE"],
     ["System Concepts", "HARBOR observation concept & microgravity fire-response map", "\u2318", "SCIENCE"],
+    ["3D Models", "Interactive models, research purposes & scenario controls", "\u2B21", "SCIENCE"],
     ["Mission Lessons", "NASA incidents & technology transfer", "\u2301", "SCIENCE"],
     ["Challenge Evidence", "NASA PSI investigation tables", "\u25A4", "SCIENCE"],
     ["Investigation Lab", "Study-specific NASA PSI evidence summaries", "\u25C9", "ANALYSIS"],
@@ -914,6 +1156,7 @@
     "Mission Atmospheres": "\u0623\u062C\u0648\u0627\u0621 \u0627\u0644\u0645\u0647\u0645\u0627\u062A",
     "Safety Insights": "\u0631\u0624\u0649 \u0633\u0644\u0627\u0645\u0629 \u0627\u0644\u062D\u0631\u064A\u0642",
     "System Concepts": "\u062A\u0635\u0627\u0645\u064A\u0645 \u0627\u0644\u0623\u0646\u0638\u0645\u0629",
+    "3D Models": "\u0627\u0644\u0646\u0645\u0627\u0630\u062C \u062B\u0644\u0627\u062B\u064A\u0629 \u0627\u0644\u0623\u0628\u0639\u0627\u062F",
     "Mission Lessons": "\u062F\u0631\u0648\u0633 \u0627\u0644\u0645\u0647\u0645\u0627\u062A \u0648\u0627\u0644\u062A\u0642\u0646\u064A\u0629",
     "Challenge Evidence": "\u0623\u062F\u0644\u0629 \u0627\u0644\u062A\u062D\u062F\u064A",
     "Investigation Lab": "\u0645\u062E\u062A\u0628\u0631 \u0627\u0644\u062A\u062D\u0642\u064A\u0642\u0627\u062A",
@@ -1300,6 +1543,7 @@
     "Mission Atmospheres": () => renderMissionAtmospheres(lang),
     "Safety Insights": () => renderSafetyInsights(lang),
     "System Concepts": () => renderSystemConcepts(lang),
+    "3D Models": () => renderModelGallery(lang),
     "Mission Lessons": missionLessons,
     "Challenge Evidence": () => renderChallengeLibrary(lang),
     "Investigation Lab": () => renderInvestigationLab(lang),
@@ -1334,6 +1578,7 @@
       if (name === "Investigation Lab") bindInvestigationLab(c, lang);
       if (name === "Flame Physics") bindFlameScene3d(c, lang);
       if (name === "System Concepts") bindSystemConcepts(c, lang);
+      if (name === "3D Models") bindModelGallery(c, lang);
       if (name === "Comparison Studio") renderCompare();
       if (name === "AI Copilot") {
         const provider = (await get("/api/health")).credentials.gemini;

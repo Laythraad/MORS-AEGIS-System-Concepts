@@ -1,0 +1,330 @@
+{
+  "BURST-LINK-optics.glb": {
+    "categoryEn": "Flame measurement",
+    "categoryAr": "قياس اللهب",
+    "purposeEn": "A synchronized optical bench concept for aligning video, background-oriented schlieren, radiometry, temperature, flow, and acceleration around a transient flame event.",
+    "purposeAr": "منصة بصرية تصورية لمزامنة الفيديو وقياس انحراف الضوء والراديومتر والحرارة والجريان والتسارع حول حدث عابر في اللهب.",
+    "valueEn": "Helps inspect whether independent signals change together in time; correlation alone does not establish a physical cause.",
+    "valueAr": "يساعد على فحص تزامن تغير الإشارات المختلفة زمنياً؛ التزامن وحده لا يثبت سبباً فيزيائياً."
+  },
+  "CAGE-GAP-RING-fixture.glb": {
+    "categoryEn": "Test enclosure",
+    "categoryAr": "حجرة الاختبار",
+    "purposeEn": "A ring-and-insert fixture illustrating a controlled boundary gap around a test enclosure or sample.",
+    "purposeAr": "حلقة وحشوة تصوريّتان لتمثيل فجوة حدّية مضبوطة حول حجرة الاختبار أو العينة.",
+    "valueEn": "Makes enclosure clearance and repeatable geometry visible for planning a cold-flow comparison.",
+    "valueAr": "يوضح خلوص الحجرة وهندسة قابلة للتكرار عند تخطيط مقارنة جريان بارد."
+  },
+  "CAGE-Loop-concept.glb": {
+    "categoryEn": "Test enclosure",
+    "categoryAr": "حجرة الاختبار",
+    "purposeEn": "A modular test-cage concept with a body, viewing hood, sample area, and separate gas and water paths.",
+    "purposeAr": "مفهوم حجرة اختبار معيارية تضم الهيكل وغطاء الرؤية ومنطقة العينة ومسارات منفصلة للغاز والماء.",
+    "valueEn": "Supports planning matched control and treatment runs while keeping flow conditions and measurement locations explicit.",
+    "valueAr": "يساعد على تخطيط تشغيلات مقارنة وضبط مع إبقاء شروط الجريان ومواضع القياس واضحة."
+  },
+  "CASCADE-RECOVERY-MATRIX.glb": {
+    "categoryEn": "Post-test recovery",
+    "categoryAr": "استعادة ما بعد الاختبار",
+    "purposeEn": "A staged recovery fixture concept for collecting material from multiple downstream locations after a test.",
+    "purposeAr": "مفهوم أداة استعادة مرحلية لجمع المواد من مواضع متعددة بعد الاختبار.",
+    "valueEn": "Encourages spatially labeled collection instead of treating all recovered residue as one sample.",
+    "valueAr": "يشجع على جمع عينات موسومة مكانياً بدلاً من دمج البقايا المستعادة في عينة واحدة."
+  },
+  "DEPTH-MEMORY-cell.glb": {
+    "categoryEn": "Sensor response",
+    "categoryAr": "استجابة الحساس",
+    "purposeEn": "A sample cell with a viewing window and sensor position for exploring depth-dependent or delayed measurement response.",
+    "purposeAr": "خلية عينة بنافذة وموضع حساس لاستكشاف اختلاف الاستجابة مع العمق أو تأخر القياس.",
+    "valueEn": "Helps separate sensor-response time from the timing of a change inside the sample; it is a proposed fixture, not a measured result.",
+    "valueAr": "يساعد على فصل زمن استجابة الحساس عن توقيت التغير داخل العينة؛ الأداة مقترحة وليست نتيجة مقاسة."
+  },
+  "DOCK-MIST-port.glb": {
+    "categoryEn": "HARBOR interface",
+    "categoryAr": "واجهة HARBOR",
+    "purposeEn": "A docking-port concept with a bay, seal, sample head, and independent water and carrier-gas connections.",
+    "purposeAr": "مفهوم منفذ التحام يضم حجرة وخاتماً ورأس عينة ووصلات مستقلة للماء والغاز الناقل.",
+    "valueEn": "Makes repeatable alignment and separate fluid paths visible for a cold test stand; it does not qualify a pressure seal.",
+    "valueAr": "يوضح المحاذاة المتكررة ومسارات الموائع المنفصلة لمنصة اختبار باردة؛ ولا يؤهل مانع تسرب للضغط."
+  },
+  "E-FIELD-DOSE-rig.glb": {
+    "categoryEn": "Mist deposition",
+    "categoryAr": "ترسيب الرذاذ",
+    "purposeEn": "A cold-spray rig concept with electrodes, an insulated frame, nozzle, collectors, and sensors for comparing charged-mist deposition.",
+    "purposeAr": "منصة رذاذ بارد تصورية بأقطاب وإطار عازل وفوهة ومجمّعات وحساسات لمقارنة ترسيب الرذاذ المشحون.",
+    "valueEn": "Provides a layout for comparing polarity and deposited mass separately from assumptions about fire suppression.",
+    "valueAr": "توفر ترتيباً لمقارنة القطبية وكتلة الترسيب بمعزل عن افتراضات إخماد الحريق."
+  },
+  "EXTINCTION-PATHWAY-MAP-rig.glb": {
+    "categoryEn": "Flame physics",
+    "categoryAr": "فيزياء اللهب",
+    "purposeEn": "A proposed test rig for contrasting reduced oxygen availability with changed imposed flow while observing flame response.",
+    "purposeAr": "منصة اختبار مقترحة لمقارنة خفض توفر الأكسجين بتغيير الجريان المفروض مع رصد استجابة اللهب.",
+    "valueEn": "Separates two candidate transport pathways for study; it does not assert that either setting extinguishes a fire.",
+    "valueAr": "تفصل مسارين محتملين للدراسة؛ ولا تدعي أن أياً من الشرطين يطفئ الحريق."
+  },
+  "FILTER-LAG-test-spool.glb": {
+    "categoryEn": "Smoke detection",
+    "categoryAr": "كشف الدخان",
+    "purposeEn": "A filter-test spool for sampling an aerosol pulse before and after a filter while recording flow and pressure drop.",
+    "purposeAr": "وصلة اختبار مرشح لأخذ عينات نبضة هباء قبله وبعده مع تسجيل الجريان وفرق الضغط.",
+    "valueEn": "Supports measuring transport delay and signal attenuation instead of assuming a detector sees a source immediately.",
+    "valueAr": "تدعم قياس تأخر الانتقال وتوهين الإشارة بدلاً من افتراض وصولها فوراً إلى الكاشف."
+  },
+  "FLOW-SHAPE-duct.glb": {
+    "categoryEn": "Flow diagnostics",
+    "categoryAr": "تشخيص الجريان",
+    "purposeEn": "A duct and sample fixture with inlet, valve, and sensor positions for mapping local flow around a test target.",
+    "purposeAr": "مجرى وأداة عينة بمدخل وصمام ومواضع حساسات لرسم الجريان المحلي حول هدف الاختبار.",
+    "valueEn": "Helps reveal nonuniform flow and sampling-position effects before comparing flame or mist outcomes.",
+    "valueAr": "تساعد على كشف عدم تجانس الجريان وأثر موضع أخذ العينة قبل مقارنة نتائج اللهب أو الرذاذ."
+  },
+  "HARBOR-DOCK-MIST-robot.glb": {
+    "categoryEn": "HARBOR robotics",
+    "categoryAr": "روبوت HARBOR",
+    "purposeEn": "A HARBOR handrail-anchored robot carrying a DOCK-MIST measurement payload at its wrist.",
+    "purposeAr": "روبوت HARBOR مرتكز على الدرابزين ويحمل وحدة قياس DOCK-MIST عند معصمه.",
+    "valueEn": "Illustrates remote payload positioning and docking for measurement; propulsion is not proposed as a fire-control flow source.",
+    "valueAr": "يوضح تموضع الحمولة والالتحام للقياس عن بعد؛ ولا يقترح الدفع مصدراً لجريان إخماد."
+  },
+  "HARBOR-handrail-robot.glb": {
+    "categoryEn": "HARBOR robotics",
+    "categoryAr": "روبوت HARBOR",
+    "purposeEn": "A mobile platform concept that travels on handrails and braces at two points before extending a measurement arm.",
+    "purposeAr": "مفهوم منصة تتحرك على الدرابزين وتثبت نفسها عند نقطتين قبل مد ذراع القياس.",
+    "valueEn": "Provides a way to discuss stable remote observation while limiting motion near a test volume; not a flight-qualified robot.",
+    "valueAr": "يتيح مناقشة الرصد عن بعد بعد التثبيت لتقليل الحركة قرب حجم الاختبار؛ وليس روبوتاً مؤهلاً للطيران."
+  },
+  "HARBOR-PERIMETER-SCAN-assembly.glb": {
+    "categoryEn": "HARBOR robotics",
+    "categoryAr": "روبوت HARBOR",
+    "purposeEn": "An assembly concept combining HARBOR, a test hood, and a perimeter sensor arrangement around the sample volume.",
+    "purposeAr": "تجميعة تصورية تجمع HARBOR وغطاء اختبار وترتيب حساسات محيطي حول حجم العينة.",
+    "valueEn": "Shows how several local observations could be compared spatially; the sensors do not reconstruct a full flow field.",
+    "valueAr": "توضح مقارنة عدة قياسات محلية مكانياً؛ ولا تعيد الحساسات بناء مجال جريان كامل."
+  },
+  "HARBOR-perimeter-sensor-ring.glb": {
+    "categoryEn": "HARBOR robotics",
+    "categoryAr": "روبوت HARBOR",
+    "purposeEn": "A detachable ring with measurement points on two axial levels around a test volume.",
+    "purposeAr": "حلقة قابلة للفك بنقاط قياس على مستويين محوريين حول حجم الاختبار.",
+    "valueEn": "Makes spatial sampling positions visible for comparing local readings; it does not specify qualified sensors or capture a continuous plume map.",
+    "valueAr": "توضح مواضع أخذ عينات مكانية للمقارنة؛ ولا تحدد حساسات مؤهلة أو خريطة مستمرة للعمود."
+  },
+  "LIQUID-DOSE-MAP-insert.glb": {
+    "categoryEn": "Mist deposition",
+    "categoryAr": "ترسيب الرذاذ",
+    "purposeEn": "A removable insert holding indexed coupons or collectors for spatially labeling liquid deposition.",
+    "purposeAr": "حشوة قابلة للإزالة تحمل عينات أو مجمّعات مرقمة لتوسيم ترسيب السائل مكانياً.",
+    "valueEn": "Helps distinguish where liquid lands from how much liquid was supplied to the nozzle.",
+    "valueAr": "تساعد على تمييز موضع وصول السائل عن كميته المغذاة إلى الفوهة."
+  },
+  "MirrorSig-vent-spool.glb": {
+    "categoryEn": "Sensor response",
+    "categoryAr": "استجابة الحساس",
+    "purposeEn": "A vent-path spool concept for placing paired signal or gas-sampling points along a repeatable flow path.",
+    "purposeAr": "وصلة لمسار تهوية تضع نقاط إشارة أو أخذ عينات مزدوجة على مسار جريان قابل للتكرار.",
+    "valueEn": "Provides a geometry for checking whether path position changes a recorded signal; the name is a project label, not a validated instrument standard.",
+    "valueAr": "توفر هندسة لفحص أثر موضع المسار على الإشارة المسجلة؛ الاسم تسمية للمشروع وليس معيار أداة معتمداً."
+  },
+  "MIST-ARRIVAL-LAG-MAP.glb": {
+    "categoryEn": "Mist timing",
+    "categoryAr": "توقيت الرذاذ",
+    "purposeEn": "An optical timing fixture for observing when a mist pulse reaches more than one location.",
+    "purposeAr": "أداة توقيت بصرية لرصد وقت وصول نبضة الرذاذ إلى أكثر من موضع.",
+    "valueEn": "Supports comparing arrival delay and spatial variability rather than treating spray onset as uniform everywhere.",
+    "valueAr": "تدعم مقارنة تأخر الوصول وتباينه مكانياً بدلاً من اعتبار بدء الرش متزامناً في كل مكان."
+  },
+  "MIST-ORIENT-turret.glb": {
+    "categoryEn": "Mist delivery",
+    "categoryAr": "توجيه الرذاذ",
+    "purposeEn": "An adjustable nozzle-orientation fixture with separate water and gas paths aimed at a sample target.",
+    "purposeAr": "أداة قابلة لتغيير اتجاه الفوهة بمساري ماء وغاز منفصلين نحو هدف العينة.",
+    "valueEn": "Makes orientation a controllable test variable for studying coverage and deposition; it does not predict suppression performance.",
+    "valueAr": "تجعل اتجاه الفوهة متغير اختبار مضبوطاً لدراسة التغطية والترسيب؛ ولا تتنبأ بأداء الإخماد."
+  },
+  "MIST-PAIR-recovery-dock.glb": {
+    "categoryEn": "Post-test recovery",
+    "categoryAr": "استعادة ما بعد الاختبار",
+    "purposeEn": "A dock for retrieving indexed coupons and sample vials after matched MIST-PAIR runs.",
+    "purposeAr": "رصيف لاستعادة عينات مرقمة وقوارير بعد تشغيلات MIST-PAIR المتطابقة.",
+    "valueEn": "Helps preserve run identity and separate recovered material across treatment and control conditions.",
+    "valueAr": "يساعد على حفظ هوية التشغيل وفصل المواد المستعادة بين المعالجة والضبط."
+  },
+  "MIST-PAIR-test-rig.glb": {
+    "categoryEn": "Mist comparison",
+    "categoryAr": "مقارنة الرذاذ",
+    "purposeEn": "A paired test-rig concept comparing a water-mist condition with a carrier-gas-only control under matched flow.",
+    "purposeAr": "منصة مقارنة مزدوجة تقابل شرط رذاذ الماء بضبط غاز ناقل فقط مع مطابقة الجريان.",
+    "valueEn": "Helps separate water-related changes from changes caused by the gas stream; mismatched flow invalidates that interpretation.",
+    "valueAr": "تساعد على فصل تغيرات الماء عن أثر تيار الغاز؛ اختلاف الجريان يبطل هذا التفسير."
+  },
+  "MIST-SENSOR-BIAS-rig.glb": {
+    "categoryEn": "Sensor response",
+    "categoryAr": "استجابة الحساس",
+    "purposeEn": "A three-path sensor fixture contrasting a mist-exposed probe, a droplet-separated path, and an independent reference.",
+    "purposeAr": "أداة بثلاثة مسارات تقارن حساساً معرضاً للرذاذ بمسار مفصول القطرات ومرجع مستقل.",
+    "valueEn": "Tests whether droplets bias a sensor signal; it does not assume that every observed change is a gas-composition change.",
+    "valueAr": "تختبر انحياز إشارة الحساس بالقطرات؛ ولا تفترض أن كل تغير مرصود سببه تركيب الغاز."
+  },
+  "MOSAIC-optical-cage.glb": {
+    "categoryEn": "Optical diagnostics",
+    "categoryAr": "التشخيص البصري",
+    "purposeEn": "An optical cage concept with multiple mounted sight paths around a target.",
+    "purposeAr": "قفص بصري تصوري بمسارات رؤية متعددة مثبتة حول الهدف.",
+    "valueEn": "Helps plan repeatable camera and optical access without confusing viewing geometry with measured flow.",
+    "valueAr": "يساعد على تخطيط وصول بصري وكاميرات قابل للتكرار دون الخلط بين خط الرؤية والجريان المقاس."
+  },
+  "PRISM-postfire-recovery.glb": {
+    "categoryEn": "Post-fire sampling",
+    "categoryAr": "أخذ عينات ما بعد الحريق",
+    "purposeEn": "A recovery case concept with separate sorbent, particle, and capillary collection elements for post-event sampling.",
+    "purposeAr": "حافظة استعادة تصورية بعناصر منفصلة للماصات والجسيمات والشعيرات لأخذ عينات ما بعد الحدث.",
+    "valueEn": "Supports comparing sampled material while documenting filter bypass and recovery path; it does not identify hazards without analysis.",
+    "valueAr": "تدعم مقارنة المواد المأخوذة مع توثيق مسار الاستعادة وتجاوز المرشح؛ ولا تحدد الأخطار دون تحليل."
+  },
+  "PULSE-MIST-cassette.glb": {
+    "categoryEn": "Mist timing",
+    "categoryAr": "توقيت الرذاذ",
+    "purposeEn": "A cassette concept for comparing time-separated water pulses with continuous delivery while keeping carrier-gas flow distinct.",
+    "purposeAr": "خرطوشة تصورية لمقارنة نبضات ماء مؤقتة بتغذية مستمرة مع فصل جريان الغاز الناقل.",
+    "valueEn": "Makes pulse timing, liquid mass, droplet field, and deposition measurable as separate quantities; it is not an extinguisher.",
+    "valueAr": "تتيح قياس توقيت النبضة وكتلة السائل وحقل القطرات والترسيب ككميات منفصلة؛ وليست مطفأة."
+  },
+  "PULSE-PHASE-MAP-head.glb": {
+    "categoryEn": "Mist timing",
+    "categoryAr": "توقيت الرذاذ",
+    "purposeEn": "An optical head concept for aligning a pulse command with observed arrival and response signals.",
+    "purposeAr": "رأس بصري تصوري لمزامنة أمر النبضة مع إشارات الوصول والاستجابة المرصودة.",
+    "valueEn": "Helps expose phase and clock offsets before interpreting timing differences as physical delays.",
+    "valueAr": "يساعد على كشف فروق الطور وانحراف الساعات قبل تفسير الفروق الزمنية كتأخر فيزيائي."
+  },
+  "RADIANT-CUT-shadow-shield.glb": {
+    "categoryEn": "Radiative heat",
+    "categoryAr": "الحرارة الإشعاعية",
+    "purposeEn": "A hinged shadow-shield concept positioned between a heat source and unburned fuel ahead of a flame-spread path.",
+    "purposeAr": "حاجب ظل مفصلي مقترح بين مصدر الحرارة والوقود غير المحترق أمام مسار انتشار اللهب.",
+    "valueEn": "Frames a test of radiation, side heating, and shield temperature; blocking line of sight alone does not prove extinguishment.",
+    "valueAr": "يؤطر اختبار الإشعاع والتسخين الجانبي وحرارة الحاجب؛ حجب خط الرؤية وحده لا يثبت الإخماد."
+  },
+  "REBOUND-MAP-cell.glb": {
+    "categoryEn": "Flame response",
+    "categoryAr": "استجابة اللهب",
+    "purposeEn": "A windowed cell concept for tracking how a flame signal changes after a controlled change in oxygen or imposed flow.",
+    "purposeAr": "خلية بنافذة لتتبع تغير إشارة اللهب بعد تغيير مضبوط في الأكسجين أو الجريان المفروض.",
+    "valueEn": "Encourages recording the response and possible return separately from the control action; it does not claim a universal rebound behavior.",
+    "valueAr": "تشجع على تسجيل الاستجابة وعودة اللهب المحتملة بمعزل عن إجراء الضبط؛ ولا تدعي نمط عودة عاماً."
+  },
+  "SIGHTLINE-MIST-GATE.glb": {
+    "categoryEn": "Optical diagnostics",
+    "categoryAr": "التشخيص البصري",
+    "purposeEn": "An optical gate concept that compares source-to-camera visibility across a mist-observation path.",
+    "purposeAr": "بوابة بصرية تصورية تقارن الرؤية بين المصدر والكاميرا عبر مسار رصد الرذاذ.",
+    "valueEn": "Helps document view obstruction and optical signal loss instead of treating a dim image as a weaker flame.",
+    "valueAr": "تساعد على توثيق حجب الرؤية وفقد الإشارة البصرية بدلاً من تفسير الصورة المعتمة كضعف اللهب."
+  },
+  "SLIP-MAP-optical-gate.glb": {
+    "categoryEn": "Optical diagnostics",
+    "categoryAr": "التشخيص البصري",
+    "purposeEn": "A duct-mounted optical gate with a source path and target window for checking image-path distortion.",
+    "purposeAr": "بوابة بصرية على مجرى لها مسار مصدر ونافذة هدف لفحص تشوه مسار الصورة.",
+    "valueEn": "Supports a repeatable optical baseline before comparing flame or particle images under changing flow.",
+    "valueAr": "تدعم خط أساس بصرياً قابلاً للتكرار قبل مقارنة صور اللهب أو الجسيمات مع تغير الجريان."
+  },
+  "SPLIT-SPECTRUM-MIST-cassette.glb": {
+    "categoryEn": "Mist characterization",
+    "categoryAr": "توصيف الرذاذ",
+    "purposeEn": "A cassette concept separating fine and coarse droplet observation paths around a target.",
+    "purposeAr": "خرطوشة تصورية تفصل مساري رصد القطرات الدقيقة والخشنة حول الهدف.",
+    "valueEn": "Makes droplet-size classes and local deposition visible for comparison; the geometry alone does not measure a spectrum.",
+    "valueAr": "توضح فئات أحجام القطرات والترسيب المحلي للمقارنة؛ الهندسة وحدها لا تقيس طيفاً."
+  },
+  "SPRAY-CLOSURE-rig.glb": {
+    "categoryEn": "Mist deposition",
+    "categoryAr": "ترسيب الرذاذ",
+    "purposeEn": "A spray-closure fixture with target and witness surfaces for accounting where liquid is captured or misses the sample.",
+    "purposeAr": "أداة إغلاق رذاذ بسطح هدف وشواهد لحساب مواضع التقاط السائل أو تجاوزه للعينة.",
+    "valueEn": "Supports a liquid-mass balance across sample, walls, and recovery surfaces rather than inferring dose from nozzle supply alone.",
+    "valueAr": "تدعم ميزان كتلة السائل بين العينة والجدران وأسطح الاستعادة بدلاً من استنتاج الجرعة من تغذية الفوهة فقط."
+  },
+  "STANDOFF-TRACE-rig.glb": {
+    "categoryEn": "Radiative heat",
+    "categoryAr": "الحرارة الإشعاعية",
+    "purposeEn": "A measurement rig for varying flame-to-sample spacing while observing radiant signal, surface temperature, and flow.",
+    "purposeAr": "منصة قياس لتغيير المسافة بين اللهب والعينة مع رصد الإشعاع وحرارة السطح والجريان.",
+    "valueEn": "Helps distinguish radiant heating from direct flame contact; radiometer readings need cross-checks against soot and hot-gas interference.",
+    "valueAr": "تساعد على تمييز التسخين الإشعاعي عن ملامسة اللهب؛ وتحتاج قراءة الراديومتر مراجعة لتداخل السخام والغاز الساخن."
+  },
+  "SWIRL-SUMP-separator.glb": {
+    "categoryEn": "Mist recovery",
+    "categoryAr": "استعادة الرذاذ",
+    "purposeEn": "A separator concept with a sump and guided gas-water path for studying liquid recovery after a mist test.",
+    "purposeAr": "مفهوم فاصل بحوض ومسار موجه للغاز والماء لدراسة استعادة السائل بعد اختبار رذاذ.",
+    "valueEn": "Helps keep captured liquid separate from vapor and bypass losses; separation efficiency is not established by this model.",
+    "valueAr": "يساعد على فصل السائل الملتقط عن البخار والفواقد المتجاوزة؛ كفاءة الفصل غير مثبتة بهذا النموذج."
+  },
+  "THERMAL-DOSE-COUPON-holder.glb": {
+    "categoryEn": "Thermal measurement",
+    "categoryAr": "القياس الحراري",
+    "purposeEn": "A coupon holder with surface and gas-temperature measurement positions for recording thermal exposure.",
+    "purposeAr": "حامل عينة بمواضع لقياس حرارة السطح والغاز لتسجيل التعرض الحراري.",
+    "valueEn": "Helps compare thermal histories at defined locations; it does not convert temperature alone into a certified damage threshold.",
+    "valueAr": "يساعد على مقارنة السجل الحراري بمواضع محددة؛ ولا يحول الحرارة وحدها إلى حد تلف معتمد."
+  },
+  "TRI-WICK-comparator.glb": {
+    "categoryEn": "Fuel configuration",
+    "categoryAr": "تهيئة الوقود",
+    "purposeEn": "A three-geometry wick comparator for studying how longitudinal, crosswise, or ribbed fuel boundaries affect observed burning.",
+    "purposeAr": "مقارن لثلاثة أشكال فتيل لدراسة أثر الحدود الطولية أو العرضية أو المضّلعة على الاحتراق المرصود.",
+    "valueEn": "Makes geometry a controlled comparison variable; fuel properties, conditioning, and ignition still require independent control.",
+    "valueAr": "يجعل الهندسة متغير مقارنة مضبوطاً؛ وتحتاج خصائص الوقود وتهيئته وإشعاله إلى ضبط مستقل."
+  },
+  "VAPOR-TRACE-spool.glb": {
+    "categoryEn": "Water mass balance",
+    "categoryAr": "ميزان كتلة الماء",
+    "purposeEn": "An inlet/outlet spool concept for measuring water vapor separately from liquid captured by a droplet separator.",
+    "purposeAr": "وصلة مدخل ومخرج لقياس بخار الماء منفصلاً عن السائل الذي يلتقطه فاصل القطرات.",
+    "valueEn": "Applies a two-phase water mass balance to a cold mist test; it does not demonstrate a fire-suppression outcome.",
+    "valueAr": "تطبق ميزان ماء بطورين على اختبار رذاذ بارد؛ ولا تثبت نتيجة إخماد حريق."
+  },
+  "VECTOR-LOCK-cassette.glb": {
+    "categoryEn": "Mist and momentum",
+    "categoryAr": "الرذاذ والزخم",
+    "purposeEn": "A segmented, opposed-flow mist cassette intended to compare measured reaction forces with a symmetric delivery arrangement.",
+    "purposeAr": "خرطوشة رذاذ مقسمة بتدفقات متقابلة لمقارنة قوى رد الفعل المقاسة بترتيب تغذية متناظر.",
+    "valueEn": "Tests a momentum-balance hypothesis; symmetry in the drawing does not guarantee zero reaction force or safe operation.",
+    "valueAr": "تختبر فرضية موازنة الزخم؛ التناظر في الرسم لا يضمن صفراً للقوة أو تشغيلاً آمناً."
+  },
+  "VIRA-GATE-sensor-head.glb": {
+    "categoryEn": "Optical and thermal sensing",
+    "categoryAr": "الاستشعار البصري والحراري",
+    "purposeEn": "A rail-mounted sensor-head concept combining camera and radiometer sightlines to a defined target.",
+    "purposeAr": "رأس حساسات على سكة يجمع خط رؤية كاميرا وراديومتر نحو هدف محدد.",
+    "valueEn": "Helps compare visible structure with radiant signal while keeping alignment and target position explicit.",
+    "valueAr": "يساعد على مقارنة البنية المرئية بالإشارة الإشعاعية مع توضيح المحاذاة وموضع الهدف."
+  },
+  "WakeMap-array.glb": {
+    "categoryEn": "Flow diagnostics",
+    "categoryAr": "تشخيص الجريان",
+    "purposeEn": "A laser-based array concept for comparing flow or optical distortion in the wake of a nearby platform.",
+    "purposeAr": "مصفوفة ليزر تصورية لمقارنة الجريان أو التشوه البصري في منطقة الاستيقاظ خلف منصة قريبة.",
+    "valueEn": "Helps check whether a moving or parked platform disturbs measurements; it does not reconstruct a full three-dimensional flow field.",
+    "valueAr": "تساعد على فحص اضطراب قياسات المنصة المتحركة أو المثبتة؛ ولا تعيد بناء مجال جريان ثلاثي الأبعاد كاملاً."
+  },
+  "WETDRY-O2-REF-head.glb": {
+    "categoryEn": "Gas measurement",
+    "categoryAr": "قياس الغاز",
+    "purposeEn": "A dual wet/dry oxygen-reference head with separate sensor cartridges and a shared manifold.",
+    "purposeAr": "رأس مرجع أكسجين رطب وجاف بحجرتي حساس منفصلتين وموزع مشترك.",
+    "valueEn": "Helps test whether water vapor or conditioning changes the reported oxygen reading; calibration offsets remain to be measured.",
+    "valueAr": "يساعد على اختبار أثر بخار الماء أو تهيئة العينة في قراءة الأكسجين؛ وانحرافات المعايرة يجب قياسها."
+  },
+  "WITNESS-BOX-fixture.glb": {
+    "categoryEn": "Containment and heat transfer",
+    "categoryAr": "الاحتواء وانتقال الحرارة",
+    "purposeEn": "A double-wall witness box concept with gas and thermal sensor locations around a sample.",
+    "purposeAr": "صندوق شاهد مزدوج الجدار بمواضع حساسات غاز وحرارة حول العينة.",
+    "valueEn": "Separates leakage or gas-exchange observations from heat transfer to the outer wall; it is not a certified fire enclosure.",
+    "valueAr": "يفصل رصد التسرب أو تبادل الغاز عن انتقال الحرارة إلى الجدار الخارجي؛ وليس حاوية حريق معتمدة."
+  }
+}

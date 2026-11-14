@@ -14,12 +14,14 @@ import { chartSVG, flexOxygenScatterSVG } from './lib/charts.js';
 import { scientificScatter, bindInteractiveCharts } from './lib/interactive-charts.js';
 import { bindFlameScene3d } from './lib/flame-scene3d.js';
 import { renderSystemConcepts, bindSystemConcepts } from './lib/system-concepts.js';
+import { renderModelGallery, bindModelGallery } from './lib/model-gallery.js';
 const nav = [
   ['Overview', 'Challenge overview', '⌂', 'COMMAND'],
   ['Flame Physics', 'Gravity, transport & flame behavior', '∿', 'SCIENCE'],
   ['Mission Atmospheres', 'Oxygen, pressure & EVA transitions', '◉', 'SCIENCE'],
   ['Safety Insights', 'Prevention, detection & suppression', '◇', 'SCIENCE'],
   ['System Concepts', 'HARBOR observation concept & microgravity fire-response map', '⌘', 'SCIENCE'],
+  ['3D Models', 'Interactive models, research purposes & scenario controls', '⬡', 'SCIENCE'],
   ['Mission Lessons', 'NASA incidents & technology transfer', '⌁', 'SCIENCE'],
   ['Challenge Evidence', 'NASA PSI investigation tables', '▤', 'SCIENCE'],
   ['Investigation Lab', 'Study-specific NASA PSI evidence summaries', '◉', 'ANALYSIS'],
@@ -100,6 +102,7 @@ const navArabic = {
   'Mission Atmospheres': 'أجواء المهمات',
   'Safety Insights': 'رؤى سلامة الحريق',
   'System Concepts': 'تصاميم الأنظمة',
+  '3D Models': 'النماذج ثلاثية الأبعاد',
   'Mission Lessons': 'دروس المهمات والتقنية',
   'Challenge Evidence': 'أدلة التحدي',
   'Investigation Lab': 'مختبر التحقيقات',
@@ -527,6 +530,7 @@ const pageMap = {
   'Mission Atmospheres': () => renderMissionAtmospheres(lang),
   'Safety Insights': () => renderSafetyInsights(lang),
   'System Concepts': () => renderSystemConcepts(lang),
+  '3D Models': () => renderModelGallery(lang),
   'Mission Lessons': missionLessons,
   'Challenge Evidence': () => renderChallengeLibrary(lang),
   'Investigation Lab': () => renderInvestigationLab(lang),
@@ -562,6 +566,7 @@ async function go(name) {
     if (name === 'Investigation Lab') bindInvestigationLab(c, lang);
     if (name === 'Flame Physics') bindFlameScene3d(c, lang);
     if (name === 'System Concepts') bindSystemConcepts(c, lang);
+    if (name === '3D Models') bindModelGallery(c, lang);
     if (name === 'Comparison Studio') renderCompare();
     if (name === 'AI Copilot') {
       const provider = (await get('/api/health')).credentials.gemini;

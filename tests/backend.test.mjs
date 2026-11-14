@@ -22,7 +22,9 @@ test('isolated backend contract and defensive boundaries', { timeout: 20000 }, a
   const post = (body, type = 'application/json') => fetch(`${base}/api/workflow`, { method: 'POST', headers: { 'content-type': type }, body });
   await t.test('health reports booleans, security headers and no configured credentials', async () => {
     const r = await fetch(`${base}/api/health`), j = await r.json();
-    assert.equal(r.status, 200); assert.ok(r.headers.get('content-security-policy').includes("script-src 'self'"));
+    const csp = r.headers.get('content-security-policy');
+    assert.equal(r.status, 200); assert.ok(csp.includes("script-src 'self' 'wasm-unsafe-eval'"));
+    assert.ok(!csp.includes("'unsafe-eval'"), 'the JavaScript unsafe-eval permission must remain disabled');
     assert.ok(Object.values(j.credentials).every(v => v === false));
   });
   await t.test('JSON primitive, null, array and malformed input rejected', async () => {
