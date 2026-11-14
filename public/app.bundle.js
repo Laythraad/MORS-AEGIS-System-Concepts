@@ -166,6 +166,224 @@
     return `<section class="card evidence-coverage" aria-labelledby="coverage-title"><div class="card-head"><div><h3 id="coverage-title">${l.title}</h3><p class="sub">${l.sub}</p></div><span class="tag">${investigations.length} ${lang2 === "ar" ? "\u062C\u062F\u0627\u0648\u0644" : "bundled tables"}</span></div><div class="table-wrap"><table><thead><tr><th scope="col">${l.study}</th>${columns.map((key) => `<th scope="col">${l[key]}</th>`).join("")}</tr></thead><tbody>${table}</tbody></table></div><div class="coverage-legend"><span><i class="coverage-swatch coverage-direct"></i>${l.direct}</span><span><i class="coverage-swatch coverage-partial"></i>${l.partial}</span><span><i class="coverage-swatch coverage-conditions"></i>${l.conditionsOnly}</span><span><i class="coverage-swatch coverage-none"></i>${l.none}</span></div><p class="sub">${l.note}</p></section>`;
   }
 
+  // public/lib/flame-volume.js
+  var VERTEX_SHADER = `
+attribute vec2 a_position;
+varying vec2 v_uv;
+void main() {
+  v_uv = a_position * 0.5 + 0.5;
+  gl_Position = vec4(a_position, 0.0, 1.0);
+}`;
+  var FRAGMENT_SHADER = `
+precision mediump float;
+varying vec2 v_uv;
+uniform vec2 u_resolution;
+uniform float u_time;
+uniform float u_gravity;
+uniform float u_air;
+uniform float u_mist;
+uniform float u_fire;
+uniform float u_yaw;
+uniform float u_pitch;
+
+vec3 rotateVolume(vec3 p) {
+  float cy = cos(u_yaw), sy = sin(u_yaw);
+  float cx = cos(u_pitch), sx = sin(u_pitch);
+  p.xz = mat2(cy, -sy, sy, cy) * p.xz;
+  p.yz = mat2(cx, -sx, sx, cx) * p.yz;
+  return p;
+}
+
+float turbulence(vec3 p) {
+  float a = sin(p.x * 13.0 + p.y * 4.0 + u_time * 3.2);
+  float b = cos(p.y * 11.0 - p.z * 7.0 - u_time * 2.7);
+  float c = sin(p.z * 15.0 + p.x * 5.0 + u_time * 2.1);
+  return (a * b + c) * 0.055;
+}
+
+void main() {
+  vec2 uv = (v_uv - 0.5) * 2.0;
+  uv.x *= u_resolution.x / u_resolution.y;
+  vec3 origin = vec3(0.0, 0.0, 2.45);
+  vec3 direction = normalize(vec3(uv * 0.88, -2.2));
+  vec4 accumulated = vec4(0.0);
+
+  for (int stepIndex = 0; stepIndex < 56; stepIndex++) {
+    float distanceAlongRay = float(stepIndex) * 0.062;
+    vec3 p = rotateVolume(origin + direction * distanceAlongRay);
+    float noise = turbulence(p);
+    float radial = 0.0;
+    float density = 0.0;
+
+    if (u_gravity < 0.5) {
+      float heightFromBase = p.y + 0.72;
+      float height01 = clamp(heightFromBase / 1.52, 0.0, 1.0);
+      float heightMask = smoothstep(-0.08, 0.06, heightFromBase)
+        * (1.0 - smoothstep(1.30, 1.54, heightFromBase));
+      float width = mix(0.29, 0.018, height01) * (1.0 + noise * 1.5);
+      float centreShift = u_air * 0.38 * height01 * height01;
+      radial = length(vec2((p.x - centreShift) / max(width, 0.025), p.z / max(width * 0.78, 0.02)));
+      density = heightMask * (1.0 - smoothstep(0.64, 1.18, radial + noise));
+    } else {
+      vec3 ellipsoid = vec3(p.x / 0.58, p.y / 0.49, p.z / 0.58);
+      ellipsoid.x -= u_air * p.y * 0.34;
+      radial = length(ellipsoid);
+      density = 1.0 - smoothstep(0.70, 1.12, radial + noise);
+    }
+
+    density *= u_fire * (1.0 - 0.12 * u_mist);
+    float core = 1.0 - smoothstep(0.02, 0.86, radial);
+    vec3 edgeColor = mix(vec3(1.0, 0.25, 0.035), vec3(0.91, 0.22, 0.48), u_gravity * 0.62);
+    vec3 sampleColor = mix(edgeColor, vec3(1.0, 0.84, 0.40), core);
+    sampleColor = mix(sampleColor, vec3(0.58, 0.83, 1.0), u_mist * 0.16);
+    float alpha = density * 0.12;
+    accumulated.rgb += (1.0 - accumulated.a) * sampleColor * alpha;
+    accumulated.a += (1.0 - accumulated.a) * alpha;
+    if (accumulated.a > 0.96) break;
+  }
+
+  // The ray marcher accumulates premultiplied light internally. Convert it to
+  // straight-alpha output for the transparent canvas compositor.
+  gl_FragColor = vec4(accumulated.rgb / max(accumulated.a, 0.0001), accumulated.a);
+}`;
+  function flameVolumeParameters(scene, { time = 0, rx = 0, ry = 0 } = {}) {
+    return {
+      time,
+      gravity: scene.dataset.gravity === "micro" ? 1 : 0,
+      air: scene.dataset.air === "on" ? 1 : 0,
+      mist: scene.dataset.mist === "on" ? 1 : 0,
+      fire: scene.dataset.fire === "on" ? 1 : 0,
+      yaw: ry * Math.PI / 180,
+      pitch: rx * Math.PI / 180
+    };
+  }
+  function compileShader(gl, type, source) {
+    const shader = gl.createShader(type);
+    if (!shader) return null;
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+      gl.deleteShader(shader);
+      return null;
+    }
+    return shader;
+  }
+  function bindFlameVolume(canvas, scene) {
+    var _a;
+    if (!(canvas == null ? void 0 : canvas.getContext)) return null;
+    let gl;
+    try {
+      gl = canvas.getContext("webgl", { alpha: true, antialias: true, premultipliedAlpha: false });
+    } catch (e) {
+      return null;
+    }
+    if (!gl) return null;
+    const vertex = compileShader(gl, gl.VERTEX_SHADER, VERTEX_SHADER);
+    const fragment = compileShader(gl, gl.FRAGMENT_SHADER, FRAGMENT_SHADER);
+    if (!vertex || !fragment) {
+      if (vertex) gl.deleteShader(vertex);
+      if (fragment) gl.deleteShader(fragment);
+      return null;
+    }
+    const program = gl.createProgram();
+    if (!program) return null;
+    gl.attachShader(program, vertex);
+    gl.attachShader(program, fragment);
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      gl.deleteProgram(program);
+      return null;
+    }
+    const buffer = gl.createBuffer();
+    if (!buffer) return null;
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+    gl.useProgram(program);
+    const position = gl.getAttribLocation(program, "a_position");
+    gl.enableVertexAttribArray(position);
+    gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
+    const uniforms = Object.fromEntries(
+      ["u_resolution", "u_time", "u_gravity", "u_air", "u_mist", "u_fire", "u_yaw", "u_pitch"].map((name) => [
+        name,
+        gl.getUniformLocation(program, name)
+      ])
+    );
+    gl.disable(gl.BLEND);
+    let rotation = { rx: 0, ry: 0 };
+    let elapsed = 0;
+    let lastFrame = 0;
+    let frame = 0;
+    let paused = Boolean((_a = window.matchMedia) == null ? void 0 : _a.call(window, "(prefers-reduced-motion: reduce)").matches);
+    let observer;
+    const resize = () => {
+      const ratio = Math.min(window.devicePixelRatio || 1, 1.25);
+      const width = Math.max(1, Math.round(canvas.clientWidth * ratio));
+      const height = Math.max(1, Math.round(canvas.clientHeight * ratio));
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
+        canvas.height = height;
+      }
+      gl.viewport(0, 0, width, height);
+      gl.uniform2f(uniforms.u_resolution, width, height);
+      draw();
+    };
+    const draw = () => {
+      if (gl.isContextLost()) return;
+      const state = flameVolumeParameters(scene, __spreadValues({ time: elapsed }, rotation));
+      gl.clearColor(0, 0, 0, 0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.uniform1f(uniforms.u_time, state.time);
+      gl.uniform1f(uniforms.u_gravity, state.gravity);
+      gl.uniform1f(uniforms.u_air, state.air);
+      gl.uniform1f(uniforms.u_mist, state.mist);
+      gl.uniform1f(uniforms.u_fire, state.fire);
+      gl.uniform1f(uniforms.u_yaw, state.yaw);
+      gl.uniform1f(uniforms.u_pitch, state.pitch);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    };
+    const render = (now) => {
+      if (!canvas.isConnected || paused) {
+        frame = 0;
+        return;
+      }
+      if (now - lastFrame >= 40) {
+        lastFrame = now;
+        elapsed = now / 1e3;
+        draw();
+      }
+      frame = requestAnimationFrame(render);
+    };
+    observer = typeof ResizeObserver === "function" ? new ResizeObserver(resize) : null;
+    observer == null ? void 0 : observer.observe(canvas);
+    resize();
+    canvas.addEventListener("webglcontextlost", (event) => {
+      event.preventDefault();
+      cancelAnimationFrame(frame);
+      scene.classList.remove("scene-volume-ready");
+    });
+    if (!paused) frame = requestAnimationFrame(render);
+    return {
+      setRotation(rx, ry) {
+        rotation = { rx, ry };
+        if (paused) draw();
+      },
+      update() {
+        draw();
+      },
+      pause() {
+        paused = true;
+        cancelAnimationFrame(frame);
+        frame = 0;
+        draw();
+      },
+      resume() {
+        if (!paused) return;
+        paused = false;
+        frame = requestAnimationFrame(render);
+      }
+    };
+  }
+
   // public/lib/flame-scene3d.js
   function flameScene3d(lang2 = "en") {
     const ar = lang2 === "ar";
@@ -185,7 +403,13 @@
       earthLabel: "\u0637\u0641\u0648 \xB7 \u062D\u0645\u0644 \u0637\u0628\u064A\u0639\u064A \u0635\u0627\u0639\u062F",
       microLabel: "\u0627\u0646\u062A\u0634\u0627\u0631 \xB7 \u062D\u0645\u0644 \u0637\u0628\u064A\u0639\u064A \u0623\u0636\u0639\u0641",
       note: "\u064A\u062A\u063A\u064A\u0631 \u0634\u0643\u0644 \u0627\u0644\u0644\u0647\u0628 \u0625\u064A\u0636\u0627\u062D\u064A\u0627\u064B \u0628\u062D\u0633\u0628 \u0627\u0644\u062D\u0627\u0644\u0629 \u0627\u0644\u0645\u062E\u062A\u0627\u0631\u0629. \u0627\u0644\u0631\u0630\u0627\u0630 \u0644\u0627 \u064A\u0637\u0641\u0626 \u0627\u0644\u0644\u0647\u0628 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0641\u064A \u0647\u0630\u0627 \u0627\u0644\u0646\u0645\u0648\u0630\u062C.",
-      boundary: "\u0631\u0633\u0645 \u0645\u0641\u0627\u0647\u064A\u0645\u064A \u0645\u062A\u0639\u062F\u062F \u0627\u0644\u0637\u0628\u0642\u0627\u062A\u060C \u0628\u0644\u0627 \u0645\u0642\u064A\u0627\u0633 \u0643\u0645\u064A. \u0644\u064A\u0633 \u0645\u062D\u0627\u0643\u0627\u0629 CFD \u0648\u0644\u0627 \u0635\u0648\u0631\u0629 \u0645\u0646 NASA \u0648\u0644\u0627 \u0646\u062A\u064A\u062C\u0629 \u062A\u062C\u0631\u0628\u0629. \u0644\u0627 \u064A\u0633\u062A\u0646\u062A\u062C \u0625\u062E\u0645\u0627\u062F \u0627\u0644\u062D\u0631\u064A\u0642 \u0623\u0648 \u0623\u062F\u0627\u0621 \u0623\u064A \u062C\u0647\u0627\u0632."
+      boundary: "\u0631\u0633\u0645 \u0645\u0641\u0627\u0647\u064A\u0645\u064A \u0645\u062A\u0639\u062F\u062F \u0627\u0644\u0637\u0628\u0642\u0627\u062A\u060C \u0628\u0644\u0627 \u0645\u0642\u064A\u0627\u0633 \u0643\u0645\u064A. \u0644\u064A\u0633 \u0645\u062D\u0627\u0643\u0627\u0629 CFD \u0648\u0644\u0627 \u0635\u0648\u0631\u0629 \u0645\u0646 NASA \u0648\u0644\u0627 \u0646\u062A\u064A\u062C\u0629 \u062A\u062C\u0631\u0628\u0629. \u0644\u0627 \u064A\u0633\u062A\u0646\u062A\u062C \u0625\u062E\u0645\u0627\u062F \u0627\u0644\u062D\u0631\u064A\u0642 \u0623\u0648 \u0623\u062F\u0627\u0621 \u0623\u064A \u062C\u0647\u0627\u0632.",
+      rendererReady: "\u0644\u0647\u0628 \u062D\u062C\u0645\u064A \u062A\u0641\u0627\u0639\u0644\u064A \xB7 \u062A\u0645\u062B\u064A\u0644 \u0646\u0648\u0639\u064A",
+      rendererFallback: "\u0639\u0627\u0631\u0636 WebGL \u063A\u064A\u0631 \u0645\u062A\u0627\u062D \xB7 \u0639\u0631\u0636 \u0637\u0628\u0642\u064A \u0627\u062D\u062A\u064A\u0627\u0637\u064A",
+      pauseMotion: "\u0625\u064A\u0642\u0627\u0641 \u0627\u0644\u062D\u0631\u0643\u0629",
+      resumeMotion: "\u0627\u0633\u062A\u0626\u0646\u0627\u0641 \u0627\u0644\u062D\u0631\u0643\u0629",
+      motionPaused: "\u0627\u0644\u062D\u0631\u0643\u0629 \u0645\u062A\u0648\u0642\u0641\u0629",
+      motionRunning: "\u0627\u0644\u062D\u0631\u0643\u0629 \u062A\u0639\u0645\u0644"
     } : {
       title: "3D flame and transport scene",
       intro: "Change the source, gravity, airflow, and mist state, then drag or use arrow keys to rotate the volume.",
@@ -202,22 +426,64 @@
       earthLabel: "BUOYANCY \xB7 UPWARD NATURAL CONVECTION",
       microLabel: "DIFFUSION \xB7 WEAKER NATURAL CONVECTION",
       note: "Flame shape changes illustratively with the selected state. Mist does not extinguish the flame in this model.",
-      boundary: "Layered conceptual rendering with no quantitative scale. It is not CFD, NASA imagery, or an experiment result. It does not predict extinction or device performance."
+      boundary: "Layered conceptual rendering with no quantitative scale. It is not CFD, NASA imagery, or an experiment result. It does not predict extinction or device performance.",
+      rendererReady: "Interactive volumetric flame \xB7 qualitative rendering",
+      rendererFallback: "WebGL viewer unavailable \xB7 layered fallback rendering",
+      pauseMotion: "Pause animation",
+      resumeMotion: "Resume animation",
+      motionPaused: "motion paused",
+      motionRunning: "motion running"
     };
-    const group = (key, title, values, selected) => `<div class="scene-control-group" role="group" aria-label="${title}"><span>${title}</span><div>${values.map(([value, label]) => `<button type="button" class="outline-btn${value === selected ? " active" : ""}" data-scene-key="${key}" data-scene-value="${value}" aria-pressed="${value === selected}">${label}</button>`).join("")}</div></div>`;
+    const group = (key, title, values, selected) => `<div class="scene-control-group" role="group" aria-label="${title}"><span>${title}</span><div>${values.map(
+      ([value, label]) => `<button type="button" class="outline-btn${value === selected ? " active" : ""}" data-scene-key="${key}" data-scene-value="${value}" aria-pressed="${value === selected}">${label}</button>`
+    ).join("")}</div></div>`;
     return `<article class="card flame-scene-card"><div class="card-head"><div><h2>${labels2.title}</h2><p class="sub">${labels2.intro}</p></div><span class="badge-sim">${ar ? "\u062A\u0648\u0636\u064A\u062D\u064A \xB7 \u0644\u064A\u0633 \u0642\u064A\u0627\u0633\u0627\u064B" : "ILLUSTRATIVE \xB7 NOT MEASURED"}</span></div>
     <div class="scene-controls" aria-label="${ar ? "\u062D\u0627\u0644\u0627\u062A \u0627\u0644\u0645\u0634\u0647\u062F" : "Scene conditions"}">
-      ${group("fire", labels2.source, [["on", labels2.on], ["off", labels2.off]], "on")}
-      ${group("gravity", labels2.gravity, [["earth", labels2.earth], ["micro", labels2.micro]], "earth")}
-      ${group("air", labels2.airflow, [["on", labels2.on], ["off", labels2.off]], "on")}
-      ${group("mist", labels2.mist, [["on", labels2.on], ["off", labels2.off]], "off")}
+      ${group(
+      "fire",
+      labels2.source,
+      [
+        ["on", labels2.on],
+        ["off", labels2.off]
+      ],
+      "on"
+    )}
+      ${group(
+      "gravity",
+      labels2.gravity,
+      [
+        ["earth", labels2.earth],
+        ["micro", labels2.micro]
+      ],
+      "earth"
+    )}
+      ${group(
+      "air",
+      labels2.airflow,
+      [
+        ["on", labels2.on],
+        ["off", labels2.off]
+      ],
+      "on"
+    )}
+      ${group(
+      "mist",
+      labels2.mist,
+      [
+        ["on", labels2.on],
+        ["off", labels2.off]
+      ],
+      "off"
+    )}
+      <button type="button" class="quiet-btn" data-scene-motion>${labels2.pauseMotion}</button>
       <button type="button" class="quiet-btn" data-scene-reset>${labels2.reset}</button>
     </div>
     <div class="scene3d-stage" tabindex="0" role="group" aria-label="${labels2.stage}">
-      <div class="scene3d-room" data-fire="on" data-gravity="earth" data-air="on" data-mist="off">
+      <div class="scene3d-room" data-fire="on" data-gravity="earth" data-air="on" data-mist="off" data-motion="paused">
         <div class="scene-cube" aria-hidden="true"><i class="cube-face cube-front"></i><i class="cube-face cube-back"></i><i class="cube-face cube-left"></i><i class="cube-face cube-right"></i><i class="cube-face cube-top"></i><i class="cube-face cube-bottom"></i></div>
         <div class="scene-plume" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
         <div class="scene-streams" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+        <canvas class="scene-flame-volume" width="320" height="360" aria-hidden="true"></canvas>
         <div class="scene-flame" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
         <div class="scene-source" aria-hidden="true"><i></i><b></b><span>${ar ? "\u0645\u0635\u062F\u0631" : "SOURCE"}</span></div>
         <div class="scene-droplets" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
@@ -230,12 +496,20 @@
     <div class="callout">${labels2.boundary} <a href="https://www.nasa.gov/missions/station/studying-combustion-and-fire-safety/" target="_blank" rel="noopener noreferrer">NASA fire-safety research \u2197</a></div></article>`;
   }
   function bindFlameScene3d(root, lang2 = "en") {
-    var _a;
+    var _a, _b;
     const stage = root.querySelector(".scene3d-stage");
     const room = root.querySelector(".scene3d-room");
     const scene = stage == null ? void 0 : stage.closest(".flame-scene-card");
     const note = scene == null ? void 0 : scene.querySelector(".scene-state-note");
     if (!stage || !room || !scene) return;
+    const prefersReducedMotion = typeof window !== "undefined" && Boolean((_a = window.matchMedia) == null ? void 0 : _a.call(window, "(prefers-reduced-motion: reduce)").matches);
+    let motionPaused = prefersReducedMotion;
+    const motionButton = scene.querySelector("[data-scene-motion]");
+    const motionLabels = lang2 === "ar" ? { pause: "\u0625\u064A\u0642\u0627\u0641 \u0627\u0644\u062D\u0631\u0643\u0629", resume: "\u0627\u0633\u062A\u0626\u0646\u0627\u0641 \u0627\u0644\u062D\u0631\u0643\u0629", paused: "\u0627\u0644\u062D\u0631\u0643\u0629 \u0645\u062A\u0648\u0642\u0641\u0629", running: "\u0627\u0644\u062D\u0631\u0643\u0629 \u062A\u0639\u0645\u0644" } : { pause: "Pause animation", resume: "Resume animation", paused: "motion paused", running: "motion running" };
+    const rendererReady = lang2 === "ar" ? "\u0644\u0647\u0628 \u062D\u062C\u0645\u064A \u062A\u0641\u0627\u0639\u0644\u064A \xB7 \u062A\u0645\u062B\u064A\u0644 \u0646\u0648\u0639\u064A" : "Interactive volumetric flame \xB7 qualitative rendering";
+    const rendererFallback = lang2 === "ar" ? "\u0639\u0627\u0631\u0636 WebGL \u063A\u064A\u0631 \u0645\u062A\u0627\u062D \xB7 \u0639\u0631\u0636 \u0637\u0628\u0642\u064A \u0627\u062D\u062A\u064A\u0627\u0637\u064A" : "WebGL viewer unavailable \xB7 layered fallback rendering";
+    const volume = bindFlameVolume(stage.querySelector(".scene-flame-volume"), room);
+    if (volume) room.classList.add("scene-volume-ready");
     let rx = -16;
     let ry = -28;
     let dragging = false;
@@ -244,6 +518,9 @@
     const applyRotation = () => {
       room.style.setProperty("--rx", `${rx}deg`);
       room.style.setProperty("--ry", `${ry}deg`);
+      room.style.setProperty("--rx-inverse", `${-rx}deg`);
+      room.style.setProperty("--ry-inverse", `${-ry}deg`);
+      volume == null ? void 0 : volume.setRotation(rx, ry);
     };
     const updateState = () => {
       const ar = lang2 === "ar";
@@ -251,24 +528,39 @@
         fire: room.dataset.fire === "on" ? ar ? "\u0645\u0634\u063A\u0651\u0644" : "on" : ar ? "\u0645\u062A\u0648\u0642\u0641" : "off",
         gravity: room.dataset.gravity === "earth" ? ar ? "\u0623\u0631\u0636\u064A\u0629" : "Earth" : ar ? "\u0635\u063A\u0631\u0649" : "microgravity",
         air: room.dataset.air === "on" ? ar ? "\u0645\u0641\u0639\u0644" : "on" : ar ? "\u0645\u062A\u0648\u0642\u0641" : "off",
-        mist: room.dataset.mist === "on" ? ar ? "\u0638\u0627\u0647\u0631" : "shown" : ar ? "\u063A\u064A\u0631 \u0638\u0627\u0647\u0631" : "off"
+        mist: room.dataset.mist === "on" ? ar ? "\u0638\u0627\u0647\u0631" : "shown" : ar ? "\u063A\u064A\u0631 \u0638\u0627\u0647\u0631" : "off",
+        motion: motionPaused ? motionLabels.paused : motionLabels.running
       };
       if (note)
-        note.textContent = ar ? `\u0627\u0644\u0645\u0635\u062F\u0631 ${state.fire} \xB7 \u0627\u0644\u062C\u0627\u0630\u0628\u064A\u0629 ${state.gravity} \xB7 \u0627\u0644\u0647\u0648\u0627\u0621 \u0627\u0644\u0642\u0633\u0631\u064A ${state.air} \xB7 \u0627\u0644\u0631\u0630\u0627\u0630 ${state.mist}. \u064A\u062A\u063A\u064A\u0631 \u0627\u0644\u0631\u0633\u0645 \u0646\u0648\u0639\u064A\u0627\u064B \u0641\u0642\u0637\u061B \u0644\u0627 \u064A\u062D\u0633\u0628 \u0627\u0644\u0625\u062E\u0645\u0627\u062F.` : `Source ${state.fire} \xB7 gravity ${state.gravity} \xB7 forced airflow ${state.air} \xB7 mist ${state.mist}. The illustration is qualitative; extinction is not calculated.`;
+        note.textContent = ar ? `\u0627\u0644\u0645\u0635\u062F\u0631 ${state.fire} \xB7 \u0627\u0644\u062C\u0627\u0630\u0628\u064A\u0629 ${state.gravity} \xB7 \u0627\u0644\u0647\u0648\u0627\u0621 \u0627\u0644\u0642\u0633\u0631\u064A ${state.air} \xB7 \u0627\u0644\u0631\u0630\u0627\u0630 ${state.mist} \xB7 ${state.motion}. \u064A\u062A\u063A\u064A\u0631 \u0627\u0644\u0631\u0633\u0645 \u0646\u0648\u0639\u064A\u0627\u064B \u0641\u0642\u0637\u061B \u0644\u0627 \u064A\u062D\u0633\u0628 \u0627\u0644\u0625\u062E\u0645\u0627\u062F. ${volume ? rendererReady : rendererFallback}` : `Source ${state.fire} \xB7 gravity ${state.gravity} \xB7 forced airflow ${state.air} \xB7 mist ${state.mist} \xB7 ${state.motion}. The illustration is qualitative; extinction is not calculated. ${volume ? rendererReady : rendererFallback}`;
+      volume == null ? void 0 : volume.update();
       for (const button of scene.querySelectorAll("[data-scene-key]")) {
         const active = room.dataset[button.dataset.sceneKey] === button.dataset.sceneValue;
         button.classList.toggle("active", active);
         button.setAttribute("aria-pressed", String(active));
       }
     };
+    const applyMotion = () => {
+      room.dataset.motion = motionPaused ? "paused" : "running";
+      if (motionButton) motionButton.textContent = motionPaused ? motionLabels.resume : motionLabels.pause;
+      if (motionPaused) volume == null ? void 0 : volume.pause();
+      else volume == null ? void 0 : volume.resume();
+    };
     applyRotation();
+    applyMotion();
+    updateState();
     scene.querySelectorAll("[data-scene-key]").forEach((button) => {
       button.addEventListener("click", () => {
         room.dataset[button.dataset.sceneKey] = button.dataset.sceneValue;
         updateState();
       });
     });
-    (_a = scene.querySelector("[data-scene-reset]")) == null ? void 0 : _a.addEventListener("click", () => {
+    motionButton == null ? void 0 : motionButton.addEventListener("click", () => {
+      motionPaused = !motionPaused;
+      applyMotion();
+      updateState();
+    });
+    (_b = scene.querySelector("[data-scene-reset]")) == null ? void 0 : _b.addEventListener("click", () => {
       rx = -16;
       ry = -28;
       applyRotation();
@@ -2155,6 +2447,7 @@
       catalogError: "The model library could not load. Reload this page to try again.",
       disclaimer: "These are research concepts and visual CAD models, not qualified hardware. The condition controls below change a separate explanatory scene; they do not alter the CAD model or predict fire suppression.",
       conditions: "Illustrative conditions",
+      scenarioFor: "Condition scene for selected concept",
       noMeasured: "Schematic only \xB7 not CFD \xB7 not a test result"
     },
     ar: {
@@ -2177,6 +2470,7 @@
       catalogError: "\u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0645\u0643\u062A\u0628\u0629 \u0627\u0644\u0646\u0645\u0627\u0630\u062C. \u0623\u0639\u062F \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0635\u0641\u062D\u0629 \u0644\u0644\u0645\u062D\u0627\u0648\u0644\u0629.",
       disclaimer: "\u0647\u0630\u0647 \u0645\u0641\u0627\u0647\u064A\u0645 \u0628\u062D\u062B\u064A\u0629 \u0648\u0646\u0645\u0627\u0630\u062C CAD \u0628\u0635\u0631\u064A\u0629 \u0648\u0644\u064A\u0633\u062A \u0645\u0639\u062F\u0627\u062A \u0645\u0624\u0647\u0644\u0629. \u062A\u063A\u064A\u0651\u0631 \u062E\u064A\u0627\u0631\u0627\u062A \u0627\u0644\u062D\u0627\u0644\u0629 \u0623\u062F\u0646\u0627\u0647 \u0645\u0634\u0647\u062F\u0627\u064B \u062A\u0641\u0633\u064A\u0631\u064A\u0627\u064B \u0645\u0646\u0641\u0635\u0644\u0627\u064B\u061B \u0648\u0644\u0627 \u062A\u0639\u062F\u0651\u0644 \u0646\u0645\u0648\u0630\u062C CAD \u0648\u0644\u0627 \u062A\u062A\u0646\u0628\u0623 \u0628\u0625\u062E\u0645\u0627\u062F \u0627\u0644\u062D\u0631\u064A\u0642.",
       conditions: "\u062D\u0627\u0644\u0627\u062A \u062A\u0648\u0636\u064A\u062D\u064A\u0629",
+      scenarioFor: "\u0645\u0634\u0647\u062F \u0627\u0644\u062D\u0627\u0644\u0627\u062A \u0644\u0644\u0645\u0641\u0647\u0648\u0645 \u0627\u0644\u0645\u062D\u062F\u062F",
       noMeasured: "\u0631\u0633\u0645 \u062A\u062E\u0637\u064A\u0637\u064A \u0641\u0642\u0637 \xB7 \u0644\u064A\u0633 CFD \xB7 \u0648\u0644\u064A\u0633 \u0646\u062A\u064A\u062C\u0629 \u0627\u062E\u062A\u0628\u0627\u0631"
     }
   };
@@ -2204,7 +2498,9 @@
     } catch (e) {
       viewerAvailable = false;
     }
-    const categories = [...new Set(models.map((model) => descriptions[model.file][ar ? "categoryAr" : "categoryEn"]))].sort();
+    const categories = [
+      ...new Set(models.map((model) => descriptions[model.file][ar ? "categoryAr" : "categoryEn"]))
+    ].sort();
     const first = models[0];
     const initial = descriptions[first.file];
     const itemCards = models.map((model) => {
@@ -2230,13 +2526,13 @@
         <div><h3>${t2.value}</h3><p id="galleryModelValue" class="sub">${esc(initial[ar ? "valueAr" : "valueEn"])}</p></div>
       </div>
     </section>
+    <section class="model-scenario-wrap"><div class="model-scenario-heading"><div><span class="eyebrow">${t2.conditions}</span><p id="modelScenarioSelection" class="sub">${t2.scenarioFor}: ${esc(first.title.replace(/-/g, " "))}</p></div><span class="concept-badge">${t2.noMeasured}</span></div>${flameScene3d(lang2)}</section>
     <section class="card model-catalog" aria-label="${esc(t2.title)}">
       <div class="card-head"><div><h2>${ar ? "\u0643\u0644 \u0627\u0644\u0646\u0645\u0627\u0630\u062C" : "Browse every model"}</h2><p id="modelGalleryCount" class="sub">${models.length} ${t2.shown}</p></div></div>
       <div class="model-gallery-filters"><label>${t2.search}<input id="modelGallerySearch" type="search" autocomplete="off" placeholder="${esc(t2.search)}"></label><label>${t2.category}<select id="modelGalleryCategory"><option value="">${t2.all}</option>${categories.map((category) => `<option value="${esc(descriptions[models.find((item) => descriptions[item.file][ar ? "categoryAr" : "categoryEn"] === category).file].categoryEn)}">${esc(category)}</option>`).join("")}</select></label></div>
       <div id="modelGalleryEmpty" class="callout" hidden>${t2.noResults}</div>
       <div id="modelGalleryItems" class="model-gallery-grid">${itemCards}</div>
     </section>
-    <section class="model-scenario-wrap"><div class="model-scenario-heading"><div><span class="eyebrow">${t2.conditions}</span><p class="sub">${t2.disclaimer}</p></div><span class="concept-badge">${t2.noMeasured}</span></div>${flameScene3d(lang2)}</section>
   </div>`;
   }
   function bindModelGallery(root, lang2 = "en") {
@@ -2245,6 +2541,7 @@
     const t2 = copy2[ar ? "ar" : "en"];
     const viewer = root.querySelector("#galleryModelViewer");
     const status = root.querySelector("#galleryModelStatus");
+    const scenarioSelection = root.querySelector("#modelScenarioSelection");
     const download2 = root.querySelector("#galleryModelDownload");
     const search = root.querySelector("#modelGallerySearch");
     const category = root.querySelector("#modelGalleryCategory");
@@ -2292,6 +2589,7 @@
         root.querySelector("#galleryModelCategory").textContent = item.dataset[ar ? "categoryAr" : "categoryEn"];
         root.querySelector("#galleryModelPurpose").textContent = item.dataset[ar ? "purposeAr" : "purposeEn"];
         root.querySelector("#galleryModelValue").textContent = item.dataset[ar ? "valueAr" : "valueEn"];
+        if (scenarioSelection) scenarioSelection.textContent = `${t2.scenarioFor}: ${title}`;
         if (download2) download2.href = path;
         if (viewer && ((_a2 = window.customElements) == null ? void 0 : _a2.get("model-viewer"))) {
           if (status) status.textContent = t2.loading;

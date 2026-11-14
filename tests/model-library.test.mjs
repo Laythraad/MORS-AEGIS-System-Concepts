@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { flameVolumeParameters } from '../public/lib/flame-volume.js';
+import { bindFlameScene3d } from '../public/lib/flame-scene3d.js';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const modelsDir = path.join(root, 'public', 'models');
@@ -40,4 +42,122 @@ test('gravity, fan, source, and mist scene states each have a matching visible s
   ])
     assert.ok(css.includes(selector), `missing visual response for ${selector}`);
   assert.ok(!css.includes('.scene-room['), 'scene selectors must match the rendered .scene3d-room element');
+  assert.match(markup, /<canvas class="scene-flame-volume"/);
+  assert.match(css, /\.scene3d-room\.scene-volume-ready \.scene-flame-volume/);
+  assert.match(markup, /data-motion="paused"/);
+  assert.match(markup, /data-scene-motion/);
+  const volume = await readFile(path.join(root, 'public', 'lib', 'flame-volume.js'), 'utf8');
+  assert.match(volume, /gl\.disable\(gl\.BLEND\)/);
+  assert.doesNotMatch(volume, /gl\.blendFunc\(/);
+});
+
+test('the volumetric flame renderer receives independent gravity, fan, mist, fire, and camera states', () => {
+  const scene = { dataset: { fire: 'on', gravity: 'earth', air: 'on', mist: 'off' } };
+  assert.deepEqual(flameVolumeParameters(scene, { rx: -16, ry: -28 }), {
+    time: 0,
+    gravity: 0,
+    air: 1,
+    mist: 0,
+    fire: 1,
+    yaw: (-28 * Math.PI) / 180,
+    pitch: (-16 * Math.PI) / 180,
+  });
+
+  scene.dataset.gravity = 'micro';
+  scene.dataset.air = 'off';
+  scene.dataset.mist = 'on';
+  scene.dataset.fire = 'off';
+  assert.deepEqual(flameVolumeParameters(scene), {
+    time: 0,
+    gravity: 1,
+    air: 0,
+    mist: 1,
+    fire: 0,
+    yaw: 0,
+    pitch: 0,
+  });
+});
+
+test('the scene state note remains usable in both languages when WebGL is unavailable', () => {
+  for (const lang of ['en', 'ar']) {
+    const listeners = new Map();
+    const buttons = [
+      'fire:on',
+      'fire:off',
+      'gravity:earth',
+      'gravity:micro',
+      'air:on',
+      'air:off',
+      'mist:on',
+      'mist:off',
+    ].map((value) => {
+      const [key, selected] = value.split(':');
+      return {
+        dataset: { sceneKey: key, sceneValue: selected },
+        addEventListener(type, handler) {
+          listeners.set(`${key}:${selected}:${type}`, handler);
+        },
+        setAttribute() {},
+        classList: { toggle() {} },
+      };
+    });
+    const note = { textContent: '' };
+    const reset = { addEventListener() {} };
+    const motion = {
+      textContent: '',
+      addEventListener(type, handler) {
+        listeners.set(`motion:${type}`, handler);
+      },
+    };
+    const scene = {
+      querySelector(selector) {
+        return selector === '.scene-state-note'
+          ? note
+          : selector === '[data-scene-reset]'
+            ? reset
+            : selector === '[data-scene-motion]'
+              ? motion
+              : null;
+      },
+      querySelectorAll() {
+        return buttons;
+      },
+    };
+    const room = {
+      dataset: { fire: 'on', gravity: 'earth', air: 'on', mist: 'off', motion: 'paused' },
+      style: { setProperty() {} },
+      classList: { add() {}, remove() {} },
+    };
+    const stage = {
+      closest() {
+        return scene;
+      },
+      querySelector() {
+        return {};
+      },
+      addEventListener() {},
+      focus() {},
+    };
+    const root = {
+      querySelector(selector) {
+        return selector === '.scene3d-stage' ? stage : selector === '.scene3d-room' ? room : null;
+      },
+    };
+
+    bindFlameScene3d(root, lang);
+    assert.equal(room.dataset.motion, 'running');
+    assert.equal(motion.textContent, lang === 'ar' ? 'إيقاف الحركة' : 'Pause animation');
+    listeners.get('motion:click')();
+    assert.equal(room.dataset.motion, 'paused');
+    assert.equal(motion.textContent, lang === 'ar' ? 'استئناف الحركة' : 'Resume animation');
+    assert.match(note.textContent, lang === 'ar' ? /عارض WebGL غير متاح/ : /WebGL viewer unavailable/);
+    listeners.get('fire:off:click')();
+    assert.match(note.textContent, lang === 'ar' ? /المصدر متوقف/ : /Source off/);
+  }
+});
+
+test('the selected model label follows the scenario controls before the model catalogue', async () => {
+  const gallery = await readFile(path.join(root, 'public', 'lib', 'model-gallery.js'), 'utf8');
+  assert.ok(gallery.indexOf('id="modelScenarioSelection"') < gallery.indexOf('Browse every model'));
+  assert.match(gallery, /scenarioSelection\.textContent = `\$\{t\.scenarioFor\}: \$\{title\}`/);
 });

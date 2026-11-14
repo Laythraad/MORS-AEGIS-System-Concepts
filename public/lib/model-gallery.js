@@ -11,7 +11,8 @@ const copy = {
     shown: 'models shown',
     loading: 'Loading model…',
     ready: '3D model ready · drag to rotate · scroll or pinch to zoom',
-    unavailable: 'This browser could not start the 3D viewer. The model description and direct download are still available.',
+    unavailable:
+      'This browser could not start the 3D viewer. The model description and direct download are still available.',
     failed: 'Model could not be rendered. Use its direct GLB download.',
     purpose: 'What it represents',
     value: 'Why it is useful',
@@ -20,8 +21,10 @@ const copy = {
     select: 'Select any model below to inspect it.',
     noResults: 'No models match these filters.',
     catalogError: 'The model library could not load. Reload this page to try again.',
-    disclaimer: 'These are research concepts and visual CAD models, not qualified hardware. The condition controls below change a separate explanatory scene; they do not alter the CAD model or predict fire suppression.',
+    disclaimer:
+      'These are research concepts and visual CAD models, not qualified hardware. The condition controls below change a separate explanatory scene; they do not alter the CAD model or predict fire suppression.',
     conditions: 'Illustrative conditions',
+    scenarioFor: 'Condition scene for selected concept',
     noMeasured: 'Schematic only · not CFD · not a test result',
   },
   ar: {
@@ -42,8 +45,10 @@ const copy = {
     select: 'اختر أي نموذج أدناه لمعاينته.',
     noResults: 'لا توجد نماذج تطابق عوامل التصفية.',
     catalogError: 'تعذر تحميل مكتبة النماذج. أعد تحميل الصفحة للمحاولة.',
-    disclaimer: 'هذه مفاهيم بحثية ونماذج CAD بصرية وليست معدات مؤهلة. تغيّر خيارات الحالة أدناه مشهداً تفسيرياً منفصلاً؛ ولا تعدّل نموذج CAD ولا تتنبأ بإخماد الحريق.',
+    disclaimer:
+      'هذه مفاهيم بحثية ونماذج CAD بصرية وليست معدات مؤهلة. تغيّر خيارات الحالة أدناه مشهداً تفسيرياً منفصلاً؛ ولا تعدّل نموذج CAD ولا تتنبأ بإخماد الحريق.',
     conditions: 'حالات توضيحية',
+    scenarioFor: 'مشهد الحالات للمفهوم المحدد',
     noMeasured: 'رسم تخطيطي فقط · ليس CFD · وليس نتيجة اختبار',
   },
 };
@@ -74,7 +79,9 @@ export async function renderModelGallery(lang = 'en') {
     viewerAvailable = false;
   }
 
-  const categories = [...new Set(models.map((model) => descriptions[model.file][ar ? 'categoryAr' : 'categoryEn']))].sort();
+  const categories = [
+    ...new Set(models.map((model) => descriptions[model.file][ar ? 'categoryAr' : 'categoryEn'])),
+  ].sort();
   const first = models[0];
   const initial = descriptions[first.file];
   const itemCards = models
@@ -103,13 +110,13 @@ export async function renderModelGallery(lang = 'en') {
         <div><h3>${t.value}</h3><p id="galleryModelValue" class="sub">${esc(initial[ar ? 'valueAr' : 'valueEn'])}</p></div>
       </div>
     </section>
+    <section class="model-scenario-wrap"><div class="model-scenario-heading"><div><span class="eyebrow">${t.conditions}</span><p id="modelScenarioSelection" class="sub">${t.scenarioFor}: ${esc(first.title.replace(/-/g, ' '))}</p></div><span class="concept-badge">${t.noMeasured}</span></div>${flameScene3d(lang)}</section>
     <section class="card model-catalog" aria-label="${esc(t.title)}">
       <div class="card-head"><div><h2>${ar ? 'كل النماذج' : 'Browse every model'}</h2><p id="modelGalleryCount" class="sub">${models.length} ${t.shown}</p></div></div>
       <div class="model-gallery-filters"><label>${t.search}<input id="modelGallerySearch" type="search" autocomplete="off" placeholder="${esc(t.search)}"></label><label>${t.category}<select id="modelGalleryCategory"><option value="">${t.all}</option>${categories.map((category) => `<option value="${esc(descriptions[models.find((item) => descriptions[item.file][ar ? 'categoryAr' : 'categoryEn'] === category).file].categoryEn)}">${esc(category)}</option>`).join('')}</select></label></div>
       <div id="modelGalleryEmpty" class="callout" hidden>${t.noResults}</div>
       <div id="modelGalleryItems" class="model-gallery-grid">${itemCards}</div>
     </section>
-    <section class="model-scenario-wrap"><div class="model-scenario-heading"><div><span class="eyebrow">${t.conditions}</span><p class="sub">${t.disclaimer}</p></div><span class="concept-badge">${t.noMeasured}</span></div>${flameScene3d(lang)}</section>
   </div>`;
 }
 
@@ -118,6 +125,7 @@ export function bindModelGallery(root, lang = 'en') {
   const t = copy[ar ? 'ar' : 'en'];
   const viewer = root.querySelector('#galleryModelViewer');
   const status = root.querySelector('#galleryModelStatus');
+  const scenarioSelection = root.querySelector('#modelScenarioSelection');
   const download = root.querySelector('#galleryModelDownload');
   const search = root.querySelector('#modelGallerySearch');
   const category = root.querySelector('#modelGalleryCategory');
@@ -131,8 +139,12 @@ export function bindModelGallery(root, lang = 'en') {
   if (!window.customElements?.get('model-viewer')) {
     if (status) status.textContent = t.unavailable;
   } else {
-    viewer.addEventListener('load', () => { if (status) status.textContent = t.ready; });
-    viewer.addEventListener('error', () => { if (status) status.textContent = t.failed; });
+    viewer.addEventListener('load', () => {
+      if (status) status.textContent = t.ready;
+    });
+    viewer.addEventListener('error', () => {
+      if (status) status.textContent = t.failed;
+    });
     if (viewer.loaded && status) status.textContent = t.ready;
   }
 
@@ -141,7 +153,9 @@ export function bindModelGallery(root, lang = 'en') {
     const selectedCategory = category?.value || '';
     let visible = 0;
     for (const item of items) {
-      const matches = (!query || item.dataset.search.includes(query)) && (!selectedCategory || item.dataset.category === selectedCategory);
+      const matches =
+        (!query || item.dataset.search.includes(query)) &&
+        (!selectedCategory || item.dataset.category === selectedCategory);
       item.hidden = !matches;
       if (matches) visible++;
     }
@@ -164,8 +178,9 @@ export function bindModelGallery(root, lang = 'en') {
       root.querySelector('#galleryModelCategory').textContent = item.dataset[ar ? 'categoryAr' : 'categoryEn'];
       root.querySelector('#galleryModelPurpose').textContent = item.dataset[ar ? 'purposeAr' : 'purposeEn'];
       root.querySelector('#galleryModelValue').textContent = item.dataset[ar ? 'valueAr' : 'valueEn'];
+      if (scenarioSelection) scenarioSelection.textContent = `${t.scenarioFor}: ${title}`;
       if (download) download.href = path;
-    if (viewer && window.customElements?.get('model-viewer')) {
+      if (viewer && window.customElements?.get('model-viewer')) {
         if (status) status.textContent = t.loading;
         viewer.alt = title;
         viewer.src = path;
