@@ -20,9 +20,12 @@ test('the chart guide documents every PSI-69 Workbench plot in English and Arabi
 test('the dedicated chart-guide page includes both Overview views and all interactive plots', () => {
   assert.match(app, /\['Chart Guide', 'Chart purposes, variables & limits'/);
   assert.match(app, /'Chart Guide': chartGuidePage/);
-  assert.match(app, /chartSVG\(dataset\.rows, 'burning_rate_mm_s'/);
+  assert.match(app, /flexBurnRateHistogram\(\)/);
   assert.match(app, /\$\{flexScatterPanel\(\)\}/);
   assert.match(app, /scientificChartGallery\(dataset\.rows, \{ explain: true \}\)/);
   assert.match(app, /if \(name === 'Overview' \|\| name === 'Chart Guide'\) bindFlexScatter\(c\)/);
+  assert.match(app, /renderSourceChartGuide\(lang\)/);
+  assert.doesNotMatch(app, /flexOxygenScatterSVG\(/);
+  assert.doesNotMatch(app, /chartSVG\(/);
   assert.match(app, /NASA PSI-69 · DOI 10\.60555\/mbq8-0451/);
 });

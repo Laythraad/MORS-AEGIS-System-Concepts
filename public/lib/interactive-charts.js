@@ -110,6 +110,193 @@ export function scientificScatter({
   return `<section class="scientific-chart" data-chart-panel><div class="chart-toolbar" role="group" aria-label="${esc(labels.controls)}"><button type="button" data-chart-action="zoom-in" aria-label="${esc(labels.zoomIn)}">＋</button><button type="button" data-chart-action="zoom-out" aria-label="${esc(labels.zoomOut)}">−</button><button type="button" data-chart-action="reset">${esc(labels.reset)}</button>${fitted.length ? `<button type="button" data-chart-action="fit" aria-pressed="false">${esc(labels.fitLine)}</button>` : ''}<button type="button" data-chart-action="draw" aria-pressed="false" data-idle-label="${esc(labels.drawLine)}" data-active-label="${esc(labels.drawLineActive)}">${esc(labels.drawLine)}</button><button type="button" data-chart-action="undo">${esc(labels.undo)}</button></div><p class="chart-interaction-hint">${esc(labels.interactionHint || '')}</p><div class="chart-viewport"><svg class="scientific-plot" viewBox="${base.x} ${base.y} ${base.width} ${base.height}" role="group" aria-label="${esc(`${xLabel} versus ${yLabel}`)}"><g class="chart-grid">${grid}</g><line x1="${plot.left}" y1="${base.height - plot.bottom}" x2="${base.width - plot.right}" y2="${base.height - plot.bottom}" class="chart-axis"/><line x1="${plot.left}" y1="${plot.top}" x2="${plot.left}" y2="${base.height - plot.bottom}" class="chart-axis"/><g class="chart-trend">${trend}</g><g class="chart-annotations"></g><g>${marks}</g><text x="${(plot.left + base.width - plot.right) / 2}" y="${base.height - 12}" class="chart-axis-label" text-anchor="middle">${esc(xLabel)}${xUnit ? ` (${esc(xUnit)})` : ''}</text><text transform="translate(18 ${(plot.top + base.height - plot.bottom) / 2}) rotate(-90)" class="chart-axis-label" text-anchor="middle">${esc(yLabel)}${yUnit ? ` (${esc(yUnit)})` : ''}</text></svg><div class="chart-tooltip" role="status" aria-live="polite" hidden></div></div><div class="chart-legend">${legend}</div><p class="sub chart-caption">${esc(labels.rows)}: n=${points.length}/${rows.length} · ${esc(labels.fitNote)} ${esc(fitSummary)}</p></section>`;
 }
 
+export function chartControlLabels(lang = 'en') {
+  const ar = lang === 'ar';
+  return {
+    controls: ar ? 'أدوات المخطط' : 'Chart controls',
+    interactionHint: ar
+      ? 'انقر نقطة لعرض تفاصيلها · اسحب مساحة فارغة للتحريك · استخدم +/− أو العجلة للتكبير · اختر رسم خط ثم اسحب خطاً إرشادياً.'
+      : 'Click a point for details · drag empty plot space to pan · use +/− or the wheel to zoom · choose Draw guide line, then drag.',
+    zoomIn: ar ? 'تكبير' : 'Zoom in',
+    zoomOut: ar ? 'تصغير' : 'Zoom out',
+    reset: ar ? 'إعادة العرض' : 'Reset view',
+    fitLine: ar ? 'خط الملاءمة' : 'Linear fit',
+    drawLine: ar ? 'ارسم خطاً إرشادياً' : 'Draw guide line',
+    drawLineActive: ar ? 'اسحب لرسم الخط · اضغط للإيقاف' : 'Drag to draw · tap to stop',
+    undo: ar ? 'تراجع عن الخط' : 'Undo line',
+    fit: ar ? 'ملاءمة خطية استكشافية' : 'Exploratory linear fit',
+    fitUnavailable: ar ? 'لا يمكن حساب الملاءمة (يلزم 3 نقاط على الأقل)' : 'Fit unavailable (need at least 3 points)',
+    fitNote: ar ? 'ارتباط استكشافي فقط؛ لا يثبت السببية.' : 'Exploratory association only; it does not show causation.',
+    rows: ar ? 'صفوف المصدر الصالحة' : 'Valid source rows',
+    points: ar ? 'النقاط المعروضة' : 'Plotted points',
+    reference: ar ? 'خط مرجعي' : 'Reference line',
+    binRows: ar ? 'صفوف المصدر ضمن الفئة' : 'Source rows in bin',
+  };
+}
+
+export function scientificSourceScatter({
+  points,
+  xLabel,
+  yLabel,
+  xUnit = '',
+  yUnit = '',
+  categories = null,
+  identityReference = false,
+  labels,
+  sourceRowCount,
+  validRowCount,
+  captionNote = '',
+}) {
+  if (!points.length) return '<div class="empty">No compatible numeric source rows for this plot.</div>';
+  const base = { width: 800, height: 400 };
+  const plot = { left: 86, right: 26, top: 24, bottom: 67 };
+  const categoriesList = Array.isArray(categories) ? categories : null;
+  const rawXMin = Math.min(...points.map((point) => point.x));
+  const rawXMax = Math.max(...points.map((point) => point.x));
+  const xPad = (rawXMax - rawXMin) * 0.04 || Math.max(Math.abs(rawXMin) * 0.04, 0.01);
+  const yDataMin = Math.min(...points.map((point) => point.y));
+  const yDataMax = Math.max(...points.map((point) => point.y));
+  const yPad = (yDataMax - yDataMin) * 0.06 || Math.max(Math.abs(yDataMin) * 0.06, 0.01);
+  const domain = {
+    xMin: categoriesList ? -0.5 : rawXMin - xPad,
+    xMax: categoriesList ? categoriesList.length - 0.5 : rawXMax + xPad,
+    yMin: yDataMin - yPad,
+    yMax: yDataMax + yPad,
+  };
+  const sx = (value) => plot.left + ((value - domain.xMin) / (domain.xMax - domain.xMin)) * (base.width - plot.left - plot.right);
+  const sy = (value) => base.height - plot.bottom - ((value - domain.yMin) / (domain.yMax - domain.yMin || 1)) * (base.height - plot.top - plot.bottom);
+  const groups = [...new Set(points.map((point) => point.group).filter(Boolean))];
+  const colors = ['#1688be', '#d59a3d', '#39a77e', '#7d73d3', '#d36d7c', '#5077a8'];
+  const groupColor = new Map(groups.map((group, index) => [group, colors[index % colors.length]]));
+  const xTicks = categoriesList
+    ? categoriesList.map((label, index) => ({ value: index, label }))
+    : Array.from({ length: 6 }, (_, index) => {
+        const value = domain.xMin + ((domain.xMax - domain.xMin) * index) / 5;
+        return { value, label: Number(value.toFixed(3)).toString() };
+      });
+  const yTicks = Array.from({ length: 6 }, (_, index) => {
+    const value = domain.yMin + ((domain.yMax - domain.yMin) * index) / 5;
+    return { value, label: Number(value.toFixed(3)).toString() };
+  });
+  const grid = xTicks.map(({ value, label }) => [
+    '<line x1="', sx(value), '" y1="', plot.top, '" x2="', sx(value), '" y2="', base.height - plot.bottom, '" class="chart-gridline"/>',
+    '<text x="', sx(value), '" y="', base.height - plot.bottom + 19, '" class="chart-tick" text-anchor="middle">', esc(label), '</text>',
+  ].join('')).join('') + yTicks.map(({ value, label }) => [
+    '<line x1="', plot.left, '" y1="', sy(value), '" x2="', base.width - plot.right, '" y2="', sy(value), '" class="chart-gridline"/>',
+    '<text x="', plot.left - 10, '" y="', sy(value) + 4, '" class="chart-tick" text-anchor="end">', esc(label), '</text>',
+  ].join('')).join('');
+  const marks = points.map((point) => {
+    const radius = Math.min(12, 4 + Math.sqrt(Math.max(1, point.count || 1)) * 1.25);
+    const info = point.info + ' · ' + xLabel + ': ' + point.xDisplay + (xUnit ? ' ' + xUnit : '') + ' · ' + yLabel + ': ' + Number(point.y.toFixed(4)) + (yUnit ? ' ' + yUnit : '');
+    const fill = groupColor.get(point.group) || '#1688be';
+    return [
+      '<circle class="chart-point" cx="', sx(point.x), '" cy="', sy(point.y), '" r="', radius, '" fill="', fill,
+      '" fill-opacity=".82" tabindex="0" role="button" aria-label="', esc(info), '" data-info="', esc(info), '"><title>', esc(info), '</title></circle>',
+    ].join('');
+  }).join('');
+  const groupLegend = groups.map((group) => [
+    '<span><i style="--legend-color:', groupColor.get(group), '"></i>', esc(group), '</span>',
+  ].join('')).join('');
+  let reference = '';
+  let referenceLegend = '';
+  if (identityReference) {
+    const start = Math.max(domain.xMin, domain.yMin);
+    const end = Math.min(domain.xMax, domain.yMax);
+    if (end > start) {
+      reference = '<line class="chart-reference-line" x1="' + sx(start) + '" y1="' + sy(start) + '" x2="' + sx(end) + '" y2="' + sy(end) + '"/>';
+      referenceLegend = '<span class="chart-reference-key"><i></i>' + esc(labels.reference) + ' · y=x</span>';
+    }
+  }
+  const legend = groupLegend + referenceLegend;
+  const caption = labels.rows + ': n=' + validRowCount + '/' + sourceRowCount + ' · ' + labels.points + ': ' + points.length + (captionNote ? ' · ' + captionNote : '');
+  return [
+    '<section class="scientific-chart" data-chart-panel>',
+    '<div class="chart-toolbar" role="group" aria-label="', esc(labels.controls), '">',
+    '<button type="button" data-chart-action="zoom-in" aria-label="', esc(labels.zoomIn), '">＋</button>',
+    '<button type="button" data-chart-action="zoom-out" aria-label="', esc(labels.zoomOut), '">−</button>',
+    '<button type="button" data-chart-action="reset">', esc(labels.reset), '</button>',
+    '<button type="button" data-chart-action="draw" aria-pressed="false" data-idle-label="', esc(labels.drawLine), '" data-active-label="', esc(labels.drawLineActive), '">', esc(labels.drawLine), '</button>',
+    '<button type="button" data-chart-action="undo">', esc(labels.undo), '</button></div>',
+    '<p class="chart-interaction-hint">', esc(labels.interactionHint), '</p>',
+    '<div class="chart-viewport"><svg class="scientific-plot" viewBox="0 0 800 400" role="group" aria-label="', esc(xLabel + ' versus ' + yLabel), '">',
+    '<g class="chart-grid">', grid, '</g>',
+    '<line class="chart-axis" x1="', plot.left, '" y1="', plot.top, '" x2="', plot.left, '" y2="', base.height - plot.bottom, '"/>',
+    '<line class="chart-axis" x1="', plot.left, '" y1="', base.height - plot.bottom, '" x2="', base.width - plot.right, '" y2="', base.height - plot.bottom, '"/>',
+    reference, '<g class="chart-annotations"></g>', marks,
+    '<text x="', (plot.left + base.width - plot.right) / 2, '" y="', base.height - 12, '" class="chart-axis-label" text-anchor="middle">', esc(xLabel), xUnit ? ' (' + esc(xUnit) + ')' : '', '</text>',
+    '<text transform="translate(18 ', (plot.top + base.height - plot.bottom) / 2, ') rotate(-90)" class="chart-axis-label" text-anchor="middle">', esc(yLabel), yUnit ? ' (' + esc(yUnit) + ')' : '', '</text>',
+    '</svg><div class="chart-tooltip" role="status" aria-live="polite" hidden></div></div>',
+    legend ? '<div class="chart-legend">' + legend + '</div>' : '',
+    '<p class="sub chart-caption">', esc(caption), '</p></section>',
+  ].join('');
+}
+
+export function scientificHistogram({ rows, key, label, unit = '', labels, idField = 'id' }) {
+  const data = rows.map((row) => ({ row, value: row[key] })).filter((point) => Number.isFinite(point.value));
+  if (!data.length) return '<div class="empty">No measured values for ' + esc(label) + '.</div>';
+  const min = Math.min(...data.map((point) => point.value));
+  const max = Math.max(...data.map((point) => point.value));
+  const bins = Math.max(5, Math.min(18, Math.ceil(Math.sqrt(data.length))));
+  const span = max - min || Math.max(Math.abs(min) * 0.1, 1);
+  const xMin = max === min ? min - span / 2 : min;
+  const xMax = max === min ? max + span / 2 : max;
+  const binWidth = (xMax - xMin) / bins;
+  const groups = Array.from({ length: bins }, (_, index) => ({
+    min: xMin + index * binWidth,
+    max: xMin + (index + 1) * binWidth,
+    rows: [],
+  }));
+  data.forEach(({ row, value }) => {
+    const index = Math.min(bins - 1, Math.max(0, Math.floor((value - xMin) / binWidth)));
+    groups[index].rows.push(row);
+  });
+  const maxCount = Math.max(...groups.map((group) => group.rows.length), 1);
+  const base = { width: 800, height: 400 };
+  const plot = { left: 86, right: 26, top: 24, bottom: 67 };
+  const yMax = maxCount * 1.14;
+  const sx = (value) => plot.left + ((value - xMin) / (xMax - xMin)) * (base.width - plot.left - plot.right);
+  const sy = (value) => base.height - plot.bottom - (value / yMax) * (base.height - plot.top - plot.bottom);
+  const xTicks = Array.from({ length: 6 }, (_, index) => xMin + ((xMax - xMin) * index) / 5);
+  const yTicks = Array.from({ length: 6 }, (_, index) => (yMax * index) / 5);
+  const grid = xTicks.map((value) => [
+    '<line x1="', sx(value), '" y1="', plot.top, '" x2="', sx(value), '" y2="', base.height - plot.bottom, '" class="chart-gridline"/>',
+    '<text x="', sx(value), '" y="', base.height - plot.bottom + 19, '" class="chart-tick" text-anchor="middle">', Number(value.toFixed(3)).toString(), '</text>',
+  ].join('')).join('') + yTicks.map((value) => [
+    '<line x1="', plot.left, '" y1="', sy(value), '" x2="', base.width - plot.right, '" y2="', sy(value), '" class="chart-gridline"/>',
+    '<text x="', plot.left - 10, '" y="', sy(value) + 4, '" class="chart-tick" text-anchor="end">', Math.round(value), '</text>',
+  ].join('')).join('');
+  const bars = groups.map((group) => {
+    if (!group.rows.length) return '';
+    const ids = group.rows.map((row) => row[idField] || row.test || 'source row').slice(0, 6).join(', ');
+    const remainder = group.rows.length > 6 ? ', +' + (group.rows.length - 6) : '';
+    const info = label + ': ' + Number(group.min.toFixed(4)) + '–' + Number(group.max.toFixed(4)) + (unit ? ' ' + unit : '') + ' · ' + labels.binRows + ': ' + group.rows.length + ' · ' + ids + remainder;
+    const left = sx(group.min);
+    const right = sx(group.max);
+    return [
+      '<rect class="chart-point chart-histogram-bin" x="', left + 1, '" y="', sy(group.rows.length), '" width="', Math.max(1, right - left - 2),
+      '" height="', base.height - plot.bottom - sy(group.rows.length), '" fill="#1688be" fill-opacity=".78" tabindex="0" role="button" aria-label="', esc(info), '" data-info="', esc(info), '"><title>', esc(info), '</title></rect>',
+    ].join('');
+  }).join('');
+  const caption = labels.rows + ': n=' + data.length + '/' + rows.length + ' · ' + labels.points + ': ' + bins;
+  return [
+    '<section class="scientific-chart" data-chart-panel><div class="chart-toolbar" role="group" aria-label="', esc(labels.controls), '">',
+    '<button type="button" data-chart-action="zoom-in" aria-label="', esc(labels.zoomIn), '">＋</button>',
+    '<button type="button" data-chart-action="zoom-out" aria-label="', esc(labels.zoomOut), '">−</button>',
+    '<button type="button" data-chart-action="reset">', esc(labels.reset), '</button>',
+    '<button type="button" data-chart-action="draw" aria-pressed="false" data-idle-label="', esc(labels.drawLine), '" data-active-label="', esc(labels.drawLineActive), '">', esc(labels.drawLine), '</button>',
+    '<button type="button" data-chart-action="undo">', esc(labels.undo), '</button></div>',
+    '<p class="chart-interaction-hint">', esc(labels.interactionHint), '</p>',
+    '<div class="chart-viewport"><svg class="scientific-plot" viewBox="0 0 800 400" role="group" aria-label="', esc(label + ' distribution'), '">',
+    '<g class="chart-grid">', grid, '</g>',
+    '<line class="chart-axis" x1="', plot.left, '" y1="', plot.top, '" x2="', plot.left, '" y2="', base.height - plot.bottom, '"/>',
+    '<line class="chart-axis" x1="', plot.left, '" y1="', base.height - plot.bottom, '" x2="', base.width - plot.right, '" y2="', base.height - plot.bottom, '"/>',
+    '<g class="chart-annotations"></g>', bars,
+    '<text x="', (plot.left + base.width - plot.right) / 2, '" y="', base.height - 12, '" class="chart-axis-label" text-anchor="middle">', esc(label), unit ? ' (' + esc(unit) + ')' : '', '</text>',
+    '<text transform="translate(18 ', (plot.top + base.height - plot.bottom) / 2, ') rotate(-90)" class="chart-axis-label" text-anchor="middle">', esc(labels.binRows), '</text>',
+    '</svg><div class="chart-tooltip" role="status" aria-live="polite" hidden></div></div><p class="sub chart-caption">', esc(caption), '</p></section>',
+  ].join('');
+}
+
 export function bindInteractiveCharts(root) {
   root.querySelectorAll('[data-chart-panel]').forEach((panel) => {
     if (panel.dataset.bound === 'true') return;
@@ -246,9 +433,17 @@ export function bindInteractiveCharts(root) {
       showPoint(mark, event);
     });
     svg.addEventListener('keydown', (event) => {
-      if (event.key !== 'Escape') return;
-      tooltipPinned = false;
-      tooltip.hidden = true;
+      if (event.key === 'Escape') {
+        tooltipPinned = false;
+        tooltip.hidden = true;
+        return;
+      }
+      const mark = event.target.closest?.('.chart-point');
+      if (mark && (event.key === 'Enter' || event.key === ' ')) {
+        event.preventDefault();
+        tooltipPinned = true;
+        showPoint(mark, { ...event, type: 'click', detail: 0 });
+      }
     });
     svg.addEventListener('pointerleave', (event) => {
       if (tooltip && shouldDismissChartTooltip(event.pointerType, tooltipPinned)) tooltip.hidden = true;

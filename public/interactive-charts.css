@@ -95,6 +95,7 @@
 }
 
 .chart-trendline,
+.chart-reference-line,
 .chart-user-line {
   fill: none;
   stroke-width: 2.5;
@@ -104,6 +105,25 @@
 .chart-trendline {
   stroke-dasharray: 7 5;
   opacity: 0.9;
+}
+
+.chart-reference-line {
+  stroke: var(--muted);
+  stroke-dasharray: 4 4;
+  stroke-width: 1.6;
+  pointer-events: none;
+}
+
+.chart-reference-key {
+  color: var(--muted);
+}
+
+.chart-reference-key i {
+  width: 15px;
+  height: 0;
+  border-top: 2px dashed var(--muted);
+  border-radius: 0;
+  background: transparent;
 }
 
 .chart-user-line {

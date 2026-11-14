@@ -306,6 +306,1074 @@
     });
   }
 
+  // public/lib/interactive-charts.js
+  var NS = "http://www.w3.org/2000/svg";
+  var COLORS = ["#1688be", "#d59a3d", "#39a77e", "#7d73d3", "#d36d7c", "#5077a8"];
+  function linearFit(points) {
+    if (points.length < 3) return null;
+    const meanX = points.reduce((sum, point) => sum + point.x, 0) / points.length;
+    const meanY = points.reduce((sum, point) => sum + point.y, 0) / points.length;
+    const variance = points.reduce((sum, point) => sum + (point.x - meanX) ** 2, 0);
+    if (!variance) return null;
+    const slope = points.reduce((sum, point) => sum + (point.x - meanX) * (point.y - meanY), 0) / variance;
+    const intercept = meanY - slope * meanX;
+    const total = points.reduce((sum, point) => sum + (point.y - meanY) ** 2, 0);
+    const residual = points.reduce((sum, point) => sum + (point.y - intercept - slope * point.x) ** 2, 0);
+    return { slope, intercept, r2: total ? 1 - residual / total : 1 };
+  }
+  function tick(value, digits = 3) {
+    return Number(value.toFixed(digits)).toString();
+  }
+  function shouldDismissChartTooltip(pointerType, pinned) {
+    return pointerType !== "touch" && !pinned;
+  }
+  function chartTooltipPosition({ clientX, clientY, viewportRect, tooltipRect, offset = 12, padding = 4 }) {
+    const availableWidth = Math.max(0, viewportRect.width - padding * 2);
+    const availableHeight = Math.max(0, viewportRect.height - padding * 2);
+    const width = Math.min(tooltipRect.width || 240, availableWidth);
+    const height = Math.min(tooltipRect.height || 64, availableHeight);
+    const relativeX = clientX - viewportRect.left;
+    const relativeY = clientY - viewportRect.top;
+    let left = relativeX + offset;
+    let top = relativeY + offset;
+    if (left + width > viewportRect.width - padding) left = relativeX - width - offset;
+    if (top + height > viewportRect.height - padding) top = relativeY - height - offset;
+    return {
+      left: Math.max(padding, Math.min(viewportRect.width - width - padding, left)),
+      top: Math.max(padding, Math.min(viewportRect.height - height - padding, top))
+    };
+  }
+  function scientificScatter({
+    rows,
+    xKey,
+    yKey,
+    xLabel,
+    yLabel,
+    xUnit = "",
+    yUnit = "",
+    xFactor = 1,
+    yFactor = 1,
+    groupKey = "fuel",
+    labels: labels2
+  }) {
+    const points = rows.filter((row) => Number.isFinite(row[xKey]) && Number.isFinite(row[yKey])).map((row) => ({
+      row,
+      x: row[xKey] * xFactor,
+      y: row[yKey] * yFactor,
+      group: String(row[groupKey] || "Unreported")
+    }));
+    if (!points.length) return '<div class="empty">No source rows contain both measurements.</div>';
+    const base = { x: 0, y: 0, width: 800, height: 400 };
+    const plot2 = { left: 86, right: 26, top: 24, bottom: 67 };
+    const xMin = Math.min(...points.map((point) => point.x));
+    const xMax = Math.max(...points.map((point) => point.x));
+    const yMin = Math.min(0, ...points.map((point) => point.y));
+    const yMax = Math.max(...points.map((point) => point.y));
+    const xPad = (xMax - xMin) * 0.04 || Math.max(Math.abs(xMin) * 0.04, 0.01);
+    const yPad = (yMax - yMin) * 0.06 || Math.max(Math.abs(yMax) * 0.06, 0.01);
+    const domain = { xMin: xMin - xPad, xMax: xMax + xPad, yMin, yMax: yMax + yPad };
+    const sx = (value) => plot2.left + (value - domain.xMin) / (domain.xMax - domain.xMin) * (base.width - plot2.left - plot2.right);
+    const sy = (value) => base.height - plot2.bottom - (value - domain.yMin) / (domain.yMax - domain.yMin || 1) * (base.height - plot2.top - plot2.bottom);
+    const groups = [...new Set(points.map((point) => point.group))];
+    const colorByGroup = new Map(groups.map((group, index) => [group, COLORS[index % COLORS.length]]));
+    const fits = groups.map((group) => [group, linearFit(points.filter((point) => point.group === group))]);
+    const grid = Array.from({ length: 6 }, (_, index) => {
+      const x = domain.xMin + (domain.xMax - domain.xMin) * index / 5;
+      const y = domain.yMin + (domain.yMax - domain.yMin) * index / 5;
+      return `<line x1="${sx(x)}" y1="${plot2.top}" x2="${sx(x)}" y2="${base.height - plot2.bottom}" class="chart-gridline"/><line x1="${plot2.left}" y1="${sy(y)}" x2="${base.width - plot2.right}" y2="${sy(y)}" class="chart-gridline"/><text x="${sx(x)}" y="${base.height - plot2.bottom + 19}" class="chart-tick" text-anchor="middle">${tick(x)}</text><text x="${plot2.left - 10}" y="${sy(y) + 4}" class="chart-tick" text-anchor="end">${tick(y)}</text>`;
+    }).join("");
+    const marks = points.map(({ row, x, y, group }) => {
+      var _a;
+      const info = `${row.id || `Test ${row.test}`} \xB7 ${row.fuel || "Fuel unreported"} \xB7 ${xLabel}: ${tick(x)} ${xUnit} \xB7 ${yLabel}: ${tick(y)} ${yUnit} \xB7 O\u2082 ${(row.oxygen_mole_fraction * 100).toFixed(1)}% \xB7 ${(_a = row.pressure_mmHg) != null ? _a : "\u2014"} mmHg \xB7 ${row.test_end || "End state unreported"}`;
+      return `<circle class="chart-point" cx="${sx(x)}" cy="${sy(y)}" r="5" fill="${colorByGroup.get(group)}" fill-opacity=".82" tabindex="0" role="button" aria-label="${esc(info)}" data-info="${esc(info)}"><title>${esc(info)}</title></circle>`;
+    }).join("");
+    const legend = groups.map((group) => `<span><i style="--legend-color:${colorByGroup.get(group)}"></i>${esc(group)}</span>`).join("");
+    const fitted = fits.filter(([, fit]) => fit);
+    const fitSummary = fitted.length ? `${labels2.fit}: ${fitted.map(([group, fit]) => `${group}: y = ${tick(fit.intercept)} + ${tick(fit.slope)}x, R\xB2 = ${fit.r2.toFixed(3)} (n=${points.filter((point) => point.group === group).length})`).join(" \xB7 ")}` : `${labels2.fitUnavailable}`;
+    const trend = fitted.map(
+      ([group, fit]) => `<line class="chart-trendline" stroke="${colorByGroup.get(group)}" x1="${sx(domain.xMin)}" y1="${sy(fit.intercept + fit.slope * domain.xMin)}" x2="${sx(domain.xMax)}" y2="${sy(fit.intercept + fit.slope * domain.xMax)}" visibility="hidden"/>`
+    ).join("");
+    return `<section class="scientific-chart" data-chart-panel><div class="chart-toolbar" role="group" aria-label="${esc(labels2.controls)}"><button type="button" data-chart-action="zoom-in" aria-label="${esc(labels2.zoomIn)}">\uFF0B</button><button type="button" data-chart-action="zoom-out" aria-label="${esc(labels2.zoomOut)}">\u2212</button><button type="button" data-chart-action="reset">${esc(labels2.reset)}</button>${fitted.length ? `<button type="button" data-chart-action="fit" aria-pressed="false">${esc(labels2.fitLine)}</button>` : ""}<button type="button" data-chart-action="draw" aria-pressed="false" data-idle-label="${esc(labels2.drawLine)}" data-active-label="${esc(labels2.drawLineActive)}">${esc(labels2.drawLine)}</button><button type="button" data-chart-action="undo">${esc(labels2.undo)}</button></div><p class="chart-interaction-hint">${esc(labels2.interactionHint || "")}</p><div class="chart-viewport"><svg class="scientific-plot" viewBox="${base.x} ${base.y} ${base.width} ${base.height}" role="group" aria-label="${esc(`${xLabel} versus ${yLabel}`)}"><g class="chart-grid">${grid}</g><line x1="${plot2.left}" y1="${base.height - plot2.bottom}" x2="${base.width - plot2.right}" y2="${base.height - plot2.bottom}" class="chart-axis"/><line x1="${plot2.left}" y1="${plot2.top}" x2="${plot2.left}" y2="${base.height - plot2.bottom}" class="chart-axis"/><g class="chart-trend">${trend}</g><g class="chart-annotations"></g><g>${marks}</g><text x="${(plot2.left + base.width - plot2.right) / 2}" y="${base.height - 12}" class="chart-axis-label" text-anchor="middle">${esc(xLabel)}${xUnit ? ` (${esc(xUnit)})` : ""}</text><text transform="translate(18 ${(plot2.top + base.height - plot2.bottom) / 2}) rotate(-90)" class="chart-axis-label" text-anchor="middle">${esc(yLabel)}${yUnit ? ` (${esc(yUnit)})` : ""}</text></svg><div class="chart-tooltip" role="status" aria-live="polite" hidden></div></div><div class="chart-legend">${legend}</div><p class="sub chart-caption">${esc(labels2.rows)}: n=${points.length}/${rows.length} \xB7 ${esc(labels2.fitNote)} ${esc(fitSummary)}</p></section>`;
+  }
+  function chartControlLabels(lang2 = "en") {
+    const ar = lang2 === "ar";
+    return {
+      controls: ar ? "\u0623\u062F\u0648\u0627\u062A \u0627\u0644\u0645\u062E\u0637\u0637" : "Chart controls",
+      interactionHint: ar ? "\u0627\u0646\u0642\u0631 \u0646\u0642\u0637\u0629 \u0644\u0639\u0631\u0636 \u062A\u0641\u0627\u0635\u064A\u0644\u0647\u0627 \xB7 \u0627\u0633\u062D\u0628 \u0645\u0633\u0627\u062D\u0629 \u0641\u0627\u0631\u063A\u0629 \u0644\u0644\u062A\u062D\u0631\u064A\u0643 \xB7 \u0627\u0633\u062A\u062E\u062F\u0645 +/\u2212 \u0623\u0648 \u0627\u0644\u0639\u062C\u0644\u0629 \u0644\u0644\u062A\u0643\u0628\u064A\u0631 \xB7 \u0627\u062E\u062A\u0631 \u0631\u0633\u0645 \u062E\u0637 \u062B\u0645 \u0627\u0633\u062D\u0628 \u062E\u0637\u0627\u064B \u0625\u0631\u0634\u0627\u062F\u064A\u0627\u064B." : "Click a point for details \xB7 drag empty plot space to pan \xB7 use +/\u2212 or the wheel to zoom \xB7 choose Draw guide line, then drag.",
+      zoomIn: ar ? "\u062A\u0643\u0628\u064A\u0631" : "Zoom in",
+      zoomOut: ar ? "\u062A\u0635\u063A\u064A\u0631" : "Zoom out",
+      reset: ar ? "\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0639\u0631\u0636" : "Reset view",
+      fitLine: ar ? "\u062E\u0637 \u0627\u0644\u0645\u0644\u0627\u0621\u0645\u0629" : "Linear fit",
+      drawLine: ar ? "\u0627\u0631\u0633\u0645 \u062E\u0637\u0627\u064B \u0625\u0631\u0634\u0627\u062F\u064A\u0627\u064B" : "Draw guide line",
+      drawLineActive: ar ? "\u0627\u0633\u062D\u0628 \u0644\u0631\u0633\u0645 \u0627\u0644\u062E\u0637 \xB7 \u0627\u0636\u063A\u0637 \u0644\u0644\u0625\u064A\u0642\u0627\u0641" : "Drag to draw \xB7 tap to stop",
+      undo: ar ? "\u062A\u0631\u0627\u062C\u0639 \u0639\u0646 \u0627\u0644\u062E\u0637" : "Undo line",
+      fit: ar ? "\u0645\u0644\u0627\u0621\u0645\u0629 \u062E\u0637\u064A\u0629 \u0627\u0633\u062A\u0643\u0634\u0627\u0641\u064A\u0629" : "Exploratory linear fit",
+      fitUnavailable: ar ? "\u0644\u0627 \u064A\u0645\u0643\u0646 \u062D\u0633\u0627\u0628 \u0627\u0644\u0645\u0644\u0627\u0621\u0645\u0629 (\u064A\u0644\u0632\u0645 3 \u0646\u0642\u0627\u0637 \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644)" : "Fit unavailable (need at least 3 points)",
+      fitNote: ar ? "\u0627\u0631\u062A\u0628\u0627\u0637 \u0627\u0633\u062A\u0643\u0634\u0627\u0641\u064A \u0641\u0642\u0637\u061B \u0644\u0627 \u064A\u062B\u0628\u062A \u0627\u0644\u0633\u0628\u0628\u064A\u0629." : "Exploratory association only; it does not show causation.",
+      rows: ar ? "\u0635\u0641\u0648\u0641 \u0627\u0644\u0645\u0635\u062F\u0631 \u0627\u0644\u0635\u0627\u0644\u062D\u0629" : "Valid source rows",
+      points: ar ? "\u0627\u0644\u0646\u0642\u0627\u0637 \u0627\u0644\u0645\u0639\u0631\u0648\u0636\u0629" : "Plotted points",
+      reference: ar ? "\u062E\u0637 \u0645\u0631\u062C\u0639\u064A" : "Reference line",
+      binRows: ar ? "\u0635\u0641\u0648\u0641 \u0627\u0644\u0645\u0635\u062F\u0631 \u0636\u0645\u0646 \u0627\u0644\u0641\u0626\u0629" : "Source rows in bin"
+    };
+  }
+  function scientificSourceScatter({
+    points,
+    xLabel,
+    yLabel,
+    xUnit = "",
+    yUnit = "",
+    categories = null,
+    identityReference = false,
+    labels: labels2,
+    sourceRowCount,
+    validRowCount,
+    captionNote = ""
+  }) {
+    if (!points.length) return '<div class="empty">No compatible numeric source rows for this plot.</div>';
+    const base = { width: 800, height: 400 };
+    const plot2 = { left: 86, right: 26, top: 24, bottom: 67 };
+    const categoriesList = Array.isArray(categories) ? categories : null;
+    const rawXMin = Math.min(...points.map((point) => point.x));
+    const rawXMax = Math.max(...points.map((point) => point.x));
+    const xPad = (rawXMax - rawXMin) * 0.04 || Math.max(Math.abs(rawXMin) * 0.04, 0.01);
+    const yDataMin = Math.min(...points.map((point) => point.y));
+    const yDataMax = Math.max(...points.map((point) => point.y));
+    const yPad = (yDataMax - yDataMin) * 0.06 || Math.max(Math.abs(yDataMin) * 0.06, 0.01);
+    const domain = {
+      xMin: categoriesList ? -0.5 : rawXMin - xPad,
+      xMax: categoriesList ? categoriesList.length - 0.5 : rawXMax + xPad,
+      yMin: yDataMin - yPad,
+      yMax: yDataMax + yPad
+    };
+    const sx = (value) => plot2.left + (value - domain.xMin) / (domain.xMax - domain.xMin) * (base.width - plot2.left - plot2.right);
+    const sy = (value) => base.height - plot2.bottom - (value - domain.yMin) / (domain.yMax - domain.yMin || 1) * (base.height - plot2.top - plot2.bottom);
+    const groups = [...new Set(points.map((point) => point.group).filter(Boolean))];
+    const colors = ["#1688be", "#d59a3d", "#39a77e", "#7d73d3", "#d36d7c", "#5077a8"];
+    const groupColor = new Map(groups.map((group, index) => [group, colors[index % colors.length]]));
+    const xTicks = categoriesList ? categoriesList.map((label, index) => ({ value: index, label })) : Array.from({ length: 6 }, (_, index) => {
+      const value = domain.xMin + (domain.xMax - domain.xMin) * index / 5;
+      return { value, label: Number(value.toFixed(3)).toString() };
+    });
+    const yTicks = Array.from({ length: 6 }, (_, index) => {
+      const value = domain.yMin + (domain.yMax - domain.yMin) * index / 5;
+      return { value, label: Number(value.toFixed(3)).toString() };
+    });
+    const grid = xTicks.map(({ value, label }) => [
+      '<line x1="',
+      sx(value),
+      '" y1="',
+      plot2.top,
+      '" x2="',
+      sx(value),
+      '" y2="',
+      base.height - plot2.bottom,
+      '" class="chart-gridline"/>',
+      '<text x="',
+      sx(value),
+      '" y="',
+      base.height - plot2.bottom + 19,
+      '" class="chart-tick" text-anchor="middle">',
+      esc(label),
+      "</text>"
+    ].join("")).join("") + yTicks.map(({ value, label }) => [
+      '<line x1="',
+      plot2.left,
+      '" y1="',
+      sy(value),
+      '" x2="',
+      base.width - plot2.right,
+      '" y2="',
+      sy(value),
+      '" class="chart-gridline"/>',
+      '<text x="',
+      plot2.left - 10,
+      '" y="',
+      sy(value) + 4,
+      '" class="chart-tick" text-anchor="end">',
+      esc(label),
+      "</text>"
+    ].join("")).join("");
+    const marks = points.map((point) => {
+      const radius = Math.min(12, 4 + Math.sqrt(Math.max(1, point.count || 1)) * 1.25);
+      const info = point.info + " \xB7 " + xLabel + ": " + point.xDisplay + (xUnit ? " " + xUnit : "") + " \xB7 " + yLabel + ": " + Number(point.y.toFixed(4)) + (yUnit ? " " + yUnit : "");
+      const fill = groupColor.get(point.group) || "#1688be";
+      return [
+        '<circle class="chart-point" cx="',
+        sx(point.x),
+        '" cy="',
+        sy(point.y),
+        '" r="',
+        radius,
+        '" fill="',
+        fill,
+        '" fill-opacity=".82" tabindex="0" role="button" aria-label="',
+        esc(info),
+        '" data-info="',
+        esc(info),
+        '"><title>',
+        esc(info),
+        "</title></circle>"
+      ].join("");
+    }).join("");
+    const groupLegend = groups.map((group) => [
+      '<span><i style="--legend-color:',
+      groupColor.get(group),
+      '"></i>',
+      esc(group),
+      "</span>"
+    ].join("")).join("");
+    let reference = "";
+    let referenceLegend = "";
+    if (identityReference) {
+      const start = Math.max(domain.xMin, domain.yMin);
+      const end = Math.min(domain.xMax, domain.yMax);
+      if (end > start) {
+        reference = '<line class="chart-reference-line" x1="' + sx(start) + '" y1="' + sy(start) + '" x2="' + sx(end) + '" y2="' + sy(end) + '"/>';
+        referenceLegend = '<span class="chart-reference-key"><i></i>' + esc(labels2.reference) + " \xB7 y=x</span>";
+      }
+    }
+    const legend = groupLegend + referenceLegend;
+    const caption = labels2.rows + ": n=" + validRowCount + "/" + sourceRowCount + " \xB7 " + labels2.points + ": " + points.length + (captionNote ? " \xB7 " + captionNote : "");
+    return [
+      '<section class="scientific-chart" data-chart-panel>',
+      '<div class="chart-toolbar" role="group" aria-label="',
+      esc(labels2.controls),
+      '">',
+      '<button type="button" data-chart-action="zoom-in" aria-label="',
+      esc(labels2.zoomIn),
+      '">\uFF0B</button>',
+      '<button type="button" data-chart-action="zoom-out" aria-label="',
+      esc(labels2.zoomOut),
+      '">\u2212</button>',
+      '<button type="button" data-chart-action="reset">',
+      esc(labels2.reset),
+      "</button>",
+      '<button type="button" data-chart-action="draw" aria-pressed="false" data-idle-label="',
+      esc(labels2.drawLine),
+      '" data-active-label="',
+      esc(labels2.drawLineActive),
+      '">',
+      esc(labels2.drawLine),
+      "</button>",
+      '<button type="button" data-chart-action="undo">',
+      esc(labels2.undo),
+      "</button></div>",
+      '<p class="chart-interaction-hint">',
+      esc(labels2.interactionHint),
+      "</p>",
+      '<div class="chart-viewport"><svg class="scientific-plot" viewBox="0 0 800 400" role="group" aria-label="',
+      esc(xLabel + " versus " + yLabel),
+      '">',
+      '<g class="chart-grid">',
+      grid,
+      "</g>",
+      '<line class="chart-axis" x1="',
+      plot2.left,
+      '" y1="',
+      plot2.top,
+      '" x2="',
+      plot2.left,
+      '" y2="',
+      base.height - plot2.bottom,
+      '"/>',
+      '<line class="chart-axis" x1="',
+      plot2.left,
+      '" y1="',
+      base.height - plot2.bottom,
+      '" x2="',
+      base.width - plot2.right,
+      '" y2="',
+      base.height - plot2.bottom,
+      '"/>',
+      reference,
+      '<g class="chart-annotations"></g>',
+      marks,
+      '<text x="',
+      (plot2.left + base.width - plot2.right) / 2,
+      '" y="',
+      base.height - 12,
+      '" class="chart-axis-label" text-anchor="middle">',
+      esc(xLabel),
+      xUnit ? " (" + esc(xUnit) + ")" : "",
+      "</text>",
+      '<text transform="translate(18 ',
+      (plot2.top + base.height - plot2.bottom) / 2,
+      ') rotate(-90)" class="chart-axis-label" text-anchor="middle">',
+      esc(yLabel),
+      yUnit ? " (" + esc(yUnit) + ")" : "",
+      "</text>",
+      '</svg><div class="chart-tooltip" role="status" aria-live="polite" hidden></div></div>',
+      legend ? '<div class="chart-legend">' + legend + "</div>" : "",
+      '<p class="sub chart-caption">',
+      esc(caption),
+      "</p></section>"
+    ].join("");
+  }
+  function scientificHistogram({ rows, key, label, unit = "", labels: labels2, idField = "id" }) {
+    const data = rows.map((row) => ({ row, value: row[key] })).filter((point) => Number.isFinite(point.value));
+    if (!data.length) return '<div class="empty">No measured values for ' + esc(label) + ".</div>";
+    const min = Math.min(...data.map((point) => point.value));
+    const max = Math.max(...data.map((point) => point.value));
+    const bins = Math.max(5, Math.min(18, Math.ceil(Math.sqrt(data.length))));
+    const span = max - min || Math.max(Math.abs(min) * 0.1, 1);
+    const xMin = max === min ? min - span / 2 : min;
+    const xMax = max === min ? max + span / 2 : max;
+    const binWidth = (xMax - xMin) / bins;
+    const groups = Array.from({ length: bins }, (_, index) => ({
+      min: xMin + index * binWidth,
+      max: xMin + (index + 1) * binWidth,
+      rows: []
+    }));
+    data.forEach(({ row, value }) => {
+      const index = Math.min(bins - 1, Math.max(0, Math.floor((value - xMin) / binWidth)));
+      groups[index].rows.push(row);
+    });
+    const maxCount = Math.max(...groups.map((group) => group.rows.length), 1);
+    const base = { width: 800, height: 400 };
+    const plot2 = { left: 86, right: 26, top: 24, bottom: 67 };
+    const yMax = maxCount * 1.14;
+    const sx = (value) => plot2.left + (value - xMin) / (xMax - xMin) * (base.width - plot2.left - plot2.right);
+    const sy = (value) => base.height - plot2.bottom - value / yMax * (base.height - plot2.top - plot2.bottom);
+    const xTicks = Array.from({ length: 6 }, (_, index) => xMin + (xMax - xMin) * index / 5);
+    const yTicks = Array.from({ length: 6 }, (_, index) => yMax * index / 5);
+    const grid = xTicks.map((value) => [
+      '<line x1="',
+      sx(value),
+      '" y1="',
+      plot2.top,
+      '" x2="',
+      sx(value),
+      '" y2="',
+      base.height - plot2.bottom,
+      '" class="chart-gridline"/>',
+      '<text x="',
+      sx(value),
+      '" y="',
+      base.height - plot2.bottom + 19,
+      '" class="chart-tick" text-anchor="middle">',
+      Number(value.toFixed(3)).toString(),
+      "</text>"
+    ].join("")).join("") + yTicks.map((value) => [
+      '<line x1="',
+      plot2.left,
+      '" y1="',
+      sy(value),
+      '" x2="',
+      base.width - plot2.right,
+      '" y2="',
+      sy(value),
+      '" class="chart-gridline"/>',
+      '<text x="',
+      plot2.left - 10,
+      '" y="',
+      sy(value) + 4,
+      '" class="chart-tick" text-anchor="end">',
+      Math.round(value),
+      "</text>"
+    ].join("")).join("");
+    const bars = groups.map((group) => {
+      if (!group.rows.length) return "";
+      const ids = group.rows.map((row) => row[idField] || row.test || "source row").slice(0, 6).join(", ");
+      const remainder = group.rows.length > 6 ? ", +" + (group.rows.length - 6) : "";
+      const info = label + ": " + Number(group.min.toFixed(4)) + "\u2013" + Number(group.max.toFixed(4)) + (unit ? " " + unit : "") + " \xB7 " + labels2.binRows + ": " + group.rows.length + " \xB7 " + ids + remainder;
+      const left = sx(group.min);
+      const right = sx(group.max);
+      return [
+        '<rect class="chart-point chart-histogram-bin" x="',
+        left + 1,
+        '" y="',
+        sy(group.rows.length),
+        '" width="',
+        Math.max(1, right - left - 2),
+        '" height="',
+        base.height - plot2.bottom - sy(group.rows.length),
+        '" fill="#1688be" fill-opacity=".78" tabindex="0" role="button" aria-label="',
+        esc(info),
+        '" data-info="',
+        esc(info),
+        '"><title>',
+        esc(info),
+        "</title></rect>"
+      ].join("");
+    }).join("");
+    const caption = labels2.rows + ": n=" + data.length + "/" + rows.length + " \xB7 " + labels2.points + ": " + bins;
+    return [
+      '<section class="scientific-chart" data-chart-panel><div class="chart-toolbar" role="group" aria-label="',
+      esc(labels2.controls),
+      '">',
+      '<button type="button" data-chart-action="zoom-in" aria-label="',
+      esc(labels2.zoomIn),
+      '">\uFF0B</button>',
+      '<button type="button" data-chart-action="zoom-out" aria-label="',
+      esc(labels2.zoomOut),
+      '">\u2212</button>',
+      '<button type="button" data-chart-action="reset">',
+      esc(labels2.reset),
+      "</button>",
+      '<button type="button" data-chart-action="draw" aria-pressed="false" data-idle-label="',
+      esc(labels2.drawLine),
+      '" data-active-label="',
+      esc(labels2.drawLineActive),
+      '">',
+      esc(labels2.drawLine),
+      "</button>",
+      '<button type="button" data-chart-action="undo">',
+      esc(labels2.undo),
+      "</button></div>",
+      '<p class="chart-interaction-hint">',
+      esc(labels2.interactionHint),
+      "</p>",
+      '<div class="chart-viewport"><svg class="scientific-plot" viewBox="0 0 800 400" role="group" aria-label="',
+      esc(label + " distribution"),
+      '">',
+      '<g class="chart-grid">',
+      grid,
+      "</g>",
+      '<line class="chart-axis" x1="',
+      plot2.left,
+      '" y1="',
+      plot2.top,
+      '" x2="',
+      plot2.left,
+      '" y2="',
+      base.height - plot2.bottom,
+      '"/>',
+      '<line class="chart-axis" x1="',
+      plot2.left,
+      '" y1="',
+      base.height - plot2.bottom,
+      '" x2="',
+      base.width - plot2.right,
+      '" y2="',
+      base.height - plot2.bottom,
+      '"/>',
+      '<g class="chart-annotations"></g>',
+      bars,
+      '<text x="',
+      (plot2.left + base.width - plot2.right) / 2,
+      '" y="',
+      base.height - 12,
+      '" class="chart-axis-label" text-anchor="middle">',
+      esc(label),
+      unit ? " (" + esc(unit) + ")" : "",
+      "</text>",
+      '<text transform="translate(18 ',
+      (plot2.top + base.height - plot2.bottom) / 2,
+      ') rotate(-90)" class="chart-axis-label" text-anchor="middle">',
+      esc(labels2.binRows),
+      "</text>",
+      '</svg><div class="chart-tooltip" role="status" aria-live="polite" hidden></div></div><p class="sub chart-caption">',
+      esc(caption),
+      "</p></section>"
+    ].join("");
+  }
+  function bindInteractiveCharts(root) {
+    root.querySelectorAll("[data-chart-panel]").forEach((panel) => {
+      if (panel.dataset.bound === "true") return;
+      panel.dataset.bound = "true";
+      const svg = panel.querySelector("svg");
+      const tooltip = panel.querySelector(".chart-tooltip");
+      const initial = svg.viewBox.baseVal;
+      const original = { x: initial.x, y: initial.y, width: initial.width, height: initial.height };
+      const annotations = svg.querySelector(".chart-annotations");
+      let drawing = false;
+      let drag = null;
+      let lineStart = null;
+      let tooltipPinned = false;
+      const view = () => svg.viewBox.baseVal;
+      const setView = (next) => svg.setAttribute("viewBox", `${next.x} ${next.y} ${next.width} ${next.height}`);
+      const showPoint = (mark, event) => {
+        tooltip.textContent = mark.dataset.info;
+        tooltip.hidden = false;
+        const box = panel.querySelector(".chart-viewport").getBoundingClientRect();
+        const keyboardClick = event.type === "click" && event.detail === 0;
+        const bounds = chartTooltipPosition({
+          clientX: keyboardClick ? box.left + box.width / 2 : event.clientX,
+          clientY: keyboardClick ? box.top + box.height / 2 : event.clientY,
+          viewportRect: box,
+          tooltipRect: tooltip.getBoundingClientRect()
+        });
+        tooltip.style.left = `${bounds.left}px`;
+        tooltip.style.top = `${bounds.top}px`;
+      };
+      const point = (event) => {
+        const p = svg.createSVGPoint();
+        p.x = event.clientX;
+        p.y = event.clientY;
+        return p.matrixTransform(svg.getScreenCTM().inverse());
+      };
+      const zoom = (factor, anchorX = view().x + view().width / 2, anchorY = view().y + view().height / 2) => {
+        const current2 = view();
+        const width = Math.max(100, Math.min(original.width * 8, current2.width * factor));
+        const height = Math.max(70, Math.min(original.height * 8, current2.height * factor));
+        const rx = (anchorX - current2.x) / current2.width;
+        const ry = (anchorY - current2.y) / current2.height;
+        setView({ x: anchorX - width * rx, y: anchorY - height * ry, width, height });
+      };
+      panel.querySelectorAll("[data-chart-action]").forEach((button) => {
+        button.addEventListener("click", () => {
+          var _a;
+          const action = button.dataset.chartAction;
+          if (action === "zoom-in") zoom(0.78);
+          if (action === "zoom-out") zoom(1.28);
+          if (action === "reset") setView(original);
+          if (action === "fit") {
+            const lines = [...svg.querySelectorAll(".chart-trendline")];
+            const visible = lines.some((line) => line.getAttribute("visibility") !== "visible");
+            lines.forEach((line) => line.setAttribute("visibility", visible ? "visible" : "hidden"));
+            button.setAttribute("aria-pressed", String(visible));
+          }
+          if (action === "draw") {
+            drawing = !drawing;
+            button.setAttribute("aria-pressed", String(drawing));
+            button.textContent = drawing ? button.dataset.activeLabel : button.dataset.idleLabel;
+            svg.classList.toggle("drawing-line", drawing);
+            lineStart = null;
+          }
+          if (action === "undo") (_a = annotations.lastElementChild) == null ? void 0 : _a.remove();
+        });
+      });
+      svg.addEventListener(
+        "wheel",
+        (event) => {
+          event.preventDefault();
+          const p = point(event);
+          zoom(event.deltaY < 0 ? 0.88 : 1.14, p.x, p.y);
+        },
+        { passive: false }
+      );
+      svg.addEventListener("pointerdown", (event) => {
+        if (event.target.closest(".chart-point")) {
+          tooltipPinned = true;
+          showPoint(event.target.closest(".chart-point"), event);
+          return;
+        }
+        tooltipPinned = false;
+        tooltip.hidden = true;
+        const p = point(event);
+        if (drawing) {
+          lineStart = p;
+          const line = document.createElementNS(NS, "line");
+          line.setAttribute("class", "chart-user-line");
+          line.setAttribute("x1", p.x);
+          line.setAttribute("y1", p.y);
+          line.setAttribute("x2", p.x);
+          line.setAttribute("y2", p.y);
+          annotations.append(line);
+          drag = { kind: "draw", pointerId: event.pointerId, line };
+        } else {
+          drag = { kind: "pan", pointerId: event.pointerId, x: event.clientX, y: event.clientY, view: __spreadValues({}, view()) };
+        }
+        svg.setPointerCapture(event.pointerId);
+        event.preventDefault();
+      });
+      svg.addEventListener("pointermove", (event) => {
+        var _a, _b;
+        const mark = (_b = (_a = event.target).closest) == null ? void 0 : _b.call(_a, ".chart-point");
+        if (mark && event.pointerType !== "touch") {
+          tooltipPinned = false;
+          showPoint(mark, event);
+        }
+        if (!drag || drag.pointerId !== event.pointerId) return;
+        if (drag.kind === "draw") {
+          const p = point(event);
+          drag.line.setAttribute("x2", p.x);
+          drag.line.setAttribute("y2", p.y);
+        } else {
+          const rect = svg.getBoundingClientRect();
+          const dx = (event.clientX - drag.x) * drag.view.width / rect.width;
+          const dy = (event.clientY - drag.y) * drag.view.height / rect.height;
+          setView(__spreadProps(__spreadValues({}, drag.view), { x: drag.view.x - dx, y: drag.view.y - dy }));
+          if (tooltip) tooltip.hidden = true;
+        }
+      });
+      const stop = (event) => {
+        if (!drag || drag.pointerId !== event.pointerId) return;
+        if (drag.kind === "draw" && lineStart) {
+          const end = point(event);
+          if (Math.hypot(end.x - lineStart.x, end.y - lineStart.y) < 4) drag.line.remove();
+        }
+        drag = null;
+        lineStart = null;
+      };
+      svg.addEventListener("pointerup", stop);
+      svg.addEventListener("pointercancel", stop);
+      svg.addEventListener("click", (event) => {
+        var _a, _b;
+        const mark = (_b = (_a = event.target).closest) == null ? void 0 : _b.call(_a, ".chart-point");
+        if (!mark) return;
+        tooltipPinned = true;
+        showPoint(mark, event);
+      });
+      svg.addEventListener("keydown", (event) => {
+        var _a, _b;
+        if (event.key === "Escape") {
+          tooltipPinned = false;
+          tooltip.hidden = true;
+          return;
+        }
+        const mark = (_b = (_a = event.target).closest) == null ? void 0 : _b.call(_a, ".chart-point");
+        if (mark && (event.key === "Enter" || event.key === " ")) {
+          event.preventDefault();
+          tooltipPinned = true;
+          showPoint(mark, __spreadProps(__spreadValues({}, event), { type: "click", detail: 0 }));
+        }
+      });
+      svg.addEventListener("pointerleave", (event) => {
+        if (tooltip && shouldDismissChartTooltip(event.pointerType, tooltipPinned)) tooltip.hidden = true;
+      });
+    });
+  }
+
+  // public/lib/source-chart-guide.js
+  var bilingual = (en, ar) => ({ en, ar });
+  function plot(id, studyId, xField, yField, xUnit, yUnit, title, question, purpose, limit, extra = {}) {
+    return __spreadValues({
+      id,
+      studyId,
+      xField,
+      yField,
+      xUnit,
+      yUnit,
+      title,
+      question,
+      purpose,
+      limit
+    }, extra);
+  }
+  var SOURCE_STUDY_CHARTS = [
+    plot(
+      "psi20-ignitions-burner-size",
+      "PSI-20",
+      "Burner Size (mm)",
+      "Flames Ignited",
+      "mm",
+      "reported daily count",
+      bilingual("Reported ignitions by burner size", "\u062D\u0627\u0644\u0627\u062A \u0627\u0644\u0625\u0634\u0639\u0627\u0644 \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0628\u062D\u0633\u0628 \u062D\u062C\u0645 \u0627\u0644\u0645\u0648\u0642\u062F"),
+      bilingual("How do the source-day ignition counts sit across the listed burner sizes?", "\u0643\u064A\u0641 \u062A\u062A\u0648\u0632\u0639 \u0623\u0639\u062F\u0627\u062F \u0627\u0644\u0625\u0634\u0639\u0627\u0644 \u0627\u0644\u064A\u0648\u0645\u064A\u0629 \u0639\u0644\u0649 \u0623\u062D\u062C\u0627\u0645 \u0627\u0644\u0645\u0648\u0627\u0642\u062F \u0627\u0644\u0645\u062F\u0631\u062C\u0629\u061F"),
+      bilingual("Inspect reported day summaries by burner size.", "\u0642\u0627\u0631\u0646 \u0645\u0644\u062E\u0635\u0627\u062A \u0627\u0644\u0623\u064A\u0627\u0645 \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0628\u062D\u0633\u0628 \u062D\u062C\u0645 \u0627\u0644\u0645\u0648\u0642\u062F."),
+      bilingual("Rows summarize days, not individual trials. Oxygen mixtures and chamber pressure vary and are not paired to each count.", "\u0627\u0644\u0635\u0641\u0648\u0641 \u062A\u0644\u062E\u0635 \u0623\u064A\u0627\u0645\u0627\u064B \u0644\u0627 \u062A\u062C\u0627\u0631\u0628 \u0645\u0646\u0641\u0631\u062F\u0629. \u062A\u062E\u062A\u0644\u0641 \u0645\u062E\u0627\u0644\u064A\u0637 \u0627\u0644\u0623\u0643\u0633\u062C\u064A\u0646 \u0648\u0636\u063A\u0637 \u0627\u0644\u062D\u062C\u0631\u0629 \u0648\u0644\u0627 \u062A\u0631\u062A\u0628\u0637 \u0643\u0644 \u0642\u064A\u0645\u0629 \u0645\u0646\u0647\u0627 \u0628\u0639\u062F\u062F \u0627\u0644\u0625\u0634\u0639\u0627\u0644."),
+      { groupField: "Fuel Bottle", rowIdField: "Date", detailFields: ["Year", "Month", "Fuel Bottle", "Oxygen Conc (percent)"], aggregateDuplicates: true }
+    ),
+    plot(
+      "psi21-ignitions-fuel-mfc",
+      "PSI-21",
+      "Fuel MFC",
+      "Flames ignited",
+      "source units not stated",
+      "reported test-day count",
+      bilingual("Reported ignitions by fuel MFC setting", "\u0627\u0644\u0625\u0634\u0639\u0627\u0644\u0627\u062A \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0628\u062D\u0633\u0628 \u0625\u0639\u062F\u0627\u062F \u0645\u062A\u062D\u0643\u0645 \u062A\u062F\u0641\u0642 \u0627\u0644\u0648\u0642\u0648\u062F"),
+      bilingual("How are test-day ignition counts distributed across the source fuel-MFC settings?", "\u0643\u064A\u0641 \u062A\u062A\u0648\u0632\u0639 \u0623\u0639\u062F\u0627\u062F \u0627\u0644\u0625\u0634\u0639\u0627\u0644 \u0627\u0644\u064A\u0648\u0645\u064A\u0629 \u0639\u0644\u0649 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0645\u062A\u062D\u0643\u0645 \u0627\u0644\u0648\u0642\u0648\u062F \u0643\u0645\u0627 \u0648\u0631\u062F\u062A \u0641\u064A \u0627\u0644\u0645\u0635\u062F\u0631\u061F"),
+      bilingual("Inspect the recorded settings and counts; values retain the source field and unit convention.", "\u0627\u0641\u062D\u0635 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0648\u0627\u0644\u0623\u0639\u062F\u0627\u062F \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0645\u0639 \u0627\u0644\u0625\u0628\u0642\u0627\u0621 \u0639\u0644\u0649 \u062A\u0633\u0645\u064A\u0629 \u0627\u0644\u062D\u0642\u0644 \u0648\u0648\u062D\u062F\u062A\u0647 \u0643\u0645\u0627 \u0641\u064A \u0627\u0644\u0645\u0635\u062F\u0631."),
+      bilingual("Rows are test-day summaries. The source does not state MFC units here; fuel, nitrogen setting, and procedure also vary.", "\u0627\u0644\u0635\u0641\u0648\u0641 \u0645\u0644\u062E\u0635\u0627\u062A \u0644\u0623\u064A\u0627\u0645 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631. \u0644\u0627 \u064A\u062D\u062F\u062F \u0627\u0644\u0645\u0635\u062F\u0631 \u0647\u0646\u0627 \u0648\u062D\u062F\u0627\u062A MFC\u061B \u0643\u0645\u0627 \u064A\u062A\u063A\u064A\u0631 \u0627\u0644\u0648\u0642\u0648\u062F \u0648\u0625\u0639\u062F\u0627\u062F \u0627\u0644\u0646\u064A\u062A\u0631\u0648\u062C\u064A\u0646 \u0648\u0627\u0644\u0625\u062C\u0631\u0627\u0621."),
+      { groupField: "Fuel Bottle", rowIdField: "Test Day", detailFields: ["Test Type", "Fuel Bottle", "N2 MFC", "Fuel conc. Range"], aggregateDuplicates: true }
+    ),
+    plot(
+      "psi21-ignitions-n2-mfc",
+      "PSI-21",
+      "N2 MFC",
+      "Flames ignited",
+      "source units not stated",
+      "reported test-day count",
+      bilingual("Reported ignitions by nitrogen MFC setting", "\u0627\u0644\u0625\u0634\u0639\u0627\u0644\u0627\u062A \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0628\u062D\u0633\u0628 \u0625\u0639\u062F\u0627\u062F \u0645\u062A\u062D\u0643\u0645 \u062A\u062F\u0641\u0642 \u0627\u0644\u0646\u064A\u062A\u0631\u0648\u062C\u064A\u0646"),
+      bilingual("How are test-day ignition counts distributed across the source nitrogen-MFC settings?", "\u0643\u064A\u0641 \u062A\u062A\u0648\u0632\u0639 \u0623\u0639\u062F\u0627\u062F \u0627\u0644\u0625\u0634\u0639\u0627\u0644 \u0627\u0644\u064A\u0648\u0645\u064A\u0629 \u0639\u0644\u0649 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0645\u062A\u062D\u0643\u0645 \u0627\u0644\u0646\u064A\u062A\u0631\u0648\u062C\u064A\u0646 \u0643\u0645\u0627 \u0648\u0631\u062F\u062A \u0641\u064A \u0627\u0644\u0645\u0635\u062F\u0631\u061F"),
+      bilingual("Inspect the recorded nitrogen settings and counts without inferring a unit.", "\u0627\u0641\u062D\u0635 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0646\u064A\u062A\u0631\u0648\u062C\u064A\u0646 \u0648\u0627\u0644\u0623\u0639\u062F\u0627\u062F \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0645\u0646 \u062F\u0648\u0646 \u0627\u0641\u062A\u0631\u0627\u0636 \u0648\u062D\u062F\u0629 \u0642\u064A\u0627\u0633."),
+      bilingual("Rows are test-day summaries and do not isolate nitrogen flow from fuel, concentration, or procedure.", "\u0627\u0644\u0635\u0641\u0648\u0641 \u0645\u0644\u062E\u0635\u0627\u062A \u0644\u0623\u064A\u0627\u0645 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631 \u0648\u0644\u0627 \u062A\u0639\u0632\u0644 \u062A\u062F\u0641\u0642 \u0627\u0644\u0646\u064A\u062A\u0631\u0648\u062C\u064A\u0646 \u0639\u0646 \u0627\u0644\u0648\u0642\u0648\u062F \u0623\u0648 \u0627\u0644\u062A\u0631\u0643\u064A\u0632 \u0623\u0648 \u0627\u0644\u0625\u062C\u0631\u0627\u0621."),
+      { groupField: "Fuel Bottle", rowIdField: "Test Day", detailFields: ["Test Type", "Fuel Bottle", "Fuel MFC", "Fuel conc. Range"], aggregateDuplicates: true }
+    ),
+    plot(
+      "psi22-ignitions-fuel-concentration",
+      "PSI-22",
+      "Fuel Conc",
+      "Flames Ignited",
+      "as labelled in source",
+      "reported count",
+      bilingual("Reported ignitions by fuel concentration label", "\u0627\u0644\u0625\u0634\u0639\u0627\u0644\u0627\u062A \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0628\u062D\u0633\u0628 \u062A\u0633\u0645\u064A\u0629 \u062A\u0631\u0643\u064A\u0632 \u0627\u0644\u0648\u0642\u0648\u062F"),
+      bilingual("What ignition counts were reported for each source concentration label and mesh polarity?", "\u0645\u0627 \u0623\u0639\u062F\u0627\u062F \u0627\u0644\u0625\u0634\u0639\u0627\u0644 \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0644\u0643\u0644 \u062A\u0633\u0645\u064A\u0629 \u062A\u0631\u0643\u064A\u0632 \u0648\u0642\u0637\u0628\u064A\u0629 \u0634\u0628\u0643\u0629 \u0641\u064A \u0627\u0644\u0645\u0635\u062F\u0631\u061F"),
+      bilingual("Compare the observed day summaries by concentration label; colors separate mesh polarity.", "\u0642\u0627\u0631\u0646 \u0645\u0644\u062E\u0635\u0627\u062A \u0627\u0644\u0623\u064A\u0627\u0645 \u0627\u0644\u0645\u0631\u0635\u0648\u062F\u0629 \u0628\u062D\u0633\u0628 \u062A\u0633\u0645\u064A\u0629 \u0627\u0644\u062A\u0631\u0643\u064A\u0632\u061B \u0648\u064A\u0641\u0635\u0644 \u0627\u0644\u0644\u0648\u0646 \u0642\u0637\u0628\u064A\u0629 \u0627\u0644\u0634\u0628\u0643\u0629."),
+      bilingual("Only 21 rows have a numeric ignition count. These are day summaries, not per-flame outcomes or a controlled concentration-only test.", "\u064A\u0648\u062C\u062F \u0639\u062F\u062F \u0625\u0634\u0639\u0627\u0644 \u0631\u0642\u0645\u064A \u0641\u064A 21 \u0635\u0641\u0627\u064B \u0641\u0642\u0637. \u0647\u0630\u0647 \u0645\u0644\u062E\u0635\u0627\u062A \u0623\u064A\u0627\u0645 \u0648\u0644\u064A\u0633\u062A \u0646\u062A\u0627\u0626\u062C \u0644\u0643\u0644 \u0644\u0647\u0628 \u0623\u0648 \u0627\u062E\u062A\u0628\u0627\u0631\u0627\u064B \u0645\u0636\u0628\u0648\u0637\u0627\u064B \u0644\u0644\u062A\u0631\u0643\u064A\u0632 \u0648\u062D\u062F\u0647."),
+      { xCategory: true, groupField: "Mesh Polarity", rowIdField: "Test Day", detailFields: ["Mesh Polarity", "Fuel Bottle", "Fuel Conc"], aggregateDuplicates: true }
+    ),
+    plot(
+      "psi23-ignitions-test-day",
+      "PSI-23",
+      "Test Day*",
+      "Flames Ignited*",
+      "source test-day label",
+      "reported daily count",
+      bilingual("Reported ignitions by PSI-23 test-day label", "\u0627\u0644\u0625\u0634\u0639\u0627\u0644\u0627\u062A \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0628\u062D\u0633\u0628 \u062A\u0633\u0645\u064A\u0629 \u064A\u0648\u0645 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631 PSI-23"),
+      bilingual("How do the reported ignition counts vary across the source test-day labels?", "\u0643\u064A\u0641 \u062A\u062E\u062A\u0644\u0641 \u0623\u0639\u062F\u0627\u062F \u0627\u0644\u0625\u0634\u0639\u0627\u0644 \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0639\u0628\u0631 \u062A\u0633\u0645\u064A\u0627\u062A \u0623\u064A\u0627\u0645 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631 \u0641\u064A \u0627\u0644\u0645\u0635\u062F\u0631\u061F"),
+      bilingual("Inspect the source-day sequence with atmosphere labels in each point detail.", "\u0627\u0633\u062A\u0639\u0631\u0636 \u062A\u0633\u0644\u0633\u0644 \u0623\u064A\u0627\u0645 \u0627\u0644\u0645\u0635\u062F\u0631 \u0645\u0639 \u062A\u0633\u0645\u064A\u0629 \u0627\u0644\u062C\u0648 \u062F\u0627\u062E\u0644 \u062A\u0641\u0627\u0635\u064A\u0644 \u0643\u0644 \u0646\u0642\u0637\u0629."),
+      bilingual("The asterisked fields and source notation are preserved. Test-day labels are not elapsed time, and the table does not report flame structure or extinction rate.", "\u0623\u064F\u0628\u0642\u064A\u062A \u0627\u0644\u062D\u0642\u0648\u0644 \u0630\u0627\u062A \u0627\u0644\u0646\u062C\u0645\u0629 \u0648\u062A\u062F\u0648\u064A\u0646 \u0627\u0644\u0645\u0635\u062F\u0631 \u0643\u0645\u0627 \u0647\u064A. \u062A\u0633\u0645\u064A\u0627\u062A \u064A\u0648\u0645 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631 \u0644\u064A\u0633\u062A \u0632\u0645\u0646\u0627\u064B \u0645\u0646\u0642\u0636\u064A\u0627\u064B\u060C \u0648\u0627\u0644\u062C\u062F\u0648\u0644 \u0644\u0627 \u064A\u0633\u062C\u0644 \u0628\u0646\u064A\u0629 \u0627\u0644\u0644\u0647\u0628 \u0623\u0648 \u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u0646\u0637\u0641\u0627\u0621."),
+      { rowIdField: "Test Day*", detailFields: ["Atmosphere*", "Fuel Bottle"], aggregateDuplicates: true }
+    ),
+    plot(
+      "psi25-o2-initial-final",
+      "PSI-25",
+      "Calibrated  initial O2 % by vol",
+      "Calibrated final O2 % by vol",
+      "% by volume",
+      "% by volume",
+      bilingual("Initial versus final oxygen readings", "\u0642\u0631\u0627\u0621\u0627\u062A \u0627\u0644\u0623\u0643\u0633\u062C\u064A\u0646 \u0627\u0644\u0627\u0628\u062A\u062F\u0627\u0626\u064A\u0629 \u0648\u0627\u0644\u0646\u0647\u0627\u0626\u064A\u0629"),
+      bilingual("Which source records show a change between the initial and final O\u2082 readings?", "\u0623\u064A \u0633\u062C\u0644\u0627\u062A \u0627\u0644\u0645\u0635\u062F\u0631 \u062A\u0638\u0647\u0631 \u0641\u0631\u0642\u0627\u064B \u0628\u064A\u0646 \u0642\u0631\u0627\u0621\u062A\u064A O\u2082 \u0627\u0644\u0627\u0628\u062A\u062F\u0627\u0626\u064A\u0629 \u0648\u0627\u0644\u0646\u0647\u0627\u0626\u064A\u0629\u061F"),
+      bilingual("The dashed 1:1 line marks equal readings; select a point to inspect its test and material.", "\u064A\u0645\u062B\u0644 \u0627\u0644\u062E\u0637 \u0627\u0644\u0645\u062A\u0642\u0637\u0639 1:1 \u062A\u0633\u0627\u0648\u064A \u0627\u0644\u0642\u0631\u0627\u0621\u062A\u064A\u0646\u061B \u0627\u062E\u062A\u0631 \u0646\u0642\u0637\u0629 \u0644\u0641\u062D\u0635 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631 \u0648\u0627\u0644\u0645\u0627\u062F\u0629."),
+      bilingual("This is a paired sensor-reading comparison, not a controlled oxygen-effect or flame-spread analysis. Missing final readings are omitted.", "\u0647\u0630\u0647 \u0645\u0642\u0627\u0631\u0646\u0629 \u0628\u064A\u0646 \u0642\u0631\u0627\u0621\u062A\u064A\u0646 \u0644\u0644\u062D\u0633\u0627\u0633 \u0641\u064A \u0627\u0644\u0633\u062C\u0644 \u0646\u0641\u0633\u0647\u060C \u0648\u0644\u064A\u0633\u062A \u062A\u062D\u0644\u064A\u0644\u0627\u064B \u0645\u0636\u0628\u0648\u0637\u0627\u064B \u0644\u0623\u062B\u0631 \u0627\u0644\u0623\u0643\u0633\u062C\u064A\u0646 \u0623\u0648 \u0627\u0646\u062A\u0634\u0627\u0631 \u0627\u0644\u0644\u0647\u0628. \u062A\u064F\u0633\u062A\u0628\u0639\u062F \u0627\u0644\u0642\u0631\u0627\u0621\u0627\u062A \u0627\u0644\u0646\u0647\u0627\u0626\u064A\u0629 \u0627\u0644\u0645\u0641\u0642\u0648\u062F\u0629."),
+      { rowIdField: "Test #", detailFields: ["Date", "Fuel Sample Material"], aggregateDuplicates: true, identityReference: true }
+    ),
+    plot(
+      "psi25-co2-initial-final",
+      "PSI-25",
+      "Initial CO2 % by vol",
+      "Final CO2 % by vol",
+      "% by volume",
+      "% by volume",
+      bilingual("Initial versus final carbon-dioxide readings", "\u0642\u0631\u0627\u0621\u0627\u062A \u062B\u0627\u0646\u064A \u0623\u0643\u0633\u064A\u062F \u0627\u0644\u0643\u0631\u0628\u0648\u0646 \u0627\u0644\u0627\u0628\u062A\u062F\u0627\u0626\u064A\u0629 \u0648\u0627\u0644\u0646\u0647\u0627\u0626\u064A\u0629"),
+      bilingual("Which source records differ between initial and final CO\u2082 readings?", "\u0623\u064A \u0633\u062C\u0644\u0627\u062A \u0627\u0644\u0645\u0635\u062F\u0631 \u062A\u062E\u062A\u0644\u0641 \u0641\u064A\u0647\u0627 \u0642\u0631\u0627\u0621\u0629 CO\u2082 \u0627\u0644\u0627\u0628\u062A\u062F\u0627\u0626\u064A\u0629 \u0639\u0646 \u0627\u0644\u0646\u0647\u0627\u0626\u064A\u0629\u061F"),
+      bilingual("The dashed 1:1 line marks equal readings; select a point to inspect its test and material.", "\u064A\u0645\u062B\u0644 \u0627\u0644\u062E\u0637 \u0627\u0644\u0645\u062A\u0642\u0637\u0639 1:1 \u062A\u0633\u0627\u0648\u064A \u0627\u0644\u0642\u0631\u0627\u0621\u062A\u064A\u0646\u061B \u0627\u062E\u062A\u0631 \u0646\u0642\u0637\u0629 \u0644\u0641\u062D\u0635 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631 \u0648\u0627\u0644\u0645\u0627\u062F\u0629."),
+      bilingual("Values are paired source readings; material, ventilation display, and test conditions vary. Missing cells remain missing.", "\u0627\u0644\u0642\u064A\u0645 \u0642\u0631\u0627\u0621\u0627\u062A \u0645\u0635\u062F\u0631 \u0645\u0632\u062F\u0648\u062C\u0629\u061B \u0648\u062A\u062E\u062A\u0644\u0641 \u0627\u0644\u0645\u0648\u0627\u062F \u0648\u0639\u0631\u0636 \u0627\u0644\u062A\u0647\u0648\u064A\u0629 \u0648\u0638\u0631\u0648\u0641 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631. \u062A\u0628\u0642\u0649 \u0627\u0644\u062E\u0644\u0627\u064A\u0627 \u0627\u0644\u0645\u0641\u0642\u0648\u062F\u0629 \u0645\u0641\u0642\u0648\u062F\u0629."),
+      { rowIdField: "Test #", detailFields: ["Date", "Fuel Sample Material"], aggregateDuplicates: true, identityReference: true }
+    ),
+    plot(
+      "psi25-co-initial-final",
+      "PSI-25",
+      "Initial CO (ppm)",
+      "Final CO (ppm)",
+      "ppm",
+      "ppm",
+      bilingual("Initial versus final carbon-monoxide readings", "\u0642\u0631\u0627\u0621\u0627\u062A \u0623\u0648\u0644 \u0623\u0643\u0633\u064A\u062F \u0627\u0644\u0643\u0631\u0628\u0648\u0646 \u0627\u0644\u0627\u0628\u062A\u062F\u0627\u0626\u064A\u0629 \u0648\u0627\u0644\u0646\u0647\u0627\u0626\u064A\u0629"),
+      bilingual("Which source records differ between initial and final CO readings?", "\u0623\u064A \u0633\u062C\u0644\u0627\u062A \u0627\u0644\u0645\u0635\u062F\u0631 \u062A\u062E\u062A\u0644\u0641 \u0641\u064A\u0647\u0627 \u0642\u0631\u0627\u0621\u0629 CO \u0627\u0644\u0627\u0628\u062A\u062F\u0627\u0626\u064A\u0629 \u0639\u0646 \u0627\u0644\u0646\u0647\u0627\u0626\u064A\u0629\u061F"),
+      bilingual("The dashed 1:1 line marks equal readings; negative values are retained as published.", "\u064A\u0645\u062B\u0644 \u0627\u0644\u062E\u0637 \u0627\u0644\u0645\u062A\u0642\u0637\u0639 1:1 \u062A\u0633\u0627\u0648\u064A \u0627\u0644\u0642\u0631\u0627\u0621\u062A\u064A\u0646\u061B \u0648\u062A\u064F\u062D\u0641\u0638 \u0627\u0644\u0642\u064A\u0645 \u0627\u0644\u0633\u0627\u0644\u0628\u0629 \u0643\u0645\u0627 \u0646\u064F\u0634\u0631\u062A."),
+      bilingual("This describes paired readings across varied materials and conditions; it does not estimate a material effect. Missing cells remain missing.", "\u0647\u0630\u0627 \u0648\u0635\u0641 \u0644\u0642\u0631\u0627\u0621\u0627\u062A \u0645\u0632\u062F\u0648\u062C\u0629 \u0639\u0628\u0631 \u0645\u0648\u0627\u062F \u0648\u0638\u0631\u0648\u0641 \u0645\u062E\u062A\u0644\u0641\u0629\u061B \u0648\u0644\u0627 \u064A\u0642\u062F\u0651\u0631 \u0623\u062B\u0631 \u0627\u0644\u0645\u0627\u062F\u0629. \u062A\u0628\u0642\u0649 \u0627\u0644\u062E\u0644\u0627\u064A\u0627 \u0627\u0644\u0645\u0641\u0642\u0648\u062F\u0629 \u0645\u0641\u0642\u0648\u062F\u0629."),
+      { rowIdField: "Test #", detailFields: ["Date", "Fuel Sample Material"], aggregateDuplicates: true, identityReference: true }
+    ),
+    plot(
+      "psi39-oxygen-helium-conditions",
+      "PSI-39",
+      "Oxygen",
+      "Helium",
+      "source units not stated",
+      "source units not stated",
+      bilingual("Recorded oxygen and helium condition values", "\u0642\u064A\u0645 \u0638\u0631\u0648\u0641 \u0627\u0644\u0623\u0643\u0633\u062C\u064A\u0646 \u0648\u0627\u0644\u0647\u064A\u0644\u064A\u0648\u0645 \u0627\u0644\u0645\u0633\u062C\u0644\u0629"),
+      bilingual("Which oxygen\u2013helium value combinations appear in the PSI-39 condition records?", "\u0645\u0627 \u062A\u0631\u0627\u0643\u064A\u0628 \u0642\u064A\u0645 \u0627\u0644\u0623\u0643\u0633\u062C\u064A\u0646 \u0648\u0627\u0644\u0647\u064A\u0644\u064A\u0648\u0645 \u0627\u0644\u0638\u0627\u0647\u0631\u0629 \u0641\u064A \u0633\u062C\u0644\u0627\u062A \u0638\u0631\u0648\u0641 PSI-39\u061F"),
+      bilingual("Colors separate nitrogen values; larger circles indicate more source rows with the same combination.", "\u062A\u0641\u0635\u0644 \u0627\u0644\u0623\u0644\u0648\u0627\u0646 \u0642\u064A\u0645 \u0627\u0644\u0646\u064A\u062A\u0631\u0648\u062C\u064A\u0646\u061B \u0648\u062A\u0634\u064A\u0631 \u0627\u0644\u062F\u0648\u0627\u0626\u0631 \u0627\u0644\u0623\u0643\u0628\u0631 \u0625\u0644\u0649 \u0635\u0641\u0648\u0641 \u0645\u0635\u062F\u0631 \u0623\u0643\u062B\u0631 \u0628\u0627\u0644\u0642\u064A\u0645 \u0646\u0641\u0633\u0647\u0627."),
+      bilingual("The source table does not state units in these headers. This plots reported conditions, not combustion outcomes or a flammability limit.", "\u0644\u0627 \u064A\u0630\u0643\u0631 \u062C\u062F\u0648\u0644 \u0627\u0644\u0645\u0635\u062F\u0631 \u0648\u062D\u062F\u0627\u062A \u0647\u0630\u0647 \u0627\u0644\u062D\u0642\u0648\u0644. \u064A\u0639\u0631\u0636 \u0627\u0644\u0631\u0633\u0645 \u0638\u0631\u0648\u0641\u0627\u064B \u0645\u0633\u062C\u0644\u0629 \u0644\u0627 \u0646\u0648\u0627\u062A\u062C \u0627\u062D\u062A\u0631\u0627\u0642 \u0623\u0648 \u062D\u062F\u0648\u062F \u0642\u0627\u0628\u0644\u064A\u0629 \u0627\u0634\u062A\u0639\u0627\u0644."),
+      { groupField: "Nitrogen", rowIdField: "Flex Number", detailFields: ["Flex Number", "Nitrogen", "Pressure", "Fuel"], aggregateDuplicates: true }
+    ),
+    plot(
+      "psi98-sample-burn-time",
+      "PSI-98",
+      "Sample Number",
+      "Burn Time (s)",
+      "source sample label",
+      "s",
+      bilingual("Burn time for PSI-98 material-fire samples", "\u0632\u0645\u0646 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642 \u0644\u0639\u064A\u0646\u0627\u062A \u062D\u0631\u0627\u0626\u0642 \u0627\u0644\u0645\u0648\u0627\u062F PSI-98"),
+      bilingual("What burn times are listed for the S-number material-fire samples?", "\u0645\u0627 \u0623\u0632\u0645\u0646\u0629 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642 \u0627\u0644\u0645\u062F\u0631\u062C\u0629 \u0644\u0639\u064A\u0646\u0627\u062A \u062D\u0631\u0627\u0626\u0642 \u0627\u0644\u0645\u0648\u0627\u062F \u0630\u0627\u062A \u0627\u0644\u0631\u0645\u0632 S\u061F"),
+      bilingual("Each point is one S# sample; flow-visualisation references are excluded.", "\u0643\u0644 \u0646\u0642\u0637\u0629 \u0639\u064A\u0646\u0629 \u0648\u0627\u062D\u062F\u0629 \u0628\u0631\u0645\u0632 S\u061B \u0648\u0627\u0633\u062A\u064F\u0628\u0639\u062F\u062A \u0645\u0631\u0627\u062C\u0639 \u062A\u0635\u0648\u064A\u0631 \u0627\u0644\u062C\u0631\u064A\u0627\u0646."),
+      bilingual("Only two material-fire samples are present. Their difference does not establish a reliable material or flow-direction effect.", "\u062A\u0648\u062C\u062F \u0639\u064A\u0646\u062A\u0627 \u062D\u0631\u064A\u0642 \u0645\u0648\u0627\u062F \u0641\u0642\u0637. \u0648\u0644\u0627 \u064A\u062B\u0628\u062A \u0627\u062E\u062A\u0644\u0627\u0641\u0647\u0645\u0627 \u0623\u062B\u0631\u0627\u064B \u0645\u0648\u062B\u0648\u0642\u0627\u064B \u0644\u0644\u0645\u0627\u062F\u0629 \u0623\u0648 \u0627\u062A\u062C\u0627\u0647 \u0627\u0644\u062C\u0631\u064A\u0627\u0646."),
+      { xCategory: true, rowIdField: "Sample Number", detailFields: ["Material", "Air Flow (cm/s)", "Percent O2", "Flow Direction"], rowFilter: "sample-only" }
+    ),
+    plot(
+      "psi101-inlet-velocity-rt-r0",
+      "PSI-101",
+      "Inlet velocity (cm/s)",
+      "Rt/R0",
+      "cm/s",
+      "ratio as published",
+      bilingual("Inlet velocity and reported Rt/R0", "\u0633\u0631\u0639\u0629 \u0627\u0644\u062F\u062E\u0648\u0644 \u0648\u0646\u0633\u0628\u0629 Rt/R0 \u0627\u0644\u0645\u0646\u0634\u0648\u0631\u0629"),
+      bilingual("How are source inlet-velocity settings distributed alongside Rt/R0 readings?", "\u0643\u064A\u0641 \u062A\u062A\u0648\u0632\u0639 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0633\u0631\u0639\u0629 \u0627\u0644\u062F\u062E\u0648\u0644 \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0625\u0644\u0649 \u062C\u0627\u0646\u0628 \u0642\u0631\u0627\u0621\u0627\u062A Rt/R0\u061F"),
+      bilingual("Select a point to inspect sample type and source description; repeated records are combined into larger bubbles.", "\u0627\u062E\u062A\u0631 \u0646\u0642\u0637\u0629 \u0644\u0641\u062D\u0635 \u0646\u0648\u0639 \u0627\u0644\u0639\u064A\u0646\u0629 \u0648\u0648\u0635\u0641 \u0627\u0644\u0645\u0635\u062F\u0631\u061B \u0648\u062A\u064F\u062C\u0645\u0639 \u0627\u0644\u0633\u062C\u0644\u0627\u062A \u0627\u0644\u0645\u062A\u0643\u0631\u0631\u0629 \u0641\u064A \u062F\u0648\u0627\u0626\u0631 \u0623\u0643\u0628\u0631."),
+      bilingual("This is smoke/aerosol measurement evidence, not flame spread. Test identifiers repeat, so points are source records and not independent burns.", "\u0647\u0630\u0647 \u0623\u062F\u0644\u0629 \u0642\u064A\u0627\u0633 \u062F\u062E\u0627\u0646/\u0647\u0628\u0627\u0621 \u0648\u0644\u064A\u0633\u062A \u0627\u0646\u062A\u0634\u0627\u0631 \u0644\u0647\u0628. \u062A\u062A\u0643\u0631\u0631 \u0645\u0639\u0631\u0651\u0641\u0627\u062A \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631\u060C \u0644\u0630\u0627 \u062A\u0645\u062B\u0644 \u0627\u0644\u0646\u0642\u0627\u0637 \u0633\u062C\u0644\u0627\u062A \u0645\u0635\u062F\u0631 \u0644\u0627 \u062D\u0631\u0627\u0626\u0642 \u0645\u0633\u062A\u0642\u0644\u0629."),
+      { groupField: "Sample Type", rowIdField: "SAME Test #", detailFields: ["Sample Type", "Description"], aggregateDuplicates: true }
+    ),
+    plot(
+      "psi101-aging-rt-r0",
+      "PSI-101",
+      "Net aging time (sec)",
+      "Rt/R0",
+      "s",
+      "ratio as published",
+      bilingual("Net aging time and reported Rt/R0", "\u0632\u0645\u0646 \u0627\u0644\u062A\u0642\u0627\u062F\u0645 \u0627\u0644\u0635\u0627\u0641\u064A \u0648\u0646\u0633\u0628\u0629 Rt/R0 \u0627\u0644\u0645\u0646\u0634\u0648\u0631\u0629"),
+      bilingual("How are reported aerosol aging times distributed alongside Rt/R0 readings?", "\u0643\u064A\u0641 \u062A\u062A\u0648\u0632\u0639 \u0623\u0632\u0645\u0646\u0629 \u062A\u0642\u0627\u062F\u0645 \u0627\u0644\u0647\u0628\u0627\u0621 \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0625\u0644\u0649 \u062C\u0627\u0646\u0628 \u0642\u0631\u0627\u0621\u0627\u062A Rt/R0\u061F"),
+      bilingual("The bubble size reveals repeated source-record values; inspect descriptions before interpreting a pattern.", "\u064A\u0643\u0634\u0641 \u062D\u062C\u0645 \u0627\u0644\u062F\u0627\u0626\u0631\u0629 \u062A\u0643\u0631\u0627\u0631 \u0642\u064A\u0645 \u0633\u062C\u0644\u0627\u062A \u0627\u0644\u0645\u0635\u062F\u0631\u061B \u0627\u0641\u062D\u0635 \u0627\u0644\u0623\u0648\u0635\u0627\u0641 \u0642\u0628\u0644 \u062A\u0641\u0633\u064A\u0631 \u0623\u064A \u0646\u0645\u0637."),
+      bilingual("Repeated test identifiers and incomplete fields mean rows are not assumed to be independent samples.", "\u062A\u0643\u0631\u0627\u0631 \u0645\u0639\u0631\u0651\u0641\u0627\u062A \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631 \u0648\u0646\u0642\u0635 \u0627\u0644\u062D\u0642\u0648\u0644 \u064A\u0639\u0646\u064A \u0623\u0646\u0646\u0627 \u0644\u0627 \u0646\u0641\u062A\u0631\u0636 \u0627\u0633\u062A\u0642\u0644\u0627\u0644 \u0627\u0644\u0635\u0641\u0648\u0641 \u0643\u0639\u064A\u0646\u0627\u062A."),
+      { groupField: "Sample Type", rowIdField: "SAME Test #", detailFields: ["Sample Type", "Description"], aggregateDuplicates: true }
+    ),
+    plot(
+      "psi102-airflow-weight-loss",
+      "PSI-102",
+      "Air Flow (cm/s)",
+      "Weight loss rate (mg/min)",
+      "cm/s",
+      "mg/min",
+      bilingual("Weight-loss rate by source airflow setting", "\u0645\u0639\u062F\u0644 \u0641\u0642\u062F\u0627\u0646 \u0627\u0644\u0648\u0632\u0646 \u0628\u062D\u0633\u0628 \u0625\u0639\u062F\u0627\u062F \u062A\u062F\u0641\u0642 \u0627\u0644\u0647\u0648\u0627\u0621 \u0641\u064A \u0627\u0644\u0645\u0635\u062F\u0631"),
+      bilingual("What weight-loss values are reported at the listed airflow settings?", "\u0645\u0627 \u0642\u064A\u0645 \u0641\u0642\u062F\u0627\u0646 \u0627\u0644\u0648\u0632\u0646 \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0639\u0646\u062F \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u062A\u062F\u0641\u0642 \u0627\u0644\u0647\u0648\u0627\u0621 \u0627\u0644\u0645\u062F\u0631\u062C\u0629\u061F"),
+      bilingual("Inspect the four numeric Teflon entries and their sample descriptions.", "\u0627\u0641\u062D\u0635 \u0625\u062F\u062E\u0627\u0644\u0627\u062A \u0627\u0644\u062A\u0641\u0644\u0648\u0646 \u0627\u0644\u0631\u0642\u0645\u064A\u0629 \u0627\u0644\u0623\u0631\u0628\u0639\u0629 \u0648\u0623\u0648\u0635\u0627\u0641 \u0639\u064A\u0646\u0627\u062A\u0647\u0627."),
+      bilingual("n=4, with differing aging conditions. This is not a flame-spread rate and cannot establish a general airflow effect.", "\u0639\u062F\u062F\u0647\u0627 4 \u0645\u0639 \u0627\u062E\u062A\u0644\u0627\u0641 \u0638\u0631\u0648\u0641 \u0627\u0644\u062A\u0642\u0627\u062F\u0645. \u0647\u0630\u0627 \u0644\u064A\u0633 \u0645\u0639\u062F\u0644 \u0627\u0646\u062A\u0634\u0627\u0631 \u0644\u0647\u0628 \u0648\u0644\u0627 \u064A\u062B\u0628\u062A \u0623\u062B\u0631\u0627\u064B \u0639\u0627\u0645\u0627\u064B \u0644\u062A\u062F\u0641\u0642 \u0627\u0644\u0647\u0648\u0627\u0621."),
+      { rowIdField: "Sample #", detailFields: ["Sample Material", "Aging Duration (minutes)"] }
+    ),
+    plot(
+      "psi102-aging-weight-loss",
+      "PSI-102",
+      "Aging Duration (minutes)",
+      "Weight loss rate (mg/min)",
+      "min",
+      "mg/min",
+      bilingual("Weight-loss rate by aerosol aging duration", "\u0645\u0639\u062F\u0644 \u0641\u0642\u062F\u0627\u0646 \u0627\u0644\u0648\u0632\u0646 \u0628\u062D\u0633\u0628 \u0645\u062F\u0629 \u062A\u0642\u0627\u062F\u0645 \u0627\u0644\u0647\u0628\u0627\u0621"),
+      bilingual("How do the four listed weight-loss readings sit across their source aging durations?", "\u0643\u064A\u0641 \u062A\u0642\u0639 \u0642\u0631\u0627\u0621\u0627\u062A \u0641\u0642\u062F\u0627\u0646 \u0627\u0644\u0648\u0632\u0646 \u0627\u0644\u0623\u0631\u0628\u0639 \u0639\u0628\u0631 \u0645\u062F\u062F \u0627\u0644\u062A\u0642\u0627\u062F\u0645 \u0627\u0644\u0645\u0633\u062C\u0644\u0629\u061F"),
+      bilingual("Select a point for sample material and airflow.", "\u0627\u062E\u062A\u0631 \u0646\u0642\u0637\u0629 \u0644\u0631\u0624\u064A\u0629 \u0645\u0627\u062F\u0629 \u0627\u0644\u0639\u064A\u0646\u0629 \u0648\u062A\u062F\u0641\u0642 \u0627\u0644\u0647\u0648\u0627\u0621."),
+      bilingual("Only four numeric entries are available and other settings vary; no causal trend is inferred.", "\u0644\u0627 \u062A\u062A\u0648\u0641\u0631 \u0625\u0644\u0627 \u0623\u0631\u0628\u0639\u0629 \u0625\u062F\u062E\u0627\u0644\u0627\u062A \u0631\u0642\u0645\u064A\u0629 \u0648\u062A\u062E\u062A\u0644\u0641 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0623\u062E\u0631\u0649\u061B \u0648\u0644\u0627 \u0646\u0633\u062A\u0646\u062A\u062C \u0627\u062A\u062C\u0627\u0647\u0627\u064B \u0633\u0628\u0628\u064A\u0627\u064B."),
+      { rowIdField: "Sample #", detailFields: ["Sample Material", "Air Flow (cm/s)"] }
+    ),
+    plot(
+      "psi107-air-fuel-rates",
+      "PSI-107",
+      "Air Rate (cm/s)",
+      "Fuel Rate (mg/s)",
+      "cm/s",
+      "mg/s",
+      bilingual("Recorded air and fuel operating rates", "\u0645\u0639\u062F\u0644\u0627\u062A \u0627\u0644\u0647\u0648\u0627\u0621 \u0648\u0627\u0644\u0648\u0642\u0648\u062F \u0627\u0644\u062A\u0634\u063A\u064A\u0644\u064A\u0629 \u0627\u0644\u0645\u0633\u062C\u0644\u0629"),
+      bilingual("What air-rate and fuel-rate combinations occur in the SPICE source log?", "\u0645\u0627 \u062A\u0631\u0627\u0643\u064A\u0628 \u0645\u0639\u062F\u0644\u064A \u0627\u0644\u0647\u0648\u0627\u0621 \u0648\u0627\u0644\u0648\u0642\u0648\u062F \u0641\u064A \u0633\u062C\u0644 SPICE \u0627\u0644\u0645\u0635\u062F\u0631\u064A\u061F"),
+      bilingual("Colors distinguish fuel labels; bubble size shows repeated source-record combinations.", "\u062A\u0645\u064A\u0632 \u0627\u0644\u0623\u0644\u0648\u0627\u0646 \u062A\u0633\u0645\u064A\u0627\u062A \u0627\u0644\u0648\u0642\u0648\u062F\u061B \u0648\u064A\u0628\u064A\u0646 \u062D\u062C\u0645 \u0627\u0644\u062F\u0627\u0626\u0631\u0629 \u062A\u0643\u0631\u0627\u0631 \u062A\u0631\u0627\u0643\u064A\u0628 \u0633\u062C\u0644\u0627\u062A \u0627\u0644\u0645\u0635\u062F\u0631."),
+      bilingual("The 469 rows repeat event times and operating conditions; they are not 469 independent fires and do not prove a causal relation.", "\u062A\u0643\u0631\u0631 \u0627\u0644\u0635\u0641\u0648\u0641 \u0627\u0644\u0640469 \u0623\u0648\u0642\u0627\u062A \u0627\u0644\u0623\u062D\u062F\u0627\u062B \u0648\u0638\u0631\u0648\u0641 \u0627\u0644\u062A\u0634\u063A\u064A\u0644\u061B \u0648\u0644\u064A\u0633\u062A 469 \u062D\u0631\u064A\u0642\u0627\u064B \u0645\u0633\u062A\u0642\u0644\u0627\u064B \u0648\u0644\u0627 \u062A\u062B\u0628\u062A \u0639\u0644\u0627\u0642\u0629 \u0633\u0628\u0628\u064A\u0629."),
+      { groupField: "Fuel", rowIdField: "GMT ignition", detailFields: ["GMT date", "Fuel", "Nozzle (mm)"], aggregateDuplicates: true }
+    ),
+    plot(
+      "psi107-nozzle-fuel-rate",
+      "PSI-107",
+      "Nozzle (mm)",
+      "Fuel Rate (mg/s)",
+      "mm",
+      "mg/s",
+      bilingual("Recorded nozzle size and fuel rate", "\u062D\u062C\u0645 \u0627\u0644\u0641\u0648\u0647\u0629 \u0648\u0645\u0639\u062F\u0644 \u0627\u0644\u0648\u0642\u0648\u062F \u0627\u0644\u0645\u0633\u062C\u0644\u0627\u0646"),
+      bilingual("Which nozzle-size and fuel-rate combinations are recorded for each fuel?", "\u0645\u0627 \u062A\u0631\u0627\u0643\u064A\u0628 \u062D\u062C\u0645 \u0627\u0644\u0641\u0648\u0647\u0629 \u0648\u0645\u0639\u062F\u0644 \u0627\u0644\u0648\u0642\u0648\u062F \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0644\u0643\u0644 \u0648\u0642\u0648\u062F\u061F"),
+      bilingual("Inspect the source operating-condition records; bubble size reveals repeated combinations.", "\u0627\u0641\u062D\u0635 \u0633\u062C\u0644\u0627\u062A \u0638\u0631\u0648\u0641 \u0627\u0644\u062A\u0634\u063A\u064A\u0644 \u0627\u0644\u0645\u0635\u062F\u0631\u064A\u0629\u061B \u0648\u064A\u0643\u0634\u0641 \u062D\u062C\u0645 \u0627\u0644\u062F\u0627\u0626\u0631\u0629 \u0627\u0644\u062A\u0631\u0627\u0643\u064A\u0628 \u0627\u0644\u0645\u062A\u0643\u0631\u0631\u0629."),
+      bilingual("The rows are repeated SPICE log entries, not independent fire trials. Nozzle and fuel-rate association is descriptive only.", "\u0627\u0644\u0635\u0641\u0648\u0641 \u0625\u062F\u062E\u0627\u0644\u0627\u062A \u0645\u062A\u0643\u0631\u0631\u0629 \u0641\u064A \u0633\u062C\u0644 SPICE \u0648\u0644\u064A\u0633\u062A \u062A\u062C\u0627\u0631\u0628 \u062D\u0631\u064A\u0642 \u0645\u0633\u062A\u0642\u0644\u0629. \u0627\u0644\u0627\u0631\u062A\u0628\u0627\u0637 \u0628\u064A\u0646 \u0627\u0644\u0641\u0648\u0647\u0629 \u0648\u0645\u0639\u062F\u0644 \u0627\u0644\u0648\u0642\u0648\u062F \u0648\u0635\u0641\u064A \u0641\u0642\u0637."),
+      { groupField: "Fuel", rowIdField: "GMT ignition", detailFields: ["GMT date", "Fuel", "Air Rate (cm/s)"], aggregateDuplicates: true }
+    )
+  ];
+  var SOURCE_STUDY_NO_PLOT_REASON = {
+    "PSI-26": bilingual("The bundled table is a material/sample inventory with no numeric combustion outcome.", "\u0627\u0644\u062C\u062F\u0648\u0644 \u0627\u0644\u0645\u0631\u0641\u0642 \u062C\u0631\u062F \u0644\u0644\u0645\u0648\u0627\u062F \u0648\u0627\u0644\u0639\u064A\u0646\u0627\u062A \u0648\u0644\u0627 \u064A\u062D\u062A\u0648\u064A \u0646\u062A\u064A\u062C\u0629 \u0627\u062D\u062A\u0631\u0627\u0642 \u0631\u0642\u0645\u064A\u0629."),
+    "PSI-47": bilingual("The bundled table contains two dust/aerosol sampling-session descriptions and no numeric combustion outcome.", "\u0627\u0644\u062C\u062F\u0648\u0644 \u0627\u0644\u0645\u0631\u0641\u0642 \u064A\u0635\u0641 \u062C\u0644\u0633\u062A\u064A \u0623\u062E\u0630 \u0639\u064A\u0646\u0627\u062A \u063A\u0628\u0627\u0631/\u0647\u0628\u0627\u0621 \u0648\u0644\u0627 \u064A\u062D\u062A\u0648\u064A \u0646\u062A\u064A\u062C\u0629 \u0627\u062D\u062A\u0631\u0627\u0642 \u0631\u0642\u0645\u064A\u0629."),
+    "PSI-68": bilingual("The table contains test-envelope ranges and alternatives, not individual numeric test observations; parsing those strings as points would invent data.", "\u064A\u062D\u062A\u0648\u064A \u0627\u0644\u062C\u062F\u0648\u0644 \u0646\u0637\u0627\u0642\u0627\u062A \u0648\u0638\u0631\u0648\u0641 \u0627\u062E\u062A\u0628\u0627\u0631 \u0628\u062F\u064A\u0644\u0629 \u0644\u0627 \u0642\u064A\u0627\u0633\u0627\u062A \u0631\u0642\u0645\u064A\u0629 \u0644\u0627\u062E\u062A\u0628\u0627\u0631\u0627\u062A \u0645\u0646\u0641\u0631\u062F\u0629\u061B \u0648\u062A\u062D\u0648\u064A\u0644 \u062A\u0644\u0643 \u0627\u0644\u0646\u0635\u0648\u0635 \u0625\u0644\u0649 \u0646\u0642\u0627\u0637 \u0633\u064A\u062E\u062A\u0644\u0642 \u0628\u064A\u0627\u0646\u0627\u062A."),
+    "PSI-99": bilingual("The bundled table mixes labels and text values. Its microgravity field is named \u201C?-g\u201D, so a gravity classification or numeric comparison is not safe.", "\u064A\u062E\u0644\u0637 \u0627\u0644\u062C\u062F\u0648\u0644 \u0627\u0644\u0645\u0631\u0641\u0642 \u0628\u064A\u0646 \u062A\u0633\u0645\u064A\u0627\u062A \u0648\u0642\u064A\u0645 \u0646\u0635\u064A\u0629. \u0648\u062D\u0642\u0644 \u0627\u0644\u062C\u0627\u0630\u0628\u064A\u0629 \u0627\u0644\u0635\u063A\u0631\u0649 \u0627\u0633\u0645\u0647 \xAB?-g\xBB\u060C \u0644\u0630\u0644\u0643 \u0644\u0627 \u064A\u0635\u062D \u062A\u0635\u0646\u064A\u0641 \u0627\u0644\u062C\u0627\u0630\u0628\u064A\u0629 \u0623\u0648 \u0625\u062C\u0631\u0627\u0621 \u0645\u0642\u0627\u0631\u0646\u0629 \u0631\u0642\u0645\u064A\u0629."),
+    "PSI-100": bilingual("The two rows describe sample conditions and camera identifiers; no measured flame-spread outcome is present.", "\u064A\u0635\u0641 \u0627\u0644\u0635\u0641\u0627\u0646 \u0638\u0631\u0648\u0641 \u0627\u0644\u0639\u064A\u0646\u0627\u062A \u0648\u0645\u0639\u0631\u0651\u0641\u0627\u062A \u0627\u0644\u0643\u0627\u0645\u064A\u0631\u0627\u062A\u061B \u0648\u0644\u0627 \u062A\u0648\u062C\u062F \u0646\u062A\u064A\u062C\u0629 \u0645\u0642\u0627\u0633\u0629 \u0644\u0627\u0646\u062A\u0634\u0627\u0631 \u0627\u0644\u0644\u0647\u0628.")
+  };
+  function sourceChartsForStudy(studyId) {
+    return SOURCE_STUDY_CHARTS.filter((chart) => chart.studyId === studyId);
+  }
+
+  // public/source-charts.js
+  var tableCache = /* @__PURE__ */ new Map();
+  function loadStudyTable(id) {
+    if (!tableCache.has(id)) {
+      tableCache.set(id, get("/api/challenge/table?id=" + encodeURIComponent(id)));
+    }
+    return tableCache.get(id);
+  }
+  function parseSourceNumber(value) {
+    if (value === null || value === void 0) return null;
+    const text = String(value).trim();
+    if (!/^[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?$/.test(text)) return null;
+    const number = Number(text);
+    return Number.isFinite(number) ? number : null;
+  }
+  function sourceLabel(row, index, config, lang2) {
+    const sourceRow = (lang2 === "ar" ? "\u0635\u0641 \u0627\u0644\u0645\u0635\u062F\u0631 " : "Source row ") + (index + 1);
+    const identity = config.rowIdField && row[config.rowIdField] ? sourceRow + " \xB7 " + config.rowIdField + ": " + String(row[config.rowIdField]) : sourceRow;
+    const fields = (config.detailFields || []).filter((field) => row[field] !== null && row[field] !== void 0 && String(row[field]).trim() !== "").map((field) => field + ": " + String(row[field]));
+    return [identity].concat(fields).join(" \xB7 ");
+  }
+  function sourcePlotData(rows, config, lang2) {
+    var _a;
+    const filtered = rows.map((row, index) => ({ row, index })).filter(({ row }) => config.rowFilter !== "sample-only" || /^S\d+$/i.test(String(row["Sample Number"] || "")));
+    const valid = [];
+    for (const { row, index } of filtered) {
+      const category = config.xCategory ? String((_a = row[config.xField]) != null ? _a : "").trim() : null;
+      const x = config.xCategory ? null : parseSourceNumber(row[config.xField]);
+      const y = parseSourceNumber(row[config.yField]);
+      if (!config.xCategory && x === null || config.xCategory && !category || y === null) continue;
+      valid.push({
+        rawX: config.xCategory ? category : x,
+        x,
+        y,
+        group: config.groupField ? String(row[config.groupField] || "Unreported") : "",
+        label: sourceLabel(row, index, config, lang2)
+      });
+    }
+    let entries = valid;
+    if (config.aggregateDuplicates) {
+      const merged = /* @__PURE__ */ new Map();
+      for (const record of valid) {
+        const key = JSON.stringify([record.rawX, record.y, record.group]);
+        const current2 = merged.get(key) || __spreadProps(__spreadValues({}, record), { count: 0, labels: [] });
+        current2.count += 1;
+        if (current2.labels.length < 6) current2.labels.push(record.label);
+        merged.set(key, current2);
+      }
+      entries = [...merged.values()];
+    } else {
+      entries = valid.map((record) => __spreadProps(__spreadValues({}, record), { count: 1, labels: [record.label] }));
+    }
+    const categories = config.xCategory ? [...new Set(entries.map((entry) => entry.rawX))].sort((a, b) => {
+      if (config.categorySort === "numeric") {
+        const left = Number.parseFloat(a);
+        const right = Number.parseFloat(b);
+        return left - right || a.localeCompare(b);
+      }
+      return a.localeCompare(b, void 0, { numeric: true });
+    }) : null;
+    const categoryIndex = new Map((categories || []).map((value, index) => [value, index]));
+    const categoryOffsets = /* @__PURE__ */ new Map();
+    const points = entries.map((entry) => {
+      let x = entry.x;
+      if (categories) {
+        const index = categoryIndex.get(entry.rawX);
+        const occurrence = categoryOffsets.get(index) || 0;
+        categoryOffsets.set(index, occurrence + 1);
+        const jitter = (occurrence % 5 - 2) * 0.055;
+        x = index + jitter;
+      }
+      const references = entry.labels.map((value) => value);
+      const more = entry.count > references.length ? (lang2 === "ar" ? " \xB7 \u0648" : " \xB7 +") + (entry.count - references.length) + (lang2 === "ar" ? " \u0633\u062C\u0644\u0627\u062A \u0623\u062E\u0631\u0649" : " more records") : "";
+      const grouped = entry.group ? (lang2 === "ar" ? "\u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629: " : "Group: ") + entry.group + " \xB7 " : "";
+      const countLabel = entry.count > 1 ? (lang2 === "ar" ? "\u0645\u0637\u0627\u0628\u0642\u0627\u062A \u0627\u0644\u0645\u0635\u062F\u0631: " : "Matching source rows: ") + entry.count + " \xB7 " : "";
+      return {
+        x,
+        y: entry.y,
+        xDisplay: String(entry.rawX),
+        group: entry.group,
+        count: entry.count,
+        info: countLabel + grouped + references.join(" | ") + more
+      };
+    });
+    return { points, categories, validRows: valid.length };
+  }
+  function renderChartCard(config, plotData, lang2, sourceUrl, sourceRowCount) {
+    const ar = lang2 === "ar";
+    const title = config.title[lang2];
+    const question = config.question[lang2];
+    const purpose = config.purpose[lang2];
+    const limit = config.limit[lang2];
+    const labels2 = chartControlLabels(lang2);
+    const notes = [];
+    if (config.aggregateDuplicates) {
+      notes.push(ar ? "\u062D\u062C\u0645 \u0627\u0644\u062F\u0627\u0626\u0631\u0629 \u064A\u0632\u062F\u0627\u062F \u0645\u0639 \u0639\u062F\u062F \u0635\u0641\u0648\u0641 \u0627\u0644\u0645\u0635\u062F\u0631 \u0630\u0627\u062A \u0627\u0644\u0642\u064A\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629." : "Bubble size increases with the number of source rows sharing the same plotted values.");
+    }
+    if (config.xCategory) {
+      notes.push(ar ? "\u0627\u0644\u0625\u0632\u0627\u062D\u0629 \u0627\u0644\u0623\u0641\u0642\u064A\u0629 \u0627\u0644\u0635\u063A\u064A\u0631\u0629 \u0644\u0625\u0638\u0647\u0627\u0631 \u0627\u0644\u062A\u062F\u0627\u062E\u0644 \u0628\u0635\u0631\u064A\u0629 \u0641\u0642\u0637\u061B \u0627\u0644\u062A\u0633\u0645\u064A\u0629 \u0627\u0644\u062F\u0642\u064A\u0642\u0629 \u0638\u0627\u0647\u0631\u0629 \u0641\u064A \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644." : "Small horizontal offsets reveal overlapping category points; the offset is visual only and the exact label is shown in point details.");
+    }
+    const chart = scientificSourceScatter({
+      points: plotData.points,
+      xLabel: config.xField,
+      yLabel: config.yField,
+      xUnit: config.xUnit,
+      yUnit: config.yUnit,
+      categories: plotData.categories,
+      identityReference: Boolean(config.identityReference),
+      labels: labels2,
+      sourceRowCount,
+      validRowCount: plotData.validRows,
+      captionNote: notes.join(" ")
+    });
+    const sourceLink = sourceUrl ? '<a href="' + esc(sourceUrl) + '" target="_blank" rel="noreferrer">NASA PSI \u2197</a>' : "";
+    return [
+      '<article class="card source-chart-card" data-source-chart="',
+      esc(config.id),
+      '">',
+      "<h3>",
+      esc(title),
+      "</h3>",
+      '<div class="grid three chart-explanation">',
+      '<p class="sub"><b>',
+      ar ? "\u0627\u0644\u0633\u0624\u0627\u0644" : "Question",
+      "</b><br>",
+      esc(question),
+      "</p>",
+      '<p class="sub"><b>',
+      ar ? "\u0627\u0644\u063A\u0631\u0636" : "Purpose",
+      "</b><br>",
+      esc(purpose),
+      "</p>",
+      '<p class="sub"><b>',
+      ar ? "\u062D\u062F\u0648\u062F \u0627\u0644\u062A\u0641\u0633\u064A\u0631" : "Interpretation limit",
+      "</b><br>",
+      esc(limit),
+      "</p>",
+      "</div>",
+      '<p class="sub source-chart-fields">',
+      ar ? "\u062D\u0642\u0648\u0644 NASA PSI \u0627\u0644\u0623\u0635\u0644\u064A\u0629: " : "Original NASA PSI fields: ",
+      esc(config.xField),
+      " \u2192 ",
+      esc(config.yField),
+      sourceLink ? " \xB7 " + sourceLink : "",
+      "</p>",
+      chart,
+      "</article>"
+    ].join("");
+  }
+  function renderSourceStudyCharts(studyId, rows, lang2 = "en", sourceUrl = "") {
+    const ar = lang2 === "ar";
+    const configs = sourceChartsForStudy(studyId);
+    if (!configs.length) {
+      const reason = SOURCE_STUDY_NO_PLOT_REASON[studyId];
+      if (!reason) return "";
+      return '<div class="callout">' + esc(reason[lang2]) + "</div>";
+    }
+    const charts = configs.map((config) => {
+      const plotData = sourcePlotData(rows, config, lang2);
+      if (plotData.validRows < 2) {
+        return '<article class="card"><h3>' + esc(config.title[lang2]) + '</h3><p class="sub">' + (ar ? "\u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u0632\u0648\u0627\u062C \u0631\u0642\u0645\u064A\u0629 \u0643\u0627\u0641\u064A\u0629 \u0641\u064A \u062E\u0644\u0627\u064A\u0627 \u0627\u0644\u0645\u0635\u062F\u0631 \u0644\u0647\u0630\u0627 \u0627\u0644\u0631\u0633\u0645\u061B \u0628\u0642\u064A\u062A \u0627\u0644\u0642\u064A\u0645 \u0643\u0645\u0627 \u0647\u064A." : "The source cells do not contain enough numeric pairs for this plot; values remain unchanged.") + "</p></article>";
+      }
+      return renderChartCard(config, plotData, lang2, sourceUrl, rows.length);
+    });
+    return [
+      '<section class="study-source-charts"><div class="section-title"><div><h3>',
+      ar ? "\u0645\u062E\u0637\u0637\u0627\u062A \u0647\u0630\u0647 \u0627\u0644\u062F\u0631\u0627\u0633\u0629" : "Plots for this investigation",
+      '</h3><p class="sub">',
+      ar ? "\u0631\u0633\u0648\u0645 \u0645\u0633\u062A\u0642\u0644\u0629 \u0645\u0646 \u062D\u0642\u0648\u0644 \u0647\u0630\u0627 \u0627\u0644\u062C\u062F\u0648\u0644 \u0641\u0642\u0637\u061B \u0644\u0627 \u062A\u064F\u062F\u0645\u062C \u0645\u0639 \u062A\u062D\u0642\u064A\u0642 \u0622\u062E\u0631." : "Separate plots from this table only; no rows are pooled with another investigation.",
+      '</p></div><span class="tag">',
+      configs.length,
+      ar ? " \u0645\u062E\u0637\u0637\u0627\u062A" : " plots",
+      '</span></div><div class="grid two">',
+      charts.join(""),
+      "</div></section>"
+    ].join("");
+  }
+  async function renderSourceChartGuide(lang2 = "en") {
+    const ar = lang2 === "ar";
+    const catalog = await get("/api/challenge/catalog");
+    const studyIds = [...new Set(SOURCE_STUDY_CHARTS.map((chart) => chart.studyId))];
+    const results = await Promise.all(studyIds.map(async (id) => {
+      try {
+        const table = await loadStudyTable(id);
+        const item = catalog.investigations.find((study) => study.id === id);
+        return renderSourceStudyCharts(id, table.rows, lang2, (item == null ? void 0 : item.sourceUrl) || "");
+      } catch (error) {
+        return '<article class="card"><h3>' + esc(id) + '</h3><div class="callout warn">' + esc(error.message) + "</div></article>";
+      }
+    }));
+    const noPlotStudies = Object.entries(SOURCE_STUDY_NO_PLOT_REASON).map(([id, reason]) => {
+      const item = catalog.investigations.find((study) => study.id === id);
+      return '<article class="card"><div class="eyebrow">' + esc(id) + "</div><h3>" + esc((item == null ? void 0 : item.title) || id) + '</h3><p class="sub">' + esc(reason[lang2]) + "</p></article>";
+    });
+    const totalCharts = SOURCE_STUDY_CHARTS.length;
+    return [
+      '<section class="chart-gallery source-chart-guide"><div class="section-title"><div><h2>',
+      ar ? "\u0645\u062E\u0637\u0637\u0627\u062A \u0628\u0642\u064A\u0629 \u062C\u062F\u0627\u0648\u0644 NASA PSI" : "Plots from the other NASA PSI tables",
+      "</h2><p>",
+      ar ? "\u062A\u064F\u0639\u0631\u0636 \u0647\u0646\u0627 " + totalCharts + " \u0645\u062E\u0637\u0637\u0627\u064B \u0639\u0628\u0631 " + studyIds.length + " \u062A\u062D\u0642\u064A\u0642\u0627\u062A. \u064A\u062D\u062A\u0641\u0638 \u0643\u0644 \u0645\u062E\u0637\u0637 \u0628\u0648\u062D\u062F\u0627\u062A\u0647 \u0648\u062D\u0642\u0648\u0644\u0647 \u0648\u062D\u062F\u0648\u062F \u062A\u0641\u0633\u064A\u0631\u0647 \u0627\u0644\u062E\u0627\u0635\u0629." : totalCharts + " plots cover " + studyIds.length + " investigations. Each keeps its own source fields, units, and interpretation limits.",
+      '</p></div></div><div class="source-chart-study-list">',
+      results.join(""),
+      '</div><h2 style="margin-top:24px">',
+      ar ? "\u062C\u062F\u0627\u0648\u0644 \u0644\u0627 \u062A\u0646\u062A\u062C \u0631\u0633\u0645\u0627\u064B \u0643\u0645\u064A\u0627\u064B \u0622\u0645\u0646\u0627\u064B" : "Tables without a defensible quantitative plot",
+      '</h2><p class="sub">',
+      ar ? "\u0647\u0630\u0647 \u0627\u0644\u062C\u062F\u0627\u0648\u0644 \u0645\u0631\u0641\u0642\u0629 \u0641\u064A \u0627\u0644\u0645\u0643\u062A\u0628\u0629 \u0648\u062A\u0638\u0644 \u0642\u0627\u0628\u0644\u0629 \u0644\u0644\u0627\u0633\u062A\u0639\u0631\u0627\u0636\u061B \u063A\u064A\u0627\u0628 \u0627\u0644\u0631\u0633\u0645 \u064A\u0639\u0643\u0633 \u0646\u0648\u0639 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0646\u0634\u0648\u0631\u0629\u060C \u0644\u0627 \u062D\u0630\u0641 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A." : "These tables remain available in the evidence library; the absence of a plot reflects the published data type, not omitted data.",
+      '</p><div class="grid two source-chart-no-plot">',
+      noPlotStudies.join(""),
+      "</div></section>"
+    ].join("");
+  }
+
   // public/challenge-research.js
   var studyNotes = {
     "PSI-20": "ACME BRE \xB7 gaseous flames and burning-rate emulator test conditions",
@@ -462,13 +1530,16 @@
   function bindInvestigationLab(root, lang2 = "en") {
     const ar = lang2 === "ar";
     let dataPromise;
+    let selectionEpoch = 0;
     const loadData = () => dataPromise || (dataPromise = get("/api/challenge/catalog"));
     const select = root.querySelector("#studySelect");
     const panel = root.querySelector("#studyAnalysisPanel");
     if (!select || !panel) return;
     const renderSelected = async () => {
+      const requestEpoch = ++selectionEpoch;
       const data = await loadData();
       const id = select.value;
+      if (requestEpoch !== selectionEpoch) return;
       const item = data.investigations.find((study) => study.id === id);
       if (!item) {
         const metadata = data.officialInventory.records.find((study) => study.id === id);
@@ -476,6 +1547,22 @@
         return;
       }
       panel.innerHTML = studyAnalysisMarkup(item, ar);
+      const chartSlot = document.createElement("div");
+      chartSlot.className = "study-source-chart-slot";
+      panel.append(chartSlot);
+      if (sourceChartsForStudy(id).length) {
+        chartSlot.innerHTML = `<div class="empty">${ar ? "\u062C\u0627\u0631\u064D \u062A\u062D\u0645\u064A\u0644 \u0642\u064A\u0627\u0633\u0627\u062A \u0647\u0630\u0627 \u0627\u0644\u062C\u062F\u0648\u0644\u2026" : "Loading this table\u2019s measurements\u2026"}</div>`;
+        loadStudyTable(id).then((table) => {
+          if (requestEpoch === selectionEpoch && select.value === id) {
+            chartSlot.innerHTML = renderSourceStudyCharts(id, table.rows, lang2, item.sourceUrl);
+            bindInteractiveCharts(chartSlot);
+          }
+        }).catch((error) => {
+          if (requestEpoch === selectionEpoch) chartSlot.innerHTML = `<div class="callout warn">${esc(error.message)}</div>`;
+        });
+      } else {
+        chartSlot.innerHTML = renderSourceStudyCharts(id, [], lang2, item.sourceUrl);
+      }
       const button = panel.querySelector("[data-study-rows]");
       if (button) button.onclick = async () => {
         const target = panel.querySelector("#study-source-rows");
@@ -496,6 +1583,7 @@
       };
     };
     select.onchange = renderSelected;
+    renderSelected();
   }
   function electricFieldNote(ar) {
     return `<article class="card" style="margin-top:15px"><h2>${ar ? "\u0627\u0644\u0644\u0647\u0628 \u062A\u062D\u062A \u062A\u0623\u062B\u064A\u0631 \u0627\u0644\u0645\u062C\u0627\u0644 \u0627\u0644\u0643\u0647\u0631\u0628\u0627\u0626\u064A \xB7 PSI-22" : "Electric-field flame demonstration \xB7 PSI-22"}</h2><p>${ar ? "\u064A\u0639\u0631\u0636 \u0641\u064A\u062F\u064A\u0648 \u0627\u0644\u062A\u062D\u062F\u064A \u062A\u062C\u0631\u0628\u0629 \u0644\u0647\u0628 \u0627\u0644\u0645\u062C\u0627\u0644 \u0627\u0644\u0643\u0647\u0631\u0628\u0627\u0626\u064A: \u064A\u062D\u0631\u0643 \u0627\u0644\u0645\u062C\u0627\u0644 \u0627\u0644\u0623\u064A\u0648\u0646\u0627\u062A \u062F\u0627\u062E\u0644 \u0627\u0644\u0644\u0647\u0628\u060C \u0648\u062A\u0646\u0642\u0644 \u062A\u0635\u0627\u062F\u0645\u0627\u062A\u0647\u0627 \u062C\u0632\u0621\u0627\u064B \u0645\u0646 \u0627\u0644\u0632\u062E\u0645 \u0625\u0644\u0649 \u0627\u0644\u063A\u0627\u0632 \u0627\u0644\u0645\u062A\u0639\u0627\u062F\u0644\u060C \u0641\u064A\u0646\u0634\u0623 \u062C\u0631\u064A\u0627\u0646 \u0623\u064A\u0648\u0646\u064A \u064A\u0645\u0643\u0646\u0647 \u062A\u063A\u064A\u064A\u0631 \u0634\u0643\u0644 \u0627\u0644\u0644\u0647\u0628 \u0631\u063A\u0645 \u0636\u0639\u0641 \u0627\u0644\u0637\u0641\u0648." : "The challenge video shows the E-FIELD flame experiment: an electric field moves ions in the flame; collisions transfer momentum to neutral gas and create an ionic wind that can reshape the flame even when buoyancy is weak."}</p><div class="equation"><b>${ar ? "\u0642\u0648\u0629 \u0643\u0647\u0631\u0628\u0627\u0626\u064A\u0629 \u062D\u062C\u0645\u064A\u0629 \u0639\u0644\u0649 \u0627\u0644\u0634\u062D\u0646\u0629" : "Electric body force on charge"}</b><code>f\u2091 = \u03C1\u2091 E</code><p class="sub">${ar ? "\u03C1\u2091 \u0643\u062B\u0627\u0641\u0629 \u0627\u0644\u0634\u062D\u0646\u0629 \u0627\u0644\u062D\u062C\u0645\u064A\u0629 \u0648E \u0634\u062F\u0629 \u0627\u0644\u0645\u062C\u0627\u0644 \u0627\u0644\u0643\u0647\u0631\u0628\u0627\u0626\u064A. \u0647\u0630\u0647 \u0639\u0644\u0627\u0642\u0629 \u0644\u0644\u0642\u0648\u0629 \u0639\u0644\u0649 \u0627\u0644\u0634\u062D\u0646\u0627\u062A\u061B \u0627\u0646\u062A\u0642\u0627\u0644 \u0627\u0644\u0632\u062E\u0645 \u0625\u0644\u0649 \u0627\u0644\u063A\u0627\u0632 \u064A\u0639\u062A\u0645\u062F \u0639\u0644\u0649 \u0627\u0642\u062A\u0631\u0627\u0646 \u0627\u0644\u0623\u064A\u0648\u0646\u0627\u062A \u0628\u0627\u0644\u062C\u0632\u064A\u0626\u0627\u062A \u0627\u0644\u0645\u062A\u0639\u0627\u062F\u0644\u0629." : "\u03C1\u2091 is volumetric charge density and E is electric-field strength. This is the force on charged species; momentum transfer to neutral gas depends on ion\u2013neutral coupling."}</p></div><div class="callout warn">${ar ? "\u0647\u0630\u0627 \u0645\u062B\u0627\u0644 \u0639\u0644\u0649 \u0646\u0642\u0644 \u0642\u0633\u0631\u064A \u0644\u0644\u0632\u062E\u0645\u060C \u0648\u0644\u064A\u0633 \u0645\u062D\u0627\u0643\u0627\u0629 \u0644\u0644\u062C\u0627\u0630\u0628\u064A\u0629 \u0627\u0644\u0642\u0645\u0631\u064A\u0629 \u0623\u0648 \u0642\u064A\u0627\u0633\u0627\u064B \u0639\u0646\u062F 1/6 g. \u0644\u0627 \u064A\u0633\u062A\u0646\u062A\u062C \u0627\u0644\u0645\u0634\u0631\u0648\u0639 \u062C\u0631\u064A\u0627\u0646\u0627\u064B \u0623\u0648 \u0642\u0648\u0629 \u0645\u0646 \u062C\u062F\u0648\u0644 PSI-22 \u062F\u0648\u0646 \u062D\u0642\u0648\u0644 \u0645\u0639\u0627\u064A\u0631\u0629 \u0645\u0646\u0627\u0633\u0628\u0629." : "This is an example of forced momentum transport, not a simulation of lunar gravity or a measurement at 1/6 g. The project does not infer flow or force from PSI-22 without suitable calibrated fields."} <a href="https://psi.nasa.gov/physci/repo/data/investigations/PSI-22" target="_blank" rel="noreferrer">${ar ? "\u0633\u062C\u0644 NASA PSI-22 \u2197" : "NASA PSI-22 record \u2197"}</a></div></article>`;
@@ -541,276 +1629,6 @@
     const raw = value == null ? "" : String(value);
     const safe = typeof value === "string" && /^[\s\uFEFF]*[=+\-@]/u.test(raw) ? `'${raw}` : raw;
     return `"${safe.replaceAll('"', '""')}"`;
-  }
-
-  // public/lib/charts.js
-  function chartSVG(rows, key, label, unit, color = "#258cb4") {
-    const vals = rows.map((r) => r[key]).filter(Number.isFinite);
-    if (!vals.length) return `<div class="empty">No measured values for ${label}.</div>`;
-    const w = 640, h = 210, p = { l: 48, r: 12, t: 16, b: 38 }, min = Math.min(0, ...vals), max = Math.max(...vals) * 1.12 || 1, xx = (i) => p.l + i * (w - p.l - p.r) / Math.max(1, rows.length - 1), yy = (v) => h - p.b - (v - min) / (max - min) * (h - p.t - p.b);
-    const last = rows[rows.length - 1];
-    return `<svg class="chart" viewBox="0 0 ${w} ${h}" role="img" aria-label="${label} in ${unit}"><g stroke="var(--line)" stroke-width="1"><line x1="${p.l}" y1="${h - p.b}" x2="${w - p.r}" y2="${h - p.b}"/><line x1="${p.l}" y1="${p.t}" x2="${p.l}" y2="${h - p.b}"/><line x1="${p.l}" y1="${yy(max * 0.5)}" x2="${w - p.r}" y2="${yy(max * 0.5)}" stroke-dasharray="3 4"/></g><text x="5" y="15" fill="var(--muted)" font-size="9">${esc(label)} (${esc(unit)})</text>${rows.map((r, i) => Number.isFinite(r[key]) ? `<circle cx="${xx(i)}" cy="${yy(Number(r[key]))}" r="4.2" fill="${color}"><title>${esc(r.id || r.test)} \xB7 ${Number(r[key]).toFixed(3)} ${unit}</title></circle>` : "").join("")}<text x="${p.l}" y="${h - 9}" fill="var(--muted)" font-size="9">${esc(rows[0].id || rows[0].date || "Record 1")}</text><text x="${w - p.r}" y="${h - 9}" text-anchor="end" fill="var(--muted)" font-size="9">${esc(last.id || last.date || "Record " + rows.length)}</text><text x="${p.l - 8}" y="${yy(max * 0.5) + 3}" text-anchor="end" fill="var(--muted)" font-size="9">${(max * 0.5).toFixed(2)}</text><text x="${p.l - 8}" y="${yy(min) + 3}" text-anchor="end" fill="var(--muted)" font-size="9">${min.toFixed(2)}</text></svg>`;
-  }
-  function flexOxygenScatterSVG(rows, labelX, labelY) {
-    const points = rows.filter((r) => Number.isFinite(r.oxygen_mole_fraction) && Number.isFinite(r.burning_rate_mm_s));
-    if (!points.length) return `<div class="empty">No rows have both oxygen fraction and burning-rate values.</div>`;
-    const w = 760, h = 300, p = { l: 64, r: 20, t: 24, b: 52 };
-    const xs = points.map((r) => r.oxygen_mole_fraction * 100);
-    const ys = points.map((r) => r.burning_rate_mm_s);
-    const xmin = Math.min(...xs), xmax = Math.max(...xs), ymin = Math.min(0, ...ys), ymax = Math.max(...ys) * 1.08 || 1;
-    const dx = xmax - xmin || 1;
-    const xx = (v) => p.l + (v - xmin) / dx * (w - p.l - p.r);
-    const yy = (v) => h - p.b - (v - ymin) / (ymax - ymin || 1) * (h - p.t - p.b);
-    const ticks = 4;
-    const grid = Array.from({ length: ticks + 1 }, (_, i) => {
-      const y = ymin + (ymax - ymin) * i / ticks;
-      return `<line x1="${p.l}" y1="${yy(y)}" x2="${w - p.r}" y2="${yy(y)}" stroke="var(--line)"/><text x="${p.l - 9}" y="${yy(y) + 3}" text-anchor="end" fill="var(--muted)" font-size="10">${y.toFixed(2)}</text>`;
-    }).join("");
-    const circles = points.map((r) => {
-      var _a;
-      const x = r.oxygen_mole_fraction * 100, y = r.burning_rate_mm_s;
-      const color = r.test_end === "Extinction" ? "#39a77e" : r.test_end === "Disruption" ? "#d59a3d" : "#7d73d3";
-      return `<circle cx="${xx(x)}" cy="${yy(y)}" r="4.2" fill="${color}" fill-opacity=".8" stroke="var(--surface)" stroke-width="1"><title>${esc(r.id)} \xB7 ${esc(r.fuel)} \xB7 O\u2082 ${x.toFixed(1)}% \xB7 K ${y.toFixed(3)} mm\xB2/s \xB7 ${esc((_a = r.pressure_mmHg) != null ? _a : "\u2014")} mmHg \xB7 ${esc(r.test_end)}</title></circle>`;
-    }).join("");
-    return `<svg class="chart flex-scatter" viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(labelX)} against ${esc(labelY)}"><g>${grid}</g><line x1="${p.l}" y1="${h - p.b}" x2="${w - p.r}" y2="${h - p.b}" stroke="var(--muted)"/><line x1="${p.l}" y1="${p.t}" x2="${p.l}" y2="${h - p.b}" stroke="var(--muted)"/>${circles}<text x="${(p.l + w - p.r) / 2}" y="${h - 12}" text-anchor="middle" fill="var(--muted)" font-size="11">${esc(labelX)}</text><text transform="translate(16 ${(p.t + h - p.b) / 2}) rotate(-90)" text-anchor="middle" fill="var(--muted)" font-size="11">${esc(labelY)}</text><text x="${xx(xmin)}" y="${h - p.b + 19}" text-anchor="middle" fill="var(--muted)" font-size="10">${xmin.toFixed(1)}%</text><text x="${xx(xmax)}" y="${h - p.b + 19}" text-anchor="middle" fill="var(--muted)" font-size="10">${xmax.toFixed(1)}%</text></svg>`;
-  }
-
-  // public/lib/interactive-charts.js
-  var NS = "http://www.w3.org/2000/svg";
-  var COLORS = ["#1688be", "#d59a3d", "#39a77e", "#7d73d3", "#d36d7c", "#5077a8"];
-  function linearFit(points) {
-    if (points.length < 3) return null;
-    const meanX = points.reduce((sum, point) => sum + point.x, 0) / points.length;
-    const meanY = points.reduce((sum, point) => sum + point.y, 0) / points.length;
-    const variance = points.reduce((sum, point) => sum + (point.x - meanX) ** 2, 0);
-    if (!variance) return null;
-    const slope = points.reduce((sum, point) => sum + (point.x - meanX) * (point.y - meanY), 0) / variance;
-    const intercept = meanY - slope * meanX;
-    const total = points.reduce((sum, point) => sum + (point.y - meanY) ** 2, 0);
-    const residual = points.reduce((sum, point) => sum + (point.y - intercept - slope * point.x) ** 2, 0);
-    return { slope, intercept, r2: total ? 1 - residual / total : 1 };
-  }
-  function tick(value, digits = 3) {
-    return Number(value.toFixed(digits)).toString();
-  }
-  function shouldDismissChartTooltip(pointerType, pinned) {
-    return pointerType !== "touch" && !pinned;
-  }
-  function chartTooltipPosition({ clientX, clientY, viewportRect, tooltipRect, offset = 12, padding = 4 }) {
-    const availableWidth = Math.max(0, viewportRect.width - padding * 2);
-    const availableHeight = Math.max(0, viewportRect.height - padding * 2);
-    const width = Math.min(tooltipRect.width || 240, availableWidth);
-    const height = Math.min(tooltipRect.height || 64, availableHeight);
-    const relativeX = clientX - viewportRect.left;
-    const relativeY = clientY - viewportRect.top;
-    let left = relativeX + offset;
-    let top = relativeY + offset;
-    if (left + width > viewportRect.width - padding) left = relativeX - width - offset;
-    if (top + height > viewportRect.height - padding) top = relativeY - height - offset;
-    return {
-      left: Math.max(padding, Math.min(viewportRect.width - width - padding, left)),
-      top: Math.max(padding, Math.min(viewportRect.height - height - padding, top))
-    };
-  }
-  function scientificScatter({
-    rows,
-    xKey,
-    yKey,
-    xLabel,
-    yLabel,
-    xUnit = "",
-    yUnit = "",
-    xFactor = 1,
-    yFactor = 1,
-    groupKey = "fuel",
-    labels: labels2
-  }) {
-    const points = rows.filter((row) => Number.isFinite(row[xKey]) && Number.isFinite(row[yKey])).map((row) => ({
-      row,
-      x: row[xKey] * xFactor,
-      y: row[yKey] * yFactor,
-      group: String(row[groupKey] || "Unreported")
-    }));
-    if (!points.length) return '<div class="empty">No source rows contain both measurements.</div>';
-    const base = { x: 0, y: 0, width: 800, height: 400 };
-    const plot = { left: 86, right: 26, top: 24, bottom: 67 };
-    const xMin = Math.min(...points.map((point) => point.x));
-    const xMax = Math.max(...points.map((point) => point.x));
-    const yMin = Math.min(0, ...points.map((point) => point.y));
-    const yMax = Math.max(...points.map((point) => point.y));
-    const xPad = (xMax - xMin) * 0.04 || Math.max(Math.abs(xMin) * 0.04, 0.01);
-    const yPad = (yMax - yMin) * 0.06 || Math.max(Math.abs(yMax) * 0.06, 0.01);
-    const domain = { xMin: xMin - xPad, xMax: xMax + xPad, yMin, yMax: yMax + yPad };
-    const sx = (value) => plot.left + (value - domain.xMin) / (domain.xMax - domain.xMin) * (base.width - plot.left - plot.right);
-    const sy = (value) => base.height - plot.bottom - (value - domain.yMin) / (domain.yMax - domain.yMin || 1) * (base.height - plot.top - plot.bottom);
-    const groups = [...new Set(points.map((point) => point.group))];
-    const colorByGroup = new Map(groups.map((group, index) => [group, COLORS[index % COLORS.length]]));
-    const fits = groups.map((group) => [group, linearFit(points.filter((point) => point.group === group))]);
-    const grid = Array.from({ length: 6 }, (_, index) => {
-      const x = domain.xMin + (domain.xMax - domain.xMin) * index / 5;
-      const y = domain.yMin + (domain.yMax - domain.yMin) * index / 5;
-      return `<line x1="${sx(x)}" y1="${plot.top}" x2="${sx(x)}" y2="${base.height - plot.bottom}" class="chart-gridline"/><line x1="${plot.left}" y1="${sy(y)}" x2="${base.width - plot.right}" y2="${sy(y)}" class="chart-gridline"/><text x="${sx(x)}" y="${base.height - plot.bottom + 19}" class="chart-tick" text-anchor="middle">${tick(x)}</text><text x="${plot.left - 10}" y="${sy(y) + 4}" class="chart-tick" text-anchor="end">${tick(y)}</text>`;
-    }).join("");
-    const marks = points.map(({ row, x, y, group }) => {
-      var _a;
-      const info = `${row.id || `Test ${row.test}`} \xB7 ${row.fuel || "Fuel unreported"} \xB7 ${xLabel}: ${tick(x)} ${xUnit} \xB7 ${yLabel}: ${tick(y)} ${yUnit} \xB7 O\u2082 ${(row.oxygen_mole_fraction * 100).toFixed(1)}% \xB7 ${(_a = row.pressure_mmHg) != null ? _a : "\u2014"} mmHg \xB7 ${row.test_end || "End state unreported"}`;
-      return `<circle class="chart-point" cx="${sx(x)}" cy="${sy(y)}" r="5" fill="${colorByGroup.get(group)}" fill-opacity=".82" tabindex="0" role="button" aria-label="${esc(info)}" data-info="${esc(info)}"><title>${esc(info)}</title></circle>`;
-    }).join("");
-    const legend = groups.map((group) => `<span><i style="--legend-color:${colorByGroup.get(group)}"></i>${esc(group)}</span>`).join("");
-    const fitted = fits.filter(([, fit]) => fit);
-    const fitSummary = fitted.length ? `${labels2.fit}: ${fitted.map(([group, fit]) => `${group}: y = ${tick(fit.intercept)} + ${tick(fit.slope)}x, R\xB2 = ${fit.r2.toFixed(3)} (n=${points.filter((point) => point.group === group).length})`).join(" \xB7 ")}` : `${labels2.fitUnavailable}`;
-    const trend = fitted.map(
-      ([group, fit]) => `<line class="chart-trendline" stroke="${colorByGroup.get(group)}" x1="${sx(domain.xMin)}" y1="${sy(fit.intercept + fit.slope * domain.xMin)}" x2="${sx(domain.xMax)}" y2="${sy(fit.intercept + fit.slope * domain.xMax)}" visibility="hidden"/>`
-    ).join("");
-    return `<section class="scientific-chart" data-chart-panel><div class="chart-toolbar" role="group" aria-label="${esc(labels2.controls)}"><button type="button" data-chart-action="zoom-in" aria-label="${esc(labels2.zoomIn)}">\uFF0B</button><button type="button" data-chart-action="zoom-out" aria-label="${esc(labels2.zoomOut)}">\u2212</button><button type="button" data-chart-action="reset">${esc(labels2.reset)}</button>${fitted.length ? `<button type="button" data-chart-action="fit" aria-pressed="false">${esc(labels2.fitLine)}</button>` : ""}<button type="button" data-chart-action="draw" aria-pressed="false" data-idle-label="${esc(labels2.drawLine)}" data-active-label="${esc(labels2.drawLineActive)}">${esc(labels2.drawLine)}</button><button type="button" data-chart-action="undo">${esc(labels2.undo)}</button></div><p class="chart-interaction-hint">${esc(labels2.interactionHint || "")}</p><div class="chart-viewport"><svg class="scientific-plot" viewBox="${base.x} ${base.y} ${base.width} ${base.height}" role="group" aria-label="${esc(`${xLabel} versus ${yLabel}`)}"><g class="chart-grid">${grid}</g><line x1="${plot.left}" y1="${base.height - plot.bottom}" x2="${base.width - plot.right}" y2="${base.height - plot.bottom}" class="chart-axis"/><line x1="${plot.left}" y1="${plot.top}" x2="${plot.left}" y2="${base.height - plot.bottom}" class="chart-axis"/><g class="chart-trend">${trend}</g><g class="chart-annotations"></g><g>${marks}</g><text x="${(plot.left + base.width - plot.right) / 2}" y="${base.height - 12}" class="chart-axis-label" text-anchor="middle">${esc(xLabel)}${xUnit ? ` (${esc(xUnit)})` : ""}</text><text transform="translate(18 ${(plot.top + base.height - plot.bottom) / 2}) rotate(-90)" class="chart-axis-label" text-anchor="middle">${esc(yLabel)}${yUnit ? ` (${esc(yUnit)})` : ""}</text></svg><div class="chart-tooltip" role="status" aria-live="polite" hidden></div></div><div class="chart-legend">${legend}</div><p class="sub chart-caption">${esc(labels2.rows)}: n=${points.length}/${rows.length} \xB7 ${esc(labels2.fitNote)} ${esc(fitSummary)}</p></section>`;
-  }
-  function bindInteractiveCharts(root) {
-    root.querySelectorAll("[data-chart-panel]").forEach((panel) => {
-      if (panel.dataset.bound === "true") return;
-      panel.dataset.bound = "true";
-      const svg = panel.querySelector("svg");
-      const tooltip = panel.querySelector(".chart-tooltip");
-      const initial = svg.viewBox.baseVal;
-      const original = { x: initial.x, y: initial.y, width: initial.width, height: initial.height };
-      const annotations = svg.querySelector(".chart-annotations");
-      let drawing = false;
-      let drag = null;
-      let lineStart = null;
-      let tooltipPinned = false;
-      const view = () => svg.viewBox.baseVal;
-      const setView = (next) => svg.setAttribute("viewBox", `${next.x} ${next.y} ${next.width} ${next.height}`);
-      const showPoint = (mark, event) => {
-        tooltip.textContent = mark.dataset.info;
-        tooltip.hidden = false;
-        const box = panel.querySelector(".chart-viewport").getBoundingClientRect();
-        const keyboardClick = event.type === "click" && event.detail === 0;
-        const bounds = chartTooltipPosition({
-          clientX: keyboardClick ? box.left + box.width / 2 : event.clientX,
-          clientY: keyboardClick ? box.top + box.height / 2 : event.clientY,
-          viewportRect: box,
-          tooltipRect: tooltip.getBoundingClientRect()
-        });
-        tooltip.style.left = `${bounds.left}px`;
-        tooltip.style.top = `${bounds.top}px`;
-      };
-      const point = (event) => {
-        const p = svg.createSVGPoint();
-        p.x = event.clientX;
-        p.y = event.clientY;
-        return p.matrixTransform(svg.getScreenCTM().inverse());
-      };
-      const zoom = (factor, anchorX = view().x + view().width / 2, anchorY = view().y + view().height / 2) => {
-        const current2 = view();
-        const width = Math.max(100, Math.min(original.width * 8, current2.width * factor));
-        const height = Math.max(70, Math.min(original.height * 8, current2.height * factor));
-        const rx = (anchorX - current2.x) / current2.width;
-        const ry = (anchorY - current2.y) / current2.height;
-        setView({ x: anchorX - width * rx, y: anchorY - height * ry, width, height });
-      };
-      panel.querySelectorAll("[data-chart-action]").forEach((button) => {
-        button.addEventListener("click", () => {
-          var _a;
-          const action = button.dataset.chartAction;
-          if (action === "zoom-in") zoom(0.78);
-          if (action === "zoom-out") zoom(1.28);
-          if (action === "reset") setView(original);
-          if (action === "fit") {
-            const lines = [...svg.querySelectorAll(".chart-trendline")];
-            const visible = lines.some((line) => line.getAttribute("visibility") !== "visible");
-            lines.forEach((line) => line.setAttribute("visibility", visible ? "visible" : "hidden"));
-            button.setAttribute("aria-pressed", String(visible));
-          }
-          if (action === "draw") {
-            drawing = !drawing;
-            button.setAttribute("aria-pressed", String(drawing));
-            button.textContent = drawing ? button.dataset.activeLabel : button.dataset.idleLabel;
-            svg.classList.toggle("drawing-line", drawing);
-            lineStart = null;
-          }
-          if (action === "undo") (_a = annotations.lastElementChild) == null ? void 0 : _a.remove();
-        });
-      });
-      svg.addEventListener(
-        "wheel",
-        (event) => {
-          event.preventDefault();
-          const p = point(event);
-          zoom(event.deltaY < 0 ? 0.88 : 1.14, p.x, p.y);
-        },
-        { passive: false }
-      );
-      svg.addEventListener("pointerdown", (event) => {
-        if (event.target.closest(".chart-point")) {
-          tooltipPinned = true;
-          showPoint(event.target.closest(".chart-point"), event);
-          return;
-        }
-        tooltipPinned = false;
-        tooltip.hidden = true;
-        const p = point(event);
-        if (drawing) {
-          lineStart = p;
-          const line = document.createElementNS(NS, "line");
-          line.setAttribute("class", "chart-user-line");
-          line.setAttribute("x1", p.x);
-          line.setAttribute("y1", p.y);
-          line.setAttribute("x2", p.x);
-          line.setAttribute("y2", p.y);
-          annotations.append(line);
-          drag = { kind: "draw", pointerId: event.pointerId, line };
-        } else {
-          drag = { kind: "pan", pointerId: event.pointerId, x: event.clientX, y: event.clientY, view: __spreadValues({}, view()) };
-        }
-        svg.setPointerCapture(event.pointerId);
-        event.preventDefault();
-      });
-      svg.addEventListener("pointermove", (event) => {
-        var _a, _b;
-        const mark = (_b = (_a = event.target).closest) == null ? void 0 : _b.call(_a, ".chart-point");
-        if (mark && event.pointerType !== "touch") {
-          tooltipPinned = false;
-          showPoint(mark, event);
-        }
-        if (!drag || drag.pointerId !== event.pointerId) return;
-        if (drag.kind === "draw") {
-          const p = point(event);
-          drag.line.setAttribute("x2", p.x);
-          drag.line.setAttribute("y2", p.y);
-        } else {
-          const rect = svg.getBoundingClientRect();
-          const dx = (event.clientX - drag.x) * drag.view.width / rect.width;
-          const dy = (event.clientY - drag.y) * drag.view.height / rect.height;
-          setView(__spreadProps(__spreadValues({}, drag.view), { x: drag.view.x - dx, y: drag.view.y - dy }));
-          if (tooltip) tooltip.hidden = true;
-        }
-      });
-      const stop = (event) => {
-        if (!drag || drag.pointerId !== event.pointerId) return;
-        if (drag.kind === "draw" && lineStart) {
-          const end = point(event);
-          if (Math.hypot(end.x - lineStart.x, end.y - lineStart.y) < 4) drag.line.remove();
-        }
-        drag = null;
-        lineStart = null;
-      };
-      svg.addEventListener("pointerup", stop);
-      svg.addEventListener("pointercancel", stop);
-      svg.addEventListener("click", (event) => {
-        var _a, _b;
-        const mark = (_b = (_a = event.target).closest) == null ? void 0 : _b.call(_a, ".chart-point");
-        if (!mark) return;
-        tooltipPinned = true;
-        showPoint(mark, event);
-      });
-      svg.addEventListener("keydown", (event) => {
-        if (event.key !== "Escape") return;
-        tooltipPinned = false;
-        tooltip.hidden = true;
-      });
-      svg.addEventListener("pointerleave", (event) => {
-        if (tooltip && shouldDismissChartTooltip(event.pointerType, tooltipPinned)) tooltip.hidden = true;
-      });
-    });
   }
 
   // public/lib/chart-guide.js
@@ -1387,14 +2205,14 @@
     const included = dataset.rows.filter(
       (row) => Number.isFinite(row.oxygen_mole_fraction) && Number.isFinite(row.burning_rate_mm_s)
     ).length;
-    return `<article class="card flex-scatter-card"><div class="card-head"><div><h3>${t("PSI-69 \xB7 Oxygen fraction and droplet burning rate", "PSI-69 \xB7 \u0646\u0633\u0628\u0629 \u0627\u0644\u0623\u0643\u0633\u062C\u064A\u0646 \u0648\u0645\u0639\u062F\u0644 \u0627\u062D\u062A\u0631\u0627\u0642 \u0627\u0644\u0642\u0637\u0631\u0629")}</h3><p class="sub">${t("Each point is one NASA FLEX source row. Hover for test ID, fuel, pressure and recorded end state.", "\u0643\u0644 \u0646\u0642\u0637\u0629 \u062A\u0645\u062B\u0644 \u0635\u0641\u0627\u064B \u0648\u0627\u062D\u062F\u0627\u064B \u0645\u0646 NASA FLEX. \u0645\u0631\u0631 \u0627\u0644\u0645\u0624\u0634\u0631 \u0644\u0639\u0631\u0636 \u0627\u0644\u0645\u0639\u0631\u0651\u0641 \u0648\u0627\u0644\u0648\u0642\u0648\u062F \u0648\u0627\u0644\u0636\u063A\u0637 \u0648\u0627\u0644\u062D\u0627\u0644\u0629 \u0627\u0644\u0646\u0647\u0627\u0626\u064A\u0629.")}</p></div><span class="tag obs">${t("OBSERVED ROWS", "\u0635\u0641\u0648\u0641 \u0645\u0631\u0635\u0648\u062F\u0629")}</span></div><div class="toolbar"><label>${t("Fuel", "\u0627\u0644\u0648\u0642\u0648\u062F")} <select id="flexScatterFuel"><option value="">${t("All fuels", "\u0643\u0644 \u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u0648\u0642\u0648\u062F")}</option>${options}</select></label><label>${t("Pressure \xB7 mmHg", "\u0627\u0644\u0636\u063A\u0637 \xB7 mmHg")} <select id="flexScatterPressure"><option value="all">${t("All pressures", "\u0643\u0644 \u0627\u0644\u0636\u063A\u0648\u0637")}</option><option value="low">\u2264 760</option><option value="mid">760\u20131520</option><option value="high">&gt; 1520</option><option value="unknown">${t("Unreported", "\u063A\u064A\u0631 \u0645\u0633\u062C\u0644")}</option></select></label></div><div id="flexScatterPlot">${flexOxygenScatterSVG(dataset.rows, t("Oxygen mole fraction (%)", "\u0627\u0644\u0643\u0633\u0631 \u0627\u0644\u0645\u0648\u0644\u064A \u0644\u0644\u0623\u0643\u0633\u062C\u064A\u0646 (%)"), t("Droplet burning-rate constant (mm\xB2/s)", "\u062B\u0627\u0628\u062A \u0645\u0639\u062F\u0644 \u0627\u062D\u062A\u0631\u0627\u0642 \u0627\u0644\u0642\u0637\u0631\u0629 (mm\xB2/s)"))}</div><p class="sub" id="flexScatterCount">${t("Rows shown", "\u0627\u0644\u0635\u0641\u0648\u0641 \u0627\u0644\u0645\u0639\u0631\u0648\u0636\u0629")}: n=${included} / ${dataset.rows.length} ${t("source rows with both plotted values", "\u0635\u0641 \u0645\u0635\u062F\u0631 \u064A\u062D\u0648\u064A \u0627\u0644\u0642\u064A\u0645\u062A\u064A\u0646")}</p><div class="legend"><span style="--legend-color:#39a77e">${t("Source test_end: Extinction", "\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u0635\u062F\u0631 test_end: Extinction")}</span><span style="--legend-color:#d59a3d">${t("Source test_end: Disruption", "\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u0635\u062F\u0631 test_end: Disruption")}</span><span style="--legend-color:#7d73d3">${t("Other / source label", "\u0623\u062E\u0631\u0649 / \u062A\u0633\u0645\u064A\u0629 \u0627\u0644\u0645\u0635\u062F\u0631")}</span></div><div class="callout warn">${t("The FLEX burning-rate constant is for liquid droplets under the d\xB2 law, not solid-material flame-spread speed. These points are descriptive; mixed conditions do not establish an oxygen effect or causality. Source: PSI-69 \xB7 DOI 10.60555/mbq8-0451.", "\u062B\u0627\u0628\u062A \u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642 \u0641\u064A FLEX \u062E\u0627\u0635 \u0628\u0627\u0644\u0642\u0637\u0631\u0627\u062A \u0627\u0644\u0633\u0627\u0626\u0644\u0629 \u0648\u0641\u0642 \u0642\u0627\u0646\u0648\u0646 d\xB2\u060C \u0648\u0644\u064A\u0633 \u0633\u0631\u0639\u0629 \u0627\u0646\u062A\u0634\u0627\u0631 \u0627\u0644\u0644\u0647\u0628 \u0639\u0644\u0649 \u0645\u0627\u062F\u0629 \u0635\u0644\u0628\u0629. \u0627\u0644\u0646\u0642\u0627\u0637 \u0648\u0635\u0641\u064A\u0629\u061B \u0627\u062E\u062A\u0644\u0627\u0641 \u0627\u0644\u0634\u0631\u0648\u0637 \u0644\u0627 \u064A\u062B\u0628\u062A \u0623\u062B\u0631 \u0627\u0644\u0623\u0643\u0633\u062C\u064A\u0646 \u0623\u0648 \u0627\u0644\u0633\u0628\u0628\u064A\u0629. \u0627\u0644\u0645\u0635\u062F\u0631: PSI-69 \xB7 DOI 10.60555/mbq8-0451.")}</div></article>`;
+    return `<article class="card flex-scatter-card"><div class="card-head"><div><h3>${t("PSI-69 \xB7 Oxygen fraction and droplet burning rate", "PSI-69 \xB7 \u0646\u0633\u0628\u0629 \u0627\u0644\u0623\u0643\u0633\u062C\u064A\u0646 \u0648\u0645\u0639\u062F\u0644 \u0627\u062D\u062A\u0631\u0627\u0642 \u0627\u0644\u0642\u0637\u0631\u0629")}</h3><p class="sub">${t("Each point is one NASA FLEX source row. Click or tap a point for test details; drag empty space to pan, zoom, or draw a guide line.", "\u0643\u0644 \u0646\u0642\u0637\u0629 \u062A\u0645\u062B\u0644 \u0635\u0641\u0627\u064B \u0648\u0627\u062D\u062F\u0627\u064B \u0645\u0646 NASA FLEX. \u0627\u0646\u0642\u0631 \u0627\u0644\u0646\u0642\u0637\u0629 \u0644\u0639\u0631\u0636 \u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631\u061B \u0627\u0633\u062D\u0628 \u0627\u0644\u0645\u0633\u0627\u062D\u0629 \u0627\u0644\u0641\u0627\u0631\u063A\u0629 \u0644\u0644\u062A\u062D\u0631\u064A\u0643 \u0623\u0648 \u0627\u0644\u062A\u0643\u0628\u064A\u0631 \u0623\u0648 \u0631\u0633\u0645 \u062E\u0637 \u0625\u0631\u0634\u0627\u062F\u064A.")}</p></div><span class="tag obs">${t("OBSERVED ROWS", "\u0635\u0641\u0648\u0641 \u0645\u0631\u0635\u0648\u062F\u0629")}</span></div><div class="toolbar"><label>${t("Fuel", "\u0627\u0644\u0648\u0642\u0648\u062F")} <select id="flexScatterFuel"><option value="">${t("All fuels", "\u0643\u0644 \u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u0648\u0642\u0648\u062F")}</option>${options}</select></label><label>${t("Pressure \xB7 mmHg", "\u0627\u0644\u0636\u063A\u0637 \xB7 mmHg")} <select id="flexScatterPressure"><option value="all">${t("All pressures", "\u0643\u0644 \u0627\u0644\u0636\u063A\u0648\u0637")}</option><option value="low">\u2264 760</option><option value="mid">760\u20131520</option><option value="high">&gt; 1520</option><option value="unknown">${t("Unreported", "\u063A\u064A\u0631 \u0645\u0633\u062C\u0644")}</option></select></label></div><div id="flexScatterPlot" aria-live="polite"></div><p class="sub" id="flexScatterCount">${t("Rows shown", "\u0627\u0644\u0635\u0641\u0648\u0641 \u0627\u0644\u0645\u0639\u0631\u0648\u0636\u0629")}: n=${included} / ${dataset.rows.length} ${t("source rows with both plotted values", "\u0635\u0641 \u0645\u0635\u062F\u0631 \u064A\u062D\u0648\u064A \u0627\u0644\u0642\u064A\u0645\u062A\u064A\u0646")}</p><div class="legend"><span style="--legend-color:#39a77e">${t("Source test_end: Extinction", "\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u0635\u062F\u0631 test_end: Extinction")}</span><span style="--legend-color:#d59a3d">${t("Source test_end: Disruption", "\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u0635\u062F\u0631 test_end: Disruption")}</span><span style="--legend-color:#7d73d3">${t("Other / source label", "\u0623\u062E\u0631\u0649 / \u062A\u0633\u0645\u064A\u0629 \u0627\u0644\u0645\u0635\u062F\u0631")}</span></div><div class="callout warn">${t("The FLEX burning-rate constant is for liquid droplets under the d\xB2 law, not solid-material flame-spread speed. These points are descriptive; mixed conditions do not establish an oxygen effect or causality. Source: PSI-69 \xB7 DOI 10.60555/mbq8-0451.", "\u062B\u0627\u0628\u062A \u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642 \u0641\u064A FLEX \u062E\u0627\u0635 \u0628\u0627\u0644\u0642\u0637\u0631\u0627\u062A \u0627\u0644\u0633\u0627\u0626\u0644\u0629 \u0648\u0641\u0642 \u0642\u0627\u0646\u0648\u0646 d\xB2\u060C \u0648\u0644\u064A\u0633 \u0633\u0631\u0639\u0629 \u0627\u0646\u062A\u0634\u0627\u0631 \u0627\u0644\u0644\u0647\u0628 \u0639\u0644\u0649 \u0645\u0627\u062F\u0629 \u0635\u0644\u0628\u0629. \u0627\u0644\u0646\u0642\u0627\u0637 \u0648\u0635\u0641\u064A\u0629\u061B \u0627\u062E\u062A\u0644\u0627\u0641 \u0627\u0644\u0634\u0631\u0648\u0637 \u0644\u0627 \u064A\u062B\u0628\u062A \u0623\u062B\u0631 \u0627\u0644\u0623\u0643\u0633\u062C\u064A\u0646 \u0623\u0648 \u0627\u0644\u0633\u0628\u0628\u064A\u0629. \u0627\u0644\u0645\u0635\u062F\u0631: PSI-69 \xB7 DOI 10.60555/mbq8-0451.")}</div></article>`;
   }
   function bindFlexScatter(root) {
     const fuel = root.querySelector("#flexScatterFuel");
     const pressure = root.querySelector("#flexScatterPressure");
-    const plot = root.querySelector("#flexScatterPlot");
+    const plot2 = root.querySelector("#flexScatterPlot");
     const count = root.querySelector("#flexScatterCount");
-    if (!fuel || !pressure || !plot) return;
+    if (!fuel || !pressure || !plot2) return;
     const update = () => {
       const rows = dataset.rows.filter((row) => {
         if (fuel.value && row.fuel !== fuel.value) return false;
@@ -1405,11 +2223,20 @@
         if (pressure.value === "high") return row.pressure_mmHg > 1520;
         return true;
       });
-      plot.innerHTML = flexOxygenScatterSVG(
+      const config = FLEX_CHART_GUIDE[0];
+      plot2.innerHTML = scientificScatter({
         rows,
-        t("Oxygen mole fraction (%)", "\u0627\u0644\u0643\u0633\u0631 \u0627\u0644\u0645\u0648\u0644\u064A \u0644\u0644\u0623\u0643\u0633\u062C\u064A\u0646 (%)"),
-        t("Droplet burning-rate constant (mm\xB2/s)", "\u062B\u0627\u0628\u062A \u0645\u0639\u062F\u0644 \u0627\u062D\u062A\u0631\u0627\u0642 \u0627\u0644\u0642\u0637\u0631\u0629 (mm\xB2/s)")
-      );
+        xKey: config.xKey,
+        yKey: config.yKey,
+        xLabel: config.xLabel[lang],
+        yLabel: config.yLabel[lang],
+        xUnit: config.xUnit,
+        yUnit: config.yUnit,
+        xFactor: config.xFactor || 1,
+        groupKey: "fuel",
+        labels: chartControlLabels(lang)
+      });
+      bindInteractiveCharts(plot2);
       const shown = rows.filter(
         (row) => Number.isFinite(row.oxygen_mole_fraction) && Number.isFinite(row.burning_rate_mm_s)
       ).length;
@@ -1449,9 +2276,19 @@
     ];
     return `<article class="card" style="margin:15px 0"><div class="card-head"><div><span class="eyebrow">OFFICIAL CHALLENGE VIDEO \xB7 07:15\u201308:39</span><h3>${t("What the challenge asks us to deliver", "\u0645\u0627 \u0627\u0644\u0630\u064A \u064A\u0637\u0644\u0628\u0647 \u0627\u0644\u062A\u062D\u062F\u064A \u0645\u0646 \u0627\u0644\u0645\u0634\u0631\u0648\u0639")}</h3></div><a href="https://www.youtube.com/watch?v=AVuEiKxOpc0" target="_blank" rel="noreferrer">${t("Watch video \u2197", "\u0634\u0627\u0647\u062F \u0627\u0644\u0641\u064A\u062F\u064A\u0648 \u2197")}</a></div><div class="grid three">${goals.map(([title, body]) => `<section class="card"><h3>${title}</h3><p class="sub">${body}</p></section>`).join("")}</div><p class="sub">${t("SI is used to help navigate and explain cited evidence; generated text is not an experimental measurement. Optional Earth applications are documented separately.", "\u064A\u0633\u0627\u0639\u062F SI \u0639\u0644\u0649 \u0627\u0633\u062A\u0643\u0634\u0627\u0641 \u0627\u0644\u0623\u062F\u0644\u0629 \u0627\u0644\u0645\u0648\u062B\u0642\u0629 \u0648\u0634\u0631\u062D\u0647\u0627\u061B \u0627\u0644\u0646\u0635 \u0627\u0644\u0645\u0648\u0644\u0651\u062F \u0644\u064A\u0633 \u0642\u064A\u0627\u0633\u0627\u064B \u062A\u062C\u0631\u064A\u0628\u064A\u0627\u064B. \u062A\u0637\u0628\u064A\u0642\u0627\u062A \u0627\u0644\u0623\u0631\u0636 \u0627\u0644\u0627\u062E\u062A\u064A\u0627\u0631\u064A\u0629 \u0645\u0648\u062B\u0642\u0629 \u0645\u0646\u0641\u0635\u0644\u0629.")}</p></article>`;
   }
+  function flexBurnRateHistogram() {
+    return scientificHistogram({
+      rows: dataset.rows,
+      key: "burning_rate_mm_s",
+      label: t("Droplet burning-rate constant", "\u062B\u0627\u0628\u062A \u0645\u0639\u062F\u0644 \u0627\u062D\u062A\u0631\u0627\u0642 \u0627\u0644\u0642\u0637\u0631\u0629"),
+      unit: "mm\xB2/s",
+      labels: chartControlLabels(lang),
+      idField: "id"
+    });
+  }
   async function overview() {
     const evidence = await get("/api/challenge/catalog");
-    return `${hero()}${challengeGoals()}<div class="grid stats">${stat(t("PSI COMBUSTION INVESTIGATIONS", "\u062A\u062D\u0642\u064A\u0642\u0627\u062A \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642 \u0641\u064A PSI"), evidence.officialInventory.total, t("Official NASA inventory snapshot", "\u0644\u0642\u0637\u0629 \u0645\u0646 \u0641\u0647\u0631\u0633 NASA \u0627\u0644\u0631\u0633\u0645\u064A"), "\u25C9")}${stat(t("TABLES BUNDLED", "\u0627\u0644\u062C\u062F\u0627\u0648\u0644 \u0627\u0644\u0645\u0631\u0641\u0642\u0629"), evidence.investigations.length, t("NASA PSI tables \xB7 checksums verified", "\u062C\u062F\u0627\u0648\u0644 NASA PSI \xB7 \u0627\u0644\u0628\u0635\u0645\u0627\u062A \u0645\u062A\u062D\u0642\u0642\u0629"), "\u25A4")}${stat(t("SEPARATE SOURCE ROWS", "\u0635\u0641\u0648\u0641 \u0627\u0644\u0645\u0635\u062F\u0631 \u0627\u0644\u0645\u0646\u0641\u0635\u0644\u0629"), evidence.recordCountAcrossFiles, t("Separate studies \xB7 never pooled", "\u062F\u0631\u0627\u0633\u0627\u062A \u0645\u0646\u0641\u0635\u0644\u0629 \xB7 \u063A\u064A\u0631 \u0645\u062F\u0645\u062C\u0629"), "\u25A4")}${stat(t("VERIFIED TABLE HASHES", "\u0628\u0635\u0645\u0627\u062A \u0627\u0644\u062C\u062F\u0627\u0648\u0644 \u0627\u0644\u0645\u062A\u062D\u0642\u0642\u0629"), evidence.investigations.filter((x) => x.sourceIntegrity === "VERIFIED").length, t("Original source bytes verified", "\u062A\u0645 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0628\u0627\u064A\u062A\u0627\u062A \u0627\u0644\u0645\u0644\u0641\u0627\u062A \u0627\u0644\u0623\u0635\u0644\u064A\u0629"), "\u2713")}</div><div class="grid two"><article class="card"><div class="card-head"><div><h3>FLEX \xB7 PSI-69</h3><p class="sub">${t("One investigation selected for detailed, condition-stratified analysis.", "\u062A\u062D\u0642\u064A\u0642 \u0648\u0627\u062D\u062F \u0644\u0644\u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u062A\u0641\u0635\u064A\u0644\u064A \u0628\u062D\u0633\u0628 \u0638\u0631\u0648\u0641 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631.")}</p></div><span class="tag obs">${t("OBSERVED", "\u0645\u0631\u0635\u0648\u062F")}</span></div>${chartSVG(dataset.rows, "burning_rate_mm_s", t("FLEX droplet burning-rate constant", "\u062B\u0627\u0628\u062A \u0627\u062D\u062A\u0631\u0627\u0642 \u0642\u0637\u0631\u0627\u062A FLEX"), "mm\xB2/s")}<div class="legend"><span>PSI-69 \xB7 DOI 10.60555/mbq8-0451</span></div></article><article class="card"><h3>${t("NASA challenge-source coverage", "\u062A\u063A\u0637\u064A\u0629 \u0645\u0635\u062F\u0631 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062A\u062D\u062F\u064A")}</h3><p class="sub">${t(`Measurements come from the challenge-relevant NASA PSI Combustion Science repository. NASA PSI lists ${evidence.officialInventory.total} investigations; ${evidence.investigations.length} original table files are bundled, checksummed, and inspectable. Studies remain separate because their methods and outcomes differ.`, `\u062A\u0623\u062A\u064A \u0627\u0644\u0642\u064A\u0627\u0633\u0627\u062A \u0645\u0646 \u0645\u0633\u062A\u0648\u062F\u0639 NASA PSI Combustion Science \u0627\u0644\u0645\u0631\u062A\u0628\u0637 \u0628\u0627\u0644\u062A\u062D\u062F\u064A. \u064A\u0633\u062C\u0644 \u0627\u0644\u0641\u0647\u0631\u0633 ${evidence.officialInventory.total} \u062A\u062D\u0642\u064A\u0642\u0627\u064B\u061B \u0623\u0631\u0641\u0642\u0646\u0627 ${evidence.investigations.length} \u062C\u062F\u0648\u0644\u0627\u064B \u0623\u0635\u0644\u064A\u0627\u064B \u0645\u0639 \u0628\u0635\u0645\u0627\u062A\u0647\u0627 \u0644\u0641\u062D\u0635\u0647\u0627. \u0628\u0642\u064A\u062A \u0627\u0644\u062F\u0631\u0627\u0633\u0627\u062A \u0645\u0646\u0641\u0635\u0644\u0629 \u0644\u0627\u062E\u062A\u0644\u0627\u0641 \u0637\u0631\u0642\u0647\u0627 \u0648\u0646\u062A\u0627\u0626\u062C\u0647\u0627.`)}</p><div class="list-row"><span>${t("Flame and droplet studies", "\u062F\u0631\u0627\u0633\u0627\u062A \u0627\u0644\u0644\u0647\u0628 \u0648\u0627\u0644\u0642\u0637\u0631\u0627\u062A")}</span><b>ACME \xB7 CFI \xB7 FLEX \xB7 SPICE</b></div><div class="list-row"><span>${t("Solid materials and spacecraft fires", "\u0627\u0644\u0645\u0648\u0627\u062F \u0627\u0644\u0635\u0644\u0628\u0629 \u0648\u062D\u0631\u0627\u0626\u0642 \u0627\u0644\u0645\u0631\u0643\u0628\u0627\u062A")}</span><b>BASS \xB7 SAFFIRE</b></div><div class="list-row"><span>${t("Smoke and aerosol studies", "\u062F\u0631\u0627\u0633\u0627\u062A \u0627\u0644\u062F\u062E\u0627\u0646 \u0648\u0627\u0644\u0647\u0628\u0627\u0621")}</span><b>SAME \xB7 DAFT</b></div><div class="callout warn">${t("Other PSI records remain metadata and source links. Unlike experiments are not pooled into a universal fire-hazard rank.", "\u062A\u0628\u0642\u0649 \u0633\u062C\u0644\u0627\u062A PSI \u0627\u0644\u0623\u062E\u0631\u0649 \u0628\u064A\u0627\u0646\u0627\u062A \u0648\u0635\u0641\u064A\u0629 \u0648\u0631\u0648\u0627\u0628\u0637 \u0644\u0644\u0645\u0635\u0627\u062F\u0631. \u0644\u0627 \u0646\u062F\u0645\u062C \u062A\u062C\u0627\u0631\u0628 \u0645\u062E\u062A\u0644\u0641\u0629 \u0641\u064A \u062A\u0635\u0646\u064A\u0641 \u0639\u0627\u0645 \u0644\u062E\u0637\u0631 \u0627\u0644\u062D\u0631\u064A\u0642.")}</div></article></div>${flexScatterPanel()}<div class="grid three"><article class="card"><h3>${t("Study the physics", "\u0627\u062F\u0631\u0633 \u0627\u0644\u0641\u064A\u0632\u064A\u0627\u0621")}</h3><p class="sub">${t("Buoyancy-driven convection weakens in microgravity; diffusion and forced ventilation remain.", "\u064A\u0636\u0639\u0641 \u0627\u0644\u062D\u0645\u0644 \u0627\u0644\u0646\u0627\u062A\u062C \u0639\u0646 \u0627\u0644\u0637\u0641\u0648 \u0641\u064A \u0627\u0644\u062C\u0627\u0630\u0628\u064A\u0629 \u0627\u0644\u0635\u063A\u0631\u0649\u060C \u0628\u064A\u0646\u0645\u0627 \u064A\u0633\u062A\u0645\u0631 \u0627\u0644\u0627\u0646\u062A\u0634\u0627\u0631 \u0648\u0627\u0644\u062A\u0647\u0648\u064A\u0629 \u0627\u0644\u0642\u0633\u0631\u064A\u0629.")}</p><button class="outline-btn" data-go="Flame Physics">${t("Open Flame Physics \u2192", "\u0627\u0641\u062A\u062D \u0641\u064A\u0632\u064A\u0627\u0621 \u0627\u0644\u0644\u0647\u0628 \u2190")}</button></article><article class="card"><h3>${t("Inspect primary data", "\u0627\u0641\u062D\u0635 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629")}</h3><p class="sub">${t("Browse source rows, missing values, DOIs, and integrity checks for each study.", "\u0627\u0633\u062A\u0639\u0631\u0636 \u0635\u0641\u0648\u0641 \u0627\u0644\u0645\u0635\u062F\u0631 \u0648\u0627\u0644\u0642\u064A\u0645 \u0627\u0644\u0645\u0641\u0642\u0648\u062F\u0629 \u0648DOI \u0648\u0641\u062D\u0648\u0635 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0644\u0643\u0644 \u062F\u0631\u0627\u0633\u0629.")}</p><button class="outline-btn" data-go="Challenge Evidence">${t("Open evidence library \u2192", "\u0627\u0641\u062A\u062D \u0645\u0643\u062A\u0628\u0629 \u0627\u0644\u0623\u062F\u0644\u0629 \u2190")}</button></article><article class="card"><h3>${t("Decision-support boundary", "\u062D\u062F\u0648\u062F \u062F\u0639\u0645 \u0627\u0644\u0642\u0631\u0627\u0631")}</h3><p class="sub">${t("This research dashboard does not certify spacecraft fire risk or replace flight-safety procedures.", "\u0644\u0648\u062D\u0629 \u0627\u0644\u0623\u0628\u062D\u0627\u062B \u0644\u0627 \u062A\u0635\u0627\u062F\u0642 \u0639\u0644\u0649 \u0645\u062E\u0627\u0637\u0631 \u0627\u0644\u062D\u0631\u064A\u0642 \u0648\u0644\u0627 \u062A\u0633\u062A\u0628\u062F\u0644 \u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0633\u0644\u0627\u0645\u0629 \u0627\u0644\u0637\u064A\u0631\u0627\u0646.")}</p><a href="https://www.nasa.gov/missions/station/studying-combustion-and-fire-safety/" target="_blank" rel="noreferrer">NASA \xB7 ${t("fire-safety research", "\u0623\u0628\u062D\u0627\u062B \u0633\u0644\u0627\u0645\u0629 \u0627\u0644\u062D\u0631\u064A\u0642")} \u2197</a></article></div>`;
+    return `${hero()}${challengeGoals()}<div class="grid stats">${stat(t("PSI COMBUSTION INVESTIGATIONS", "\u062A\u062D\u0642\u064A\u0642\u0627\u062A \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642 \u0641\u064A PSI"), evidence.officialInventory.total, t("Official NASA inventory snapshot", "\u0644\u0642\u0637\u0629 \u0645\u0646 \u0641\u0647\u0631\u0633 NASA \u0627\u0644\u0631\u0633\u0645\u064A"), "\u25C9")}${stat(t("TABLES BUNDLED", "\u0627\u0644\u062C\u062F\u0627\u0648\u0644 \u0627\u0644\u0645\u0631\u0641\u0642\u0629"), evidence.investigations.length, t("NASA PSI tables \xB7 checksums verified", "\u062C\u062F\u0627\u0648\u0644 NASA PSI \xB7 \u0627\u0644\u0628\u0635\u0645\u0627\u062A \u0645\u062A\u062D\u0642\u0642\u0629"), "\u25A4")}${stat(t("SEPARATE SOURCE ROWS", "\u0635\u0641\u0648\u0641 \u0627\u0644\u0645\u0635\u062F\u0631 \u0627\u0644\u0645\u0646\u0641\u0635\u0644\u0629"), evidence.recordCountAcrossFiles, t("Separate studies \xB7 never pooled", "\u062F\u0631\u0627\u0633\u0627\u062A \u0645\u0646\u0641\u0635\u0644\u0629 \xB7 \u063A\u064A\u0631 \u0645\u062F\u0645\u062C\u0629"), "\u25A4")}${stat(t("VERIFIED TABLE HASHES", "\u0628\u0635\u0645\u0627\u062A \u0627\u0644\u062C\u062F\u0627\u0648\u0644 \u0627\u0644\u0645\u062A\u062D\u0642\u0642\u0629"), evidence.investigations.filter((x) => x.sourceIntegrity === "VERIFIED").length, t("Original source bytes verified", "\u062A\u0645 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0628\u0627\u064A\u062A\u0627\u062A \u0627\u0644\u0645\u0644\u0641\u0627\u062A \u0627\u0644\u0623\u0635\u0644\u064A\u0629"), "\u2713")}</div><div class="grid two"><article class="card"><div class="card-head"><div><h3>FLEX \xB7 PSI-69</h3><p class="sub">${t("One investigation selected for detailed, condition-stratified analysis.", "\u062A\u062D\u0642\u064A\u0642 \u0648\u0627\u062D\u062F \u0644\u0644\u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u062A\u0641\u0635\u064A\u0644\u064A \u0628\u062D\u0633\u0628 \u0638\u0631\u0648\u0641 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631.")}</p></div><span class="tag obs">${t("OBSERVED", "\u0645\u0631\u0635\u0648\u062F")}</span></div>${flexBurnRateHistogram()}<div class="legend"><span>PSI-69 \xB7 DOI 10.60555/mbq8-0451</span></div></article><article class="card"><h3>${t("NASA challenge-source coverage", "\u062A\u063A\u0637\u064A\u0629 \u0645\u0635\u062F\u0631 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062A\u062D\u062F\u064A")}</h3><p class="sub">${t(`Measurements come from the challenge-relevant NASA PSI Combustion Science repository. NASA PSI lists ${evidence.officialInventory.total} investigations; ${evidence.investigations.length} original table files are bundled, checksummed, and inspectable. Studies remain separate because their methods and outcomes differ.`, `\u062A\u0623\u062A\u064A \u0627\u0644\u0642\u064A\u0627\u0633\u0627\u062A \u0645\u0646 \u0645\u0633\u062A\u0648\u062F\u0639 NASA PSI Combustion Science \u0627\u0644\u0645\u0631\u062A\u0628\u0637 \u0628\u0627\u0644\u062A\u062D\u062F\u064A. \u064A\u0633\u062C\u0644 \u0627\u0644\u0641\u0647\u0631\u0633 ${evidence.officialInventory.total} \u062A\u062D\u0642\u064A\u0642\u0627\u064B\u061B \u0623\u0631\u0641\u0642\u0646\u0627 ${evidence.investigations.length} \u062C\u062F\u0648\u0644\u0627\u064B \u0623\u0635\u0644\u064A\u0627\u064B \u0645\u0639 \u0628\u0635\u0645\u0627\u062A\u0647\u0627 \u0644\u0641\u062D\u0635\u0647\u0627. \u0628\u0642\u064A\u062A \u0627\u0644\u062F\u0631\u0627\u0633\u0627\u062A \u0645\u0646\u0641\u0635\u0644\u0629 \u0644\u0627\u062E\u062A\u0644\u0627\u0641 \u0637\u0631\u0642\u0647\u0627 \u0648\u0646\u062A\u0627\u0626\u062C\u0647\u0627.`)}</p><div class="list-row"><span>${t("Flame and droplet studies", "\u062F\u0631\u0627\u0633\u0627\u062A \u0627\u0644\u0644\u0647\u0628 \u0648\u0627\u0644\u0642\u0637\u0631\u0627\u062A")}</span><b>ACME \xB7 CFI \xB7 FLEX \xB7 SPICE</b></div><div class="list-row"><span>${t("Solid materials and spacecraft fires", "\u0627\u0644\u0645\u0648\u0627\u062F \u0627\u0644\u0635\u0644\u0628\u0629 \u0648\u062D\u0631\u0627\u0626\u0642 \u0627\u0644\u0645\u0631\u0643\u0628\u0627\u062A")}</span><b>BASS \xB7 SAFFIRE</b></div><div class="list-row"><span>${t("Smoke and aerosol studies", "\u062F\u0631\u0627\u0633\u0627\u062A \u0627\u0644\u062F\u062E\u0627\u0646 \u0648\u0627\u0644\u0647\u0628\u0627\u0621")}</span><b>SAME \xB7 DAFT</b></div><div class="callout warn">${t("Other PSI records remain metadata and source links. Unlike experiments are not pooled into a universal fire-hazard rank.", "\u062A\u0628\u0642\u0649 \u0633\u062C\u0644\u0627\u062A PSI \u0627\u0644\u0623\u062E\u0631\u0649 \u0628\u064A\u0627\u0646\u0627\u062A \u0648\u0635\u0641\u064A\u0629 \u0648\u0631\u0648\u0627\u0628\u0637 \u0644\u0644\u0645\u0635\u0627\u062F\u0631. \u0644\u0627 \u0646\u062F\u0645\u062C \u062A\u062C\u0627\u0631\u0628 \u0645\u062E\u062A\u0644\u0641\u0629 \u0641\u064A \u062A\u0635\u0646\u064A\u0641 \u0639\u0627\u0645 \u0644\u062E\u0637\u0631 \u0627\u0644\u062D\u0631\u064A\u0642.")}</div></article></div>${flexScatterPanel()}<div class="grid three"><article class="card"><h3>${t("Study the physics", "\u0627\u062F\u0631\u0633 \u0627\u0644\u0641\u064A\u0632\u064A\u0627\u0621")}</h3><p class="sub">${t("Buoyancy-driven convection weakens in microgravity; diffusion and forced ventilation remain.", "\u064A\u0636\u0639\u0641 \u0627\u0644\u062D\u0645\u0644 \u0627\u0644\u0646\u0627\u062A\u062C \u0639\u0646 \u0627\u0644\u0637\u0641\u0648 \u0641\u064A \u0627\u0644\u062C\u0627\u0630\u0628\u064A\u0629 \u0627\u0644\u0635\u063A\u0631\u0649\u060C \u0628\u064A\u0646\u0645\u0627 \u064A\u0633\u062A\u0645\u0631 \u0627\u0644\u0627\u0646\u062A\u0634\u0627\u0631 \u0648\u0627\u0644\u062A\u0647\u0648\u064A\u0629 \u0627\u0644\u0642\u0633\u0631\u064A\u0629.")}</p><button class="outline-btn" data-go="Flame Physics">${t("Open Flame Physics \u2192", "\u0627\u0641\u062A\u062D \u0641\u064A\u0632\u064A\u0627\u0621 \u0627\u0644\u0644\u0647\u0628 \u2190")}</button></article><article class="card"><h3>${t("Inspect primary data", "\u0627\u0641\u062D\u0635 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629")}</h3><p class="sub">${t("Browse source rows, missing values, DOIs, and integrity checks for each study.", "\u0627\u0633\u062A\u0639\u0631\u0636 \u0635\u0641\u0648\u0641 \u0627\u0644\u0645\u0635\u062F\u0631 \u0648\u0627\u0644\u0642\u064A\u0645 \u0627\u0644\u0645\u0641\u0642\u0648\u062F\u0629 \u0648DOI \u0648\u0641\u062D\u0648\u0635 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0644\u0643\u0644 \u062F\u0631\u0627\u0633\u0629.")}</p><button class="outline-btn" data-go="Challenge Evidence">${t("Open evidence library \u2192", "\u0627\u0641\u062A\u062D \u0645\u0643\u062A\u0628\u0629 \u0627\u0644\u0623\u062F\u0644\u0629 \u2190")}</button></article><article class="card"><h3>${t("Decision-support boundary", "\u062D\u062F\u0648\u062F \u062F\u0639\u0645 \u0627\u0644\u0642\u0631\u0627\u0631")}</h3><p class="sub">${t("This research dashboard does not certify spacecraft fire risk or replace flight-safety procedures.", "\u0644\u0648\u062D\u0629 \u0627\u0644\u0623\u0628\u062D\u0627\u062B \u0644\u0627 \u062A\u0635\u0627\u062F\u0642 \u0639\u0644\u0649 \u0645\u062E\u0627\u0637\u0631 \u0627\u0644\u062D\u0631\u064A\u0642 \u0648\u0644\u0627 \u062A\u0633\u062A\u0628\u062F\u0644 \u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0633\u0644\u0627\u0645\u0629 \u0627\u0644\u0637\u064A\u0631\u0627\u0646.")}</p><a href="https://www.nasa.gov/missions/station/studying-combustion-and-fire-safety/" target="_blank" rel="noreferrer">NASA \xB7 ${t("fire-safety research", "\u0623\u0628\u062D\u0627\u062B \u0633\u0644\u0627\u0645\u0629 \u0627\u0644\u062D\u0631\u064A\u0642")} \u2197</a></article></div>`;
   }
   var WB_VARIABLES = [
     ["burning_rate_mm_s", "Burning-rate constant (mm\xB2/s)"],
@@ -1515,7 +2352,7 @@
     <div class="callout" style="margin-bottom:18px">${intro} <a href="https://psi.nasa.gov/physci/repo/data/investigations/PSI-69" target="_blank" rel="noreferrer">NASA PSI-69 \xB7 DOI 10.60555/mbq8-0451 \u2197</a></div>
     <h2 style="margin:22px 0 12px">${t("Overview plots", "\u0645\u062E\u0637\u0637\u0627 \u0627\u0644\u0646\u0638\u0631\u0629 \u0627\u0644\u0639\u0627\u0645\u0629")}</h2>
     <div class="grid two">
-      <article class="card"><h3>${t("FLEX burning-rate values by source-row order", "\u0642\u064A\u0645 \u0645\u0639\u062F\u0644 \u0627\u062D\u062A\u0631\u0627\u0642 FLEX \u0628\u062D\u0633\u0628 \u062A\u0631\u062A\u064A\u0628 \u0635\u0641\u0648\u0641 \u0627\u0644\u0645\u0635\u062F\u0631")}</h3><p class="sub">${t("Purpose: scan the spread of reported burning-rate constants and spot values worth inspecting.", "\u0627\u0644\u063A\u0631\u0636: \u0627\u0633\u062A\u0639\u0631\u0627\u0636 \u062A\u0634\u062A\u062A \u062B\u0648\u0627\u0628\u062A \u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642 \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0648\u0631\u0635\u062F \u0627\u0644\u0642\u064A\u0645 \u0627\u0644\u062A\u064A \u062A\u0633\u062A\u062D\u0642 \u0627\u0644\u0641\u062D\u0635.")}</p>${chartSVG(dataset.rows, "burning_rate_mm_s", t("FLEX droplet burning-rate constant", "\u062B\u0627\u0628\u062A \u0627\u062D\u062A\u0631\u0627\u0642 \u0642\u0637\u0631\u0627\u062A FLEX"), "mm\xB2/s")}<div class="callout warn">${t("The horizontal position is source-row order, not elapsed time or another physical variable. Do not read a left-to-right slope as a trend.", "\u0627\u0644\u0645\u0648\u0636\u0639 \u0627\u0644\u0623\u0641\u0642\u064A \u0647\u0648 \u062A\u0631\u062A\u064A\u0628 \u0635\u0641 \u0627\u0644\u0645\u0635\u062F\u0631\u060C \u0648\u0644\u064A\u0633 \u0632\u0645\u0646\u0627\u064B \u0645\u0646\u0642\u0636\u064A\u0627\u064B \u0623\u0648 \u0645\u062A\u063A\u064A\u0631\u0627\u064B \u0641\u064A\u0632\u064A\u0627\u0626\u064A\u0627\u064B. \u0644\u0627 \u062A\u0641\u0633\u0631 \u0645\u064A\u0644\u0627\u064B \u0645\u0646 \u0627\u0644\u064A\u0633\u0627\u0631 \u0625\u0644\u0649 \u0627\u0644\u064A\u0645\u064A\u0646 \u0639\u0644\u0649 \u0623\u0646\u0647 \u0627\u062A\u062C\u0627\u0647 \u0632\u0645\u0646\u064A.")}</div></article>
+      <article class="card"><h3>${t("Distribution of FLEX droplet burning-rate constants", "\u062A\u0648\u0632\u064A\u0639 \u062B\u0648\u0627\u0628\u062A \u0645\u0639\u062F\u0644 \u0627\u062D\u062A\u0631\u0627\u0642 \u0642\u0637\u0631\u0627\u062A FLEX")}</h3><p class="sub">${t("Purpose: scan the spread of reported burning-rate constants and spot values worth inspecting.", "\u0627\u0644\u063A\u0631\u0636: \u0627\u0633\u062A\u0639\u0631\u0627\u0636 \u062A\u0634\u062A\u062A \u062B\u0648\u0627\u0628\u062A \u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642 \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0648\u0631\u0635\u062F \u0627\u0644\u0642\u064A\u0645 \u0627\u0644\u062A\u064A \u062A\u0633\u062A\u062D\u0642 \u0627\u0644\u0641\u062D\u0635.")}</p>${flexBurnRateHistogram()}<div class="callout warn">${t("Each bar counts valid PSI-69 source rows within a burning-rate interval. Click a bar to inspect its source test IDs; binning is descriptive.", "\u064A\u0645\u062B\u0644 \u0643\u0644 \u0639\u0645\u0648\u062F \u0639\u062F\u062F \u0635\u0641\u0648\u0641 NASA PSI-69 \u0627\u0644\u0635\u0627\u0644\u062D\u0629 \u0636\u0645\u0646 \u0645\u062C\u0627\u0644 \u0644\u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642. \u0627\u0646\u0642\u0631 \u0639\u0645\u0648\u062F\u0627\u064B \u0644\u0641\u062D\u0635 \u0645\u0639\u0631\u0651\u0641\u0627\u062A \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631\u061B \u0648\u0627\u0644\u062A\u062C\u0645\u064A\u0639 \u0648\u0635\u0641\u064A.")}</div></article>
       ${flexScatterPanel()}
     </div>
     <h2 style="margin:24px 0 12px">${t("Six interactive Workbench plots", "\u0627\u0644\u0645\u062E\u0637\u0637\u0627\u062A \u0627\u0644\u062A\u0641\u0627\u0639\u0644\u064A\u0629 \u0627\u0644\u0633\u062A\u0629 \u0641\u064A \u0645\u0646\u0636\u062F\u0629 \u0627\u0644\u062A\u062D\u0644\u064A\u0644")}</h2>
@@ -1773,6 +2610,20 @@
       c.innerHTML = html;
       bindPage();
       if (name === "Overview" || name === "Chart Guide") bindFlexScatter(c);
+      if (name === "Chart Guide") {
+        const sourceCharts = document.createElement("section");
+        sourceCharts.className = "source-chart-guide-loading";
+        sourceCharts.innerHTML = `<div class="empty" role="status">${t("Loading source-table plots\u2026", "\u062C\u0627\u0631\u064D \u062A\u062D\u0645\u064A\u0644 \u0645\u062E\u0637\u0637\u0627\u062A \u062C\u062F\u0627\u0648\u0644 \u0627\u0644\u0645\u0635\u062F\u0631\u2026")}</div>`;
+        c.append(sourceCharts);
+        renderSourceChartGuide(lang).then((markup) => {
+          if (id !== navigationId) return;
+          sourceCharts.outerHTML = markup;
+          bindInteractiveCharts(c);
+        }).catch((error) => {
+          if (id !== navigationId) return;
+          sourceCharts.innerHTML = `<div class="callout warn">${t("Source-table plots could not load:", "\u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0645\u062E\u0637\u0637\u0627\u062A \u062C\u062F\u0627\u0648\u0644 \u0627\u0644\u0645\u0635\u062F\u0631:")} ${esc(error.message)}</div>`;
+        });
+      }
       if (name === "Challenge Evidence") bindChallengeLibrary(c, lang);
       if (name === "Investigation Lab") bindInvestigationLab(c, lang);
       if (name === "Flame Physics") bindFlameScene3d(c, lang);
@@ -2036,6 +2887,7 @@
       document.documentElement.dataset.morsAppReady = "true";
     } catch (e) {
       $("#content").innerHTML = `<div class="callout warn">Backend not ready. Start this application with <code>npm start</code> in its folder. ${esc(e.message)}</div>`;
+      document.documentElement.dataset.morsAppReady = "true";
     }
   })();
 })();

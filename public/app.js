@@ -10,13 +10,13 @@ import {
 import { csvCell } from './csv-safe.js';
 import { $, esc, toast, pageHead, stat, download } from './lib/dom.js';
 import { get, post } from './lib/api.js';
-import { chartSVG, flexOxygenScatterSVG } from './lib/charts.js';
-import { scientificScatter, bindInteractiveCharts } from './lib/interactive-charts.js';
+import { scientificScatter, bindInteractiveCharts, chartControlLabels, scientificHistogram } from './lib/interactive-charts.js';
 import { FLEX_CHART_GUIDE } from './lib/chart-guide.js';
 import { filterNavEntries } from './lib/navigation.js';
 import { bindFlameScene3d } from './lib/flame-scene3d.js';
 import { renderSystemConcepts, bindSystemConcepts } from './lib/system-concepts.js';
 import { renderModelGallery, bindModelGallery } from './lib/model-gallery.js';
+import { renderSourceChartGuide } from './source-charts.js';
 const nav = [
   ['Overview', 'Challenge overview', '⌂', 'COMMAND'],
   ['Flame Physics', 'Gravity, transport & flame behavior', '∿', 'SCIENCE'],
@@ -198,7 +198,7 @@ function flexScatterPanel() {
   const included = dataset.rows.filter(
     (row) => Number.isFinite(row.oxygen_mole_fraction) && Number.isFinite(row.burning_rate_mm_s),
   ).length;
-  return `<article class="card flex-scatter-card"><div class="card-head"><div><h3>${t('PSI-69 · Oxygen fraction and droplet burning rate', 'PSI-69 · نسبة الأكسجين ومعدل احتراق القطرة')}</h3><p class="sub">${t('Each point is one NASA FLEX source row. Hover for test ID, fuel, pressure and recorded end state.', 'كل نقطة تمثل صفاً واحداً من NASA FLEX. مرر المؤشر لعرض المعرّف والوقود والضغط والحالة النهائية.')}</p></div><span class="tag obs">${t('OBSERVED ROWS', 'صفوف مرصودة')}</span></div><div class="toolbar"><label>${t('Fuel', 'الوقود')} <select id="flexScatterFuel"><option value="">${t('All fuels', 'كل أنواع الوقود')}</option>${options}</select></label><label>${t('Pressure · mmHg', 'الضغط · mmHg')} <select id="flexScatterPressure"><option value="all">${t('All pressures', 'كل الضغوط')}</option><option value="low">≤ 760</option><option value="mid">760–1520</option><option value="high">&gt; 1520</option><option value="unknown">${t('Unreported', 'غير مسجل')}</option></select></label></div><div id="flexScatterPlot">${flexOxygenScatterSVG(dataset.rows, t('Oxygen mole fraction (%)', 'الكسر المولي للأكسجين (%)'), t('Droplet burning-rate constant (mm²/s)', 'ثابت معدل احتراق القطرة (mm²/s)'))}</div><p class="sub" id="flexScatterCount">${t('Rows shown', 'الصفوف المعروضة')}: n=${included} / ${dataset.rows.length} ${t('source rows with both plotted values', 'صف مصدر يحوي القيمتين')}</p><div class="legend"><span style="--legend-color:#39a77e">${t('Source test_end: Extinction', 'قيمة المصدر test_end: Extinction')}</span><span style="--legend-color:#d59a3d">${t('Source test_end: Disruption', 'قيمة المصدر test_end: Disruption')}</span><span style="--legend-color:#7d73d3">${t('Other / source label', 'أخرى / تسمية المصدر')}</span></div><div class="callout warn">${t('The FLEX burning-rate constant is for liquid droplets under the d² law, not solid-material flame-spread speed. These points are descriptive; mixed conditions do not establish an oxygen effect or causality. Source: PSI-69 · DOI 10.60555/mbq8-0451.', 'ثابت معدل الاحتراق في FLEX خاص بالقطرات السائلة وفق قانون d²، وليس سرعة انتشار اللهب على مادة صلبة. النقاط وصفية؛ اختلاف الشروط لا يثبت أثر الأكسجين أو السببية. المصدر: PSI-69 · DOI 10.60555/mbq8-0451.')}</div></article>`;
+  return `<article class="card flex-scatter-card"><div class="card-head"><div><h3>${t('PSI-69 · Oxygen fraction and droplet burning rate', 'PSI-69 · نسبة الأكسجين ومعدل احتراق القطرة')}</h3><p class="sub">${t('Each point is one NASA FLEX source row. Click or tap a point for test details; drag empty space to pan, zoom, or draw a guide line.', 'كل نقطة تمثل صفاً واحداً من NASA FLEX. انقر النقطة لعرض تفاصيل الاختبار؛ اسحب المساحة الفارغة للتحريك أو التكبير أو رسم خط إرشادي.')}</p></div><span class="tag obs">${t('OBSERVED ROWS', 'صفوف مرصودة')}</span></div><div class="toolbar"><label>${t('Fuel', 'الوقود')} <select id="flexScatterFuel"><option value="">${t('All fuels', 'كل أنواع الوقود')}</option>${options}</select></label><label>${t('Pressure · mmHg', 'الضغط · mmHg')} <select id="flexScatterPressure"><option value="all">${t('All pressures', 'كل الضغوط')}</option><option value="low">≤ 760</option><option value="mid">760–1520</option><option value="high">&gt; 1520</option><option value="unknown">${t('Unreported', 'غير مسجل')}</option></select></label></div><div id="flexScatterPlot" aria-live="polite"></div><p class="sub" id="flexScatterCount">${t('Rows shown', 'الصفوف المعروضة')}: n=${included} / ${dataset.rows.length} ${t('source rows with both plotted values', 'صف مصدر يحوي القيمتين')}</p><div class="legend"><span style="--legend-color:#39a77e">${t('Source test_end: Extinction', 'قيمة المصدر test_end: Extinction')}</span><span style="--legend-color:#d59a3d">${t('Source test_end: Disruption', 'قيمة المصدر test_end: Disruption')}</span><span style="--legend-color:#7d73d3">${t('Other / source label', 'أخرى / تسمية المصدر')}</span></div><div class="callout warn">${t('The FLEX burning-rate constant is for liquid droplets under the d² law, not solid-material flame-spread speed. These points are descriptive; mixed conditions do not establish an oxygen effect or causality. Source: PSI-69 · DOI 10.60555/mbq8-0451.', 'ثابت معدل الاحتراق في FLEX خاص بالقطرات السائلة وفق قانون d²، وليس سرعة انتشار اللهب على مادة صلبة. النقاط وصفية؛ اختلاف الشروط لا يثبت أثر الأكسجين أو السببية. المصدر: PSI-69 · DOI 10.60555/mbq8-0451.')}</div></article>`;
 }
 function bindFlexScatter(root) {
   const fuel = root.querySelector('#flexScatterFuel');
@@ -216,11 +216,20 @@ function bindFlexScatter(root) {
       if (pressure.value === 'high') return row.pressure_mmHg > 1520;
       return true;
     });
-    plot.innerHTML = flexOxygenScatterSVG(
+    const config = FLEX_CHART_GUIDE[0];
+    plot.innerHTML = scientificScatter({
       rows,
-      t('Oxygen mole fraction (%)', 'الكسر المولي للأكسجين (%)'),
-      t('Droplet burning-rate constant (mm²/s)', 'ثابت معدل احتراق القطرة (mm²/s)'),
-    );
+      xKey: config.xKey,
+      yKey: config.yKey,
+      xLabel: config.xLabel[lang],
+      yLabel: config.yLabel[lang],
+      xUnit: config.xUnit,
+      yUnit: config.yUnit,
+      xFactor: config.xFactor || 1,
+      groupKey: 'fuel',
+      labels: chartControlLabels(lang),
+    });
+    bindInteractiveCharts(plot);
     const shown = rows.filter(
       (row) => Number.isFinite(row.oxygen_mole_fraction) && Number.isFinite(row.burning_rate_mm_s),
     ).length;
@@ -263,9 +272,19 @@ function challengeGoals() {
         ];
   return `<article class="card" style="margin:15px 0"><div class="card-head"><div><span class="eyebrow">OFFICIAL CHALLENGE VIDEO · 07:15–08:39</span><h3>${t('What the challenge asks us to deliver', 'ما الذي يطلبه التحدي من المشروع')}</h3></div><a href="https://www.youtube.com/watch?v=AVuEiKxOpc0" target="_blank" rel="noreferrer">${t('Watch video ↗', 'شاهد الفيديو ↗')}</a></div><div class="grid three">${goals.map(([title, body]) => `<section class="card"><h3>${title}</h3><p class="sub">${body}</p></section>`).join('')}</div><p class="sub">${t('SI is used to help navigate and explain cited evidence; generated text is not an experimental measurement. Optional Earth applications are documented separately.', 'يساعد SI على استكشاف الأدلة الموثقة وشرحها؛ النص المولّد ليس قياساً تجريبياً. تطبيقات الأرض الاختيارية موثقة منفصلة.')}</p></article>`;
 }
+function flexBurnRateHistogram() {
+  return scientificHistogram({
+    rows: dataset.rows,
+    key: 'burning_rate_mm_s',
+    label: t('Droplet burning-rate constant', 'ثابت معدل احتراق القطرة'),
+    unit: 'mm²/s',
+    labels: chartControlLabels(lang),
+    idField: 'id',
+  });
+}
 async function overview() {
   const evidence = await get('/api/challenge/catalog');
-  return `${hero()}${challengeGoals()}<div class="grid stats">${stat(t('PSI COMBUSTION INVESTIGATIONS', 'تحقيقات الاحتراق في PSI'), evidence.officialInventory.total, t('Official NASA inventory snapshot', 'لقطة من فهرس NASA الرسمي'), '◉')}${stat(t('TABLES BUNDLED', 'الجداول المرفقة'), evidence.investigations.length, t('NASA PSI tables · checksums verified', 'جداول NASA PSI · البصمات متحققة'), '▤')}${stat(t('SEPARATE SOURCE ROWS', 'صفوف المصدر المنفصلة'), evidence.recordCountAcrossFiles, t('Separate studies · never pooled', 'دراسات منفصلة · غير مدمجة'), '▤')}${stat(t('VERIFIED TABLE HASHES', 'بصمات الجداول المتحققة'), evidence.investigations.filter((x) => x.sourceIntegrity === 'VERIFIED').length, t('Original source bytes verified', 'تم التحقق من بايتات الملفات الأصلية'), '✓')}</div><div class="grid two"><article class="card"><div class="card-head"><div><h3>FLEX · PSI-69</h3><p class="sub">${t('One investigation selected for detailed, condition-stratified analysis.', 'تحقيق واحد للتحليل التفصيلي بحسب ظروف الاختبار.')}</p></div><span class="tag obs">${t('OBSERVED', 'مرصود')}</span></div>${chartSVG(dataset.rows, 'burning_rate_mm_s', t('FLEX droplet burning-rate constant', 'ثابت احتراق قطرات FLEX'), 'mm²/s')}<div class="legend"><span>PSI-69 · DOI 10.60555/mbq8-0451</span></div></article><article class="card"><h3>${t('NASA challenge-source coverage', 'تغطية مصدر بيانات التحدي')}</h3><p class="sub">${t(`Measurements come from the challenge-relevant NASA PSI Combustion Science repository. NASA PSI lists ${evidence.officialInventory.total} investigations; ${evidence.investigations.length} original table files are bundled, checksummed, and inspectable. Studies remain separate because their methods and outcomes differ.`, `تأتي القياسات من مستودع NASA PSI Combustion Science المرتبط بالتحدي. يسجل الفهرس ${evidence.officialInventory.total} تحقيقاً؛ أرفقنا ${evidence.investigations.length} جدولاً أصلياً مع بصماتها لفحصها. بقيت الدراسات منفصلة لاختلاف طرقها ونتائجها.`)}</p><div class="list-row"><span>${t('Flame and droplet studies', 'دراسات اللهب والقطرات')}</span><b>ACME · CFI · FLEX · SPICE</b></div><div class="list-row"><span>${t('Solid materials and spacecraft fires', 'المواد الصلبة وحرائق المركبات')}</span><b>BASS · SAFFIRE</b></div><div class="list-row"><span>${t('Smoke and aerosol studies', 'دراسات الدخان والهباء')}</span><b>SAME · DAFT</b></div><div class="callout warn">${t('Other PSI records remain metadata and source links. Unlike experiments are not pooled into a universal fire-hazard rank.', 'تبقى سجلات PSI الأخرى بيانات وصفية وروابط للمصادر. لا ندمج تجارب مختلفة في تصنيف عام لخطر الحريق.')}</div></article></div>${flexScatterPanel()}<div class="grid three"><article class="card"><h3>${t('Study the physics', 'ادرس الفيزياء')}</h3><p class="sub">${t('Buoyancy-driven convection weakens in microgravity; diffusion and forced ventilation remain.', 'يضعف الحمل الناتج عن الطفو في الجاذبية الصغرى، بينما يستمر الانتشار والتهوية القسرية.')}</p><button class="outline-btn" data-go="Flame Physics">${t('Open Flame Physics →', 'افتح فيزياء اللهب ←')}</button></article><article class="card"><h3>${t('Inspect primary data', 'افحص البيانات الأساسية')}</h3><p class="sub">${t('Browse source rows, missing values, DOIs, and integrity checks for each study.', 'استعرض صفوف المصدر والقيم المفقودة وDOI وفحوص السلامة لكل دراسة.')}</p><button class="outline-btn" data-go="Challenge Evidence">${t('Open evidence library →', 'افتح مكتبة الأدلة ←')}</button></article><article class="card"><h3>${t('Decision-support boundary', 'حدود دعم القرار')}</h3><p class="sub">${t('This research dashboard does not certify spacecraft fire risk or replace flight-safety procedures.', 'لوحة الأبحاث لا تصادق على مخاطر الحريق ولا تستبدل إجراءات سلامة الطيران.')}</p><a href="https://www.nasa.gov/missions/station/studying-combustion-and-fire-safety/" target="_blank" rel="noreferrer">NASA · ${t('fire-safety research', 'أبحاث سلامة الحريق')} ↗</a></article></div>`;
+  return `${hero()}${challengeGoals()}<div class="grid stats">${stat(t('PSI COMBUSTION INVESTIGATIONS', 'تحقيقات الاحتراق في PSI'), evidence.officialInventory.total, t('Official NASA inventory snapshot', 'لقطة من فهرس NASA الرسمي'), '◉')}${stat(t('TABLES BUNDLED', 'الجداول المرفقة'), evidence.investigations.length, t('NASA PSI tables · checksums verified', 'جداول NASA PSI · البصمات متحققة'), '▤')}${stat(t('SEPARATE SOURCE ROWS', 'صفوف المصدر المنفصلة'), evidence.recordCountAcrossFiles, t('Separate studies · never pooled', 'دراسات منفصلة · غير مدمجة'), '▤')}${stat(t('VERIFIED TABLE HASHES', 'بصمات الجداول المتحققة'), evidence.investigations.filter((x) => x.sourceIntegrity === 'VERIFIED').length, t('Original source bytes verified', 'تم التحقق من بايتات الملفات الأصلية'), '✓')}</div><div class="grid two"><article class="card"><div class="card-head"><div><h3>FLEX · PSI-69</h3><p class="sub">${t('One investigation selected for detailed, condition-stratified analysis.', 'تحقيق واحد للتحليل التفصيلي بحسب ظروف الاختبار.')}</p></div><span class="tag obs">${t('OBSERVED', 'مرصود')}</span></div>${flexBurnRateHistogram()}<div class="legend"><span>PSI-69 · DOI 10.60555/mbq8-0451</span></div></article><article class="card"><h3>${t('NASA challenge-source coverage', 'تغطية مصدر بيانات التحدي')}</h3><p class="sub">${t(`Measurements come from the challenge-relevant NASA PSI Combustion Science repository. NASA PSI lists ${evidence.officialInventory.total} investigations; ${evidence.investigations.length} original table files are bundled, checksummed, and inspectable. Studies remain separate because their methods and outcomes differ.`, `تأتي القياسات من مستودع NASA PSI Combustion Science المرتبط بالتحدي. يسجل الفهرس ${evidence.officialInventory.total} تحقيقاً؛ أرفقنا ${evidence.investigations.length} جدولاً أصلياً مع بصماتها لفحصها. بقيت الدراسات منفصلة لاختلاف طرقها ونتائجها.`)}</p><div class="list-row"><span>${t('Flame and droplet studies', 'دراسات اللهب والقطرات')}</span><b>ACME · CFI · FLEX · SPICE</b></div><div class="list-row"><span>${t('Solid materials and spacecraft fires', 'المواد الصلبة وحرائق المركبات')}</span><b>BASS · SAFFIRE</b></div><div class="list-row"><span>${t('Smoke and aerosol studies', 'دراسات الدخان والهباء')}</span><b>SAME · DAFT</b></div><div class="callout warn">${t('Other PSI records remain metadata and source links. Unlike experiments are not pooled into a universal fire-hazard rank.', 'تبقى سجلات PSI الأخرى بيانات وصفية وروابط للمصادر. لا ندمج تجارب مختلفة في تصنيف عام لخطر الحريق.')}</div></article></div>${flexScatterPanel()}<div class="grid three"><article class="card"><h3>${t('Study the physics', 'ادرس الفيزياء')}</h3><p class="sub">${t('Buoyancy-driven convection weakens in microgravity; diffusion and forced ventilation remain.', 'يضعف الحمل الناتج عن الطفو في الجاذبية الصغرى، بينما يستمر الانتشار والتهوية القسرية.')}</p><button class="outline-btn" data-go="Flame Physics">${t('Open Flame Physics →', 'افتح فيزياء اللهب ←')}</button></article><article class="card"><h3>${t('Inspect primary data', 'افحص البيانات الأساسية')}</h3><p class="sub">${t('Browse source rows, missing values, DOIs, and integrity checks for each study.', 'استعرض صفوف المصدر والقيم المفقودة وDOI وفحوص السلامة لكل دراسة.')}</p><button class="outline-btn" data-go="Challenge Evidence">${t('Open evidence library →', 'افتح مكتبة الأدلة ←')}</button></article><article class="card"><h3>${t('Decision-support boundary', 'حدود دعم القرار')}</h3><p class="sub">${t('This research dashboard does not certify spacecraft fire risk or replace flight-safety procedures.', 'لوحة الأبحاث لا تصادق على مخاطر الحريق ولا تستبدل إجراءات سلامة الطيران.')}</p><a href="https://www.nasa.gov/missions/station/studying-combustion-and-fire-safety/" target="_blank" rel="noreferrer">NASA · ${t('fire-safety research', 'أبحاث سلامة الحريق')} ↗</a></article></div>`;
 }
 const WB_VARIABLES = [
   ['burning_rate_mm_s', 'Burning-rate constant (mm²/s)'],
@@ -334,7 +353,7 @@ function chartGuidePage() {
     <div class="callout" style="margin-bottom:18px">${intro} <a href="https://psi.nasa.gov/physci/repo/data/investigations/PSI-69" target="_blank" rel="noreferrer">NASA PSI-69 · DOI 10.60555/mbq8-0451 ↗</a></div>
     <h2 style="margin:22px 0 12px">${t('Overview plots', 'مخططا النظرة العامة')}</h2>
     <div class="grid two">
-      <article class="card"><h3>${t('FLEX burning-rate values by source-row order', 'قيم معدل احتراق FLEX بحسب ترتيب صفوف المصدر')}</h3><p class="sub">${t('Purpose: scan the spread of reported burning-rate constants and spot values worth inspecting.', 'الغرض: استعراض تشتت ثوابت معدل الاحتراق المسجلة ورصد القيم التي تستحق الفحص.')}</p>${chartSVG(dataset.rows, 'burning_rate_mm_s', t('FLEX droplet burning-rate constant', 'ثابت احتراق قطرات FLEX'), 'mm²/s')}<div class="callout warn">${t('The horizontal position is source-row order, not elapsed time or another physical variable. Do not read a left-to-right slope as a trend.', 'الموضع الأفقي هو ترتيب صف المصدر، وليس زمناً منقضياً أو متغيراً فيزيائياً. لا تفسر ميلاً من اليسار إلى اليمين على أنه اتجاه زمني.')}</div></article>
+      <article class="card"><h3>${t('Distribution of FLEX droplet burning-rate constants', 'توزيع ثوابت معدل احتراق قطرات FLEX')}</h3><p class="sub">${t('Purpose: scan the spread of reported burning-rate constants and spot values worth inspecting.', 'الغرض: استعراض تشتت ثوابت معدل الاحتراق المسجلة ورصد القيم التي تستحق الفحص.')}</p>${flexBurnRateHistogram()}<div class="callout warn">${t('Each bar counts valid PSI-69 source rows within a burning-rate interval. Click a bar to inspect its source test IDs; binning is descriptive.', 'يمثل كل عمود عدد صفوف NASA PSI-69 الصالحة ضمن مجال لمعدل الاحتراق. انقر عموداً لفحص معرّفات الاختبار؛ والتجميع وصفي.')}</div></article>
       ${flexScatterPanel()}
     </div>
     <h2 style="margin:24px 0 12px">${t('Six interactive Workbench plots', 'المخططات التفاعلية الستة في منضدة التحليل')}</h2>
@@ -628,6 +647,20 @@ async function go(name) {
     c.innerHTML = html;
     bindPage();
     if (name === 'Overview' || name === 'Chart Guide') bindFlexScatter(c);
+    if (name === 'Chart Guide') {
+      const sourceCharts = document.createElement('section');
+      sourceCharts.className = 'source-chart-guide-loading';
+      sourceCharts.innerHTML = `<div class="empty" role="status">${t('Loading source-table plots…', 'جارٍ تحميل مخططات جداول المصدر…')}</div>`;
+      c.append(sourceCharts);
+      renderSourceChartGuide(lang).then((markup) => {
+        if (id !== navigationId) return;
+        sourceCharts.outerHTML = markup;
+        bindInteractiveCharts(c);
+      }).catch((error) => {
+        if (id !== navigationId) return;
+        sourceCharts.innerHTML = `<div class="callout warn">${t('Source-table plots could not load:', 'تعذر تحميل مخططات جداول المصدر:')} ${esc(error.message)}</div>`;
+      });
+    }
     if (name === 'Challenge Evidence') bindChallengeLibrary(c, lang);
     if (name === 'Investigation Lab') bindInvestigationLab(c, lang);
     if (name === 'Flame Physics') bindFlameScene3d(c, lang);
@@ -924,5 +957,6 @@ $('#content').innerHTML = `<div class="empty">${t('Loading research view…', '�
   } catch (e) {
     $('#content').innerHTML =
       `<div class="callout warn">Backend not ready. Start this application with <code>npm start</code> in its folder. ${esc(e.message)}</div>`;
+    document.documentElement.dataset.morsAppReady = 'true';
   }
 })();

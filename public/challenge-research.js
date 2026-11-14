@@ -2,6 +2,9 @@ import { esc, pageHead, stat } from './lib/dom.js';
 import { get } from './lib/api.js';
 import { renderEvidenceCoverage } from './lib/evidence-coverage.js';
 import { flameScene3d } from './lib/flame-scene3d.js';
+import { bindInteractiveCharts } from './lib/interactive-charts.js';
+import { sourceChartsForStudy } from './lib/source-chart-guide.js';
+import { loadStudyTable, renderSourceStudyCharts } from './source-charts.js';
 
 const studyNotes = {
   'PSI-20': 'ACME BRE · gaseous flames and burning-rate emulator test conditions',
@@ -179,13 +182,16 @@ export async function renderInvestigationLab(lang = 'en') {
 export function bindInvestigationLab(root, lang = 'en') {
   const ar = lang === 'ar';
   let dataPromise;
+  let selectionEpoch = 0;
   const loadData = () => dataPromise ||= get('/api/challenge/catalog');
   const select = root.querySelector('#studySelect');
   const panel = root.querySelector('#studyAnalysisPanel');
   if (!select || !panel) return;
   const renderSelected = async () => {
+    const requestEpoch = ++selectionEpoch;
     const data = await loadData();
     const id = select.value;
+    if (requestEpoch !== selectionEpoch) return;
     const item = data.investigations.find(study => study.id === id);
     if (!item) {
       const metadata = data.officialInventory.records.find(study => study.id === id);
@@ -193,6 +199,24 @@ export function bindInvestigationLab(root, lang = 'en') {
       return;
     }
     panel.innerHTML = studyAnalysisMarkup(item, ar);
+    const chartSlot = document.createElement('div');
+    chartSlot.className = 'study-source-chart-slot';
+    panel.append(chartSlot);
+    if (sourceChartsForStudy(id).length) {
+      chartSlot.innerHTML = `<div class="empty">${ar ? 'جارٍ تحميل قياسات هذا الجدول…' : 'Loading this table’s measurements…'}</div>`;
+      loadStudyTable(id)
+        .then(table => {
+          if (requestEpoch === selectionEpoch && select.value === id) {
+            chartSlot.innerHTML = renderSourceStudyCharts(id, table.rows, lang, item.sourceUrl);
+            bindInteractiveCharts(chartSlot);
+          }
+        })
+        .catch(error => {
+          if (requestEpoch === selectionEpoch) chartSlot.innerHTML = `<div class="callout warn">${esc(error.message)}</div>`;
+        });
+    } else {
+      chartSlot.innerHTML = renderSourceStudyCharts(id, [], lang, item.sourceUrl);
+    }
     const button = panel.querySelector('[data-study-rows]');
     if (button) button.onclick = async () => {
       const target = panel.querySelector('#study-source-rows');
@@ -208,6 +232,7 @@ export function bindInvestigationLab(root, lang = 'en') {
     };
   };
   select.onchange = renderSelected;
+  renderSelected();
 }
 
 function electricFieldNote(ar) {
