@@ -817,7 +817,8 @@ $('#content').innerHTML = `<div class="empty">${t('Loading research viewâ€¦', 'Ø
     dataset = await get('/api/datasets/flex');
     analysis = await get('/api/analysis');
     await health();
-    go(current);
+    await go(current);
+    document.documentElement.dataset.morsAppReady = 'true';
   } catch (e) {
     $('#content').innerHTML =
       `<div class="callout warn">Backend not ready. Start this application with <code>npm start</code> in its folder. ${esc(e.message)}</div>`;
