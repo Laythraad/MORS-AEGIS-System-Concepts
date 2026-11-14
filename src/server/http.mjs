@@ -1,5 +1,5 @@
 // HTTP primitives: response headers, bounded body readers, origin checks, rate limits and a small cache.
-import { ALLOWED_HOSTS, NETWORK_MODE, TRUSTED_ORIGINS } from './config.mjs';
+import { ALLOWED_HOSTS, NETWORK_MODE, PUBLIC_READONLY, TRUSTED_ORIGINS } from './config.mjs';
 
 export function safeHeaders(type) {
   return {
@@ -66,7 +66,7 @@ export function isLoopbackOrPrivate(address = '') {
 export function requestIsLocal(req) {
   const host = String(req.headers.host || '').toLowerCase();
   if (!ALLOWED_HOSTS.has(host)) return false;
-  if (NETWORK_MODE && !isLoopbackOrPrivate(req.socket.remoteAddress)) return false;
+  if (NETWORK_MODE && !PUBLIC_READONLY && !isLoopbackOrPrivate(req.socket.remoteAddress)) return false;
   if (req.headers['sec-fetch-site'] === 'cross-site') return false;
   const origin = req.headers.origin;
   if (!origin) return true; // CLI clients and same-origin navigations may omit Origin.

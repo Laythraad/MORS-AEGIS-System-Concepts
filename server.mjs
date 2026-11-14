@@ -3,7 +3,7 @@
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { HOST, PORT, NETWORK_MODE, PUBLIC_ROOT } from './src/server/config.mjs';
+import { HOST, PORT, NETWORK_MODE, PUBLIC_READONLY, PUBLIC_ROOT } from './src/server/config.mjs';
 import { send, safeHeaders, requestIsLocal } from './src/server/http.mjs';
 import { hasSession, loginPage, authenticate, logout } from './src/server/auth.mjs';
 import { dataRoutes } from './src/server/routes/data.mjs';
@@ -41,11 +41,13 @@ async function serveStatic(req, res, url) {
 async function handle(req, res) {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   if (url.pathname === '/api/logout') return req.method === 'POST' ? logout(req, res) : send(res, 405, { error: 'Method not allowed.' });
-  if (NETWORK_MODE && !hasSession(req)) {
+  if (NETWORK_MODE && !PUBLIC_READONLY && !hasSession(req)) {
     if (url.pathname === '/api/auth' && req.method === 'POST') return authenticate(req, res);
     if (url.pathname.startsWith('/api/')) return send(res, 401, { error: 'Access token required.' });
     return send(res, 401, loginPage(), 'text/html; charset=utf-8');
   }
+  if (NETWORK_MODE && PUBLIC_READONLY && url.pathname.startsWith('/api/') && req.method !== 'GET')
+    return send(res, 405, { error: 'Read-only public mode.' });
   if (!url.pathname.startsWith('/api/')) return serveStatic(req, res, url);
   const route = ROUTES.get(`${req.method} ${url.pathname}`);
   if (route) return route(req, res, url, req.socket.remoteAddress || 'local');
