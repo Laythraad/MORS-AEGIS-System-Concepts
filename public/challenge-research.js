@@ -5,6 +5,7 @@ import { flameScene3d } from './lib/flame-scene3d.js';
 import { bindInteractiveCharts } from './lib/interactive-charts.js';
 import { sourceChartsForStudy } from './lib/source-chart-guide.js';
 import { loadStudyTable, renderSourceStudyCharts } from './source-charts.js';
+import { flex3DMarkup, bindFlex3DPlot } from './lib/flex-3d.js';
 
 const studyNotes = {
   'PSI-20': 'ACME BRE · gaseous flames and burning-rate emulator test conditions',
@@ -277,4 +278,26 @@ export function renderSafetyInsights(lang = 'en') {
   ];
   const ref = ar ? 'مبادئ تصميم بحثية وليست إجراءات تشغيل أو وصفات لجو المركبة.' : 'Research design implications only; these are not vehicle operating procedures or cabin-atmosphere prescriptions.';
   return `${pageHead(ar ? 'استنتاجات سلامة الحريق' : 'Fire Safety Insights', ar ? 'تحويل الأدلة إلى أسئلة تصميم قابلة للاختبار من دون ادعاء تصديق أو تصنيف خطر عام.' : 'Turn NASA evidence into testable design actions without claiming certification or a universal hazard ranking.')}<div class="equation"><b>${ar ? 'ضغط الأكسجين الجزئي' : 'Oxygen partial pressure'}</b><code>pO₂ = xO₂ · Ptotal</code><p class="sub">${ar ? 'نسبة الأكسجين وحدها لا تكفي لوصف الجو. تغيّر الضغط أو التركيب قد يغيّر حدود الاشتعال؛ لا نوصي بإعدادات جو للطاقم.' : 'Oxygen fraction alone does not define the atmosphere. Changing total pressure or composition changes flammability conditions; this dashboard does not prescribe crew atmosphere settings.'}</p></div><div class="grid two safety-grid">${cards.map(([title, body, evidence]) => `<article class="card safety-card"><span class="tag comp">${ar ? 'إجراء وقائي' : 'DESIGN CONTROL'}</span><h2>${title}</h2><p>${body}</p><div class="callout">${evidence}</div></article>`).join('')}</div><article class="card" style="margin-top:15px"><h2>${ar ? 'أسئلة اختبار قابلة للتنفيذ' : 'Actionable qualification questions'}</h2><ol><li>${ar ? 'هل المادة نفسها اختُبرت عند ضغط الأكسجين المتوقع، لا عند نسبة O₂ وحدها؟' : 'Was the exact material tested at the expected oxygen partial pressure, not oxygen fraction alone?'}</li><li>${ar ? 'هل اتجاه وسرعة التهوية وموضع الكاشف مطابق لبيئة الاستخدام؟' : 'Do airflow speed/direction and detector location match the intended environment?'}</li><li>${ar ? 'هل نتيجة الإخماد تقيس إطفاء اللهب المرئي وتوقف التفاعل الكيميائي كلٌّ على حدة؟' : 'Does the suppression outcome separately measure visible-flame extinction and cessation of chemical reaction?'}</li><li>${ar ? 'هل عدد التكرارات وعدم اليقين كافيان قبل تعميم الاستنتاج؟' : 'Are replication and uncertainty adequate before generalizing the result?'}</li></ol><p class="sub">${ref}</p><div class="list-row"><span>NASA OCHMO-TB-008 · Fire Protection</span><a href="https://www.nasa.gov/wp-content/uploads/2023/12/ochmo-tb-008-fire-protection.pdf" target="_blank" rel="noreferrer">${ar ? 'فتح المصدر ↗' : 'Open source ↗'}</a></div><div class="list-row"><span>NASA-STD-3001 Volume 2 · Revision F</span><a href="https://www.nasa.gov/wp-content/uploads/2025/05/nasa-std-3001-vol-2.pdf" target="_blank" rel="noreferrer">${ar ? 'فتح المصدر ↗' : 'Open source ↗'}</a></div><div class="list-row"><span>NASA combustion and fire safety investigations</span><a href="https://www.nasa.gov/missions/station/studying-combustion-and-fire-safety/" target="_blank" rel="noreferrer">${ar ? 'فتح المصدر ↗' : 'Open source ↗'}</a></div></article>`;
+}
+
+// Add source-backed plots to the safety page. Keep PSI-69 isolated: its droplet
+// measurements cannot be pooled with BASS solid-material tests or used as a
+// universal flame-spread curve.
+export async function bindSafetyInsightCharts(root, lang = 'en') {
+  const ar = lang === 'ar';
+  const section = document.createElement('section');
+  section.className = 'card safety-evidence-trends';
+  section.innerHTML = `<h2>${ar ? 'اتجاهات من قياسات NASA الفعلية' : 'Trends from measured NASA records'}</h2><p class="sub">${ar ? 'مخططات منفصلة لبيانات FLEX PSI-69؛ النقاط صفوف مصدرية وليست منحنى تنبؤياً.' : 'Separate plots for FLEX PSI-69 source rows; points are observations, not a fitted prediction curve.'}</p><div class="empty" role="status">${ar ? 'جارٍ تحميل جدول المصدر…' : 'Loading source table…'}</div>`;
+  const anchor = root.querySelector('.safety-grid');
+  if (anchor) anchor.after(section); else root.append(section);
+  try {
+    const [table, dataset] = await Promise.all([loadStudyTable('PSI-69'), get('/api/datasets/flex')]);
+    section.innerHTML = `<h2>${ar ? 'اتجاهات من قياسات NASA الفعلية' : 'Trends from measured NASA records'}</h2><p class="sub">${ar ? `جدول NASA PSI-69 FLEX · ${table.rows.length} صفاً في المصدر. تعرض الرسوم الحقول المقاسة المتاحة مع وحداتها وحدود كل علاقة.` : `NASA PSI-69 FLEX source table · ${table.rows.length} rows. Plots use measured fields, units, and per-relationship limitations.`}</p>${flex3DMarkup(lang)}${renderSourceStudyCharts('PSI-69', table.rows, lang, 'https://psi.nasa.gov/physci/repo/data/investigations/PSI-69')}`;
+    bindFlex3DPlot(section, dataset.rows, lang);
+    bindInteractiveCharts(section);
+  } catch (error) {
+    const loading = section.querySelector('.empty');
+    if (loading) loading.outerHTML = `<div class="callout warn">${esc(error.message)}</div>`;
+    else section.insertAdjacentHTML('beforeend', `<div class="callout warn">${esc(error.message)}</div>`);
+  }
 }

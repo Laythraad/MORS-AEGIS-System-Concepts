@@ -3,6 +3,7 @@ import {
   renderFlamePhysics,
   renderMissionAtmospheres,
   renderSafetyInsights,
+  bindSafetyInsightCharts,
   bindChallengeLibrary,
   renderInvestigationLab,
   bindInvestigationLab,
@@ -673,6 +674,7 @@ async function go(name) {
         });
     }
     if (name === 'Challenge Evidence') bindChallengeLibrary(c, lang);
+    if (name === 'Safety Insights') bindSafetyInsightCharts(c, lang);
     if (name === 'Investigation Lab') bindInvestigationLab(c, lang);
     if (name === 'Flame Physics') bindFlameScene3d(c, lang);
     if (name === 'System Concepts') bindSystemConcepts(c, lang);

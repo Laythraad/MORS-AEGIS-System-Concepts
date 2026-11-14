@@ -2350,6 +2350,119 @@ void main() {
     ].join("");
   }
 
+  // public/lib/flex-3d.js
+  var outcomeColor = (row) => row.test_end === "Extinction" ? "#42b883" : row.test_end === "Disruption" ? "#e4a84c" : "#8c79d8";
+  function flex3DMarkup(lang2 = "en") {
+    const ar = lang2 === "ar";
+    return `<article class="card flex-3d-card"><div class="card-head"><div><h3>${ar ? "\u0641\u0636\u0627\u0621 \u0642\u064A\u0627\u0633\u0627\u062A FLEX \u062B\u0644\u0627\u062B\u064A \u0627\u0644\u0623\u0628\u0639\u0627\u062F" : "FLEX measured-data 3D space"}</h3><p class="sub">${ar ? "\u0627\u0644\u0623\u0643\u0633\u062C\u064A\u0646 \xD7 \u0642\u0637\u0631 \u0627\u0644\u0642\u0637\u0631\u0629 \u0627\u0644\u0627\u0628\u062A\u062F\u0627\u0626\u064A \xD7 \u062B\u0627\u0628\u062A \u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642" : "Oxygen \xD7 initial droplet diameter \xD7 burning-rate constant"}</p></div><span class="tag obs">NASA PSI-69 \xB7 OBSERVED</span></div><canvas class="flex-3d-canvas" tabindex="0" role="img" aria-label="${ar ? "\u0645\u062E\u0637\u0637 \u062B\u0644\u0627\u062B\u064A \u0627\u0644\u0623\u0628\u0639\u0627\u062F \u062A\u0641\u0627\u0639\u0644\u064A \u0644\u0642\u064A\u0627\u0633\u0627\u062A NASA FLEX" : "Interactive 3D plot of NASA FLEX measurements"}"></canvas><div class="flex-3d-tools"><button type="button" class="outline-btn" data-flex3d-reset>${ar ? "\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0639\u0631\u0636" : "Reset view"}</button><span class="sub" data-flex3d-selection role="status" aria-live="polite">${ar ? "\u0627\u0633\u062D\u0628 \u0644\u0644\u062A\u062F\u0648\u064A\u0631 \xB7 \u0627\u062E\u062A\u0631 \u0646\u0642\u0637\u0629 \u0644\u0644\u062A\u0641\u0627\u0635\u064A\u0644" : "Drag to rotate \xB7 select a point for details"}</span></div><p class="sub">${ar ? "\u0643\u0644 \u0646\u0642\u0637\u0629 \u0635\u0641 \u062A\u062C\u0631\u064A\u0628\u064A \u0623\u0635\u0644\u064A\u061B \u0627\u0644\u0644\u0648\u0646 \u064A\u0645\u064A\u0632 \u0646\u062A\u064A\u062C\u0629 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631. \u0627\u0644\u0645\u0646\u0638\u0648\u0631 \u062B\u0644\u0627\u062B\u064A \u0627\u0644\u0623\u0628\u0639\u0627\u062F \u0644\u0644\u062A\u0646\u0638\u064A\u0645 \u0627\u0644\u0628\u0635\u0631\u064A \u0641\u0642\u0637. \u0644\u0627 \u064A\u062B\u0628\u062A \u0627\u0644\u0627\u0631\u062A\u0628\u0627\u0637 \u0627\u0644\u0633\u0628\u0628\u064A\u0629 \u0648\u0644\u0627 \u064A\u062C\u0645\u0639 \u0646\u062A\u0627\u0626\u062C \u0648\u0642\u0648\u062F \u0623\u0648 \u0645\u062E\u0641\u0641\u0627\u062A \u0645\u062E\u062A\u0644\u0641\u0629 \u0643\u0646\u0638\u0627\u0645 \u0648\u0627\u062D\u062F." : "Each point is an original test row; color marks reported test outcome. 3D perspective is a viewing aid only. Association is not causation, and different fuels/diluents are not one interchangeable system."}</p></article>`;
+  }
+  function bindFlex3DPlot(root, rows, lang2 = "en") {
+    var _a;
+    const canvas = root.querySelector(".flex-3d-canvas");
+    if (!canvas || !Array.isArray(rows)) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const data = rows.filter((r) => Number.isFinite(r.oxygen_mole_fraction) && Number.isFinite(r.initial_droplet_diameter_mm) && Number.isFinite(r.burning_rate_mm_s));
+    if (!data.length) return;
+    const ranges = ["oxygen_mole_fraction", "initial_droplet_diameter_mm", "burning_rate_mm_s"].map((k) => [Math.min(...data.map((r) => r[k])), Math.max(...data.map((r) => r[k]))]);
+    let yaw = -0.62, pitch = 0.35, points = [], drag = null;
+    const labels2 = lang2 === "ar" ? ["O\u2082 \u0627\u0644\u0643\u0633\u0631 \u0627\u0644\u0645\u0648\u0644\u064A", "\u0642\u0637\u0631 \u0627\u0628\u062A\u062F\u0627\u0626\u064A \xB7 mm", "\u062B\u0627\u0628\u062A \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642 \xB7 mm\xB2/s"] : ["O\u2082 mole fraction", "Initial diameter \xB7 mm", "Burning rate \xB7 mm\xB2/s"];
+    function project(row, width, height) {
+      const values = [row.oxygen_mole_fraction, row.initial_droplet_diameter_mm, row.burning_rate_mm_s];
+      const v = values.map((x, i) => ((x - ranges[i][0]) / (ranges[i][1] - ranges[i][0] || 1) - 0.5) * 2);
+      const x1 = v[0] * Math.cos(yaw) - v[1] * Math.sin(yaw), y1 = v[0] * Math.sin(yaw) + v[1] * Math.cos(yaw);
+      const z1 = v[2] * Math.cos(pitch) - y1 * Math.sin(pitch), y2 = v[2] * Math.sin(pitch) + y1 * Math.cos(pitch);
+      const scale = Math.min(width, height) * 0.27 / (2.8 - z1 * 0.28);
+      return { x: width * 0.5 + x1 * scale, y: height * 0.51 - y2 * scale, depth: z1, row };
+    }
+    function draw() {
+      const rect = canvas.getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio || 1, 2);
+      if (!rect.width || !rect.height) return;
+      canvas.width = Math.round(rect.width * dpr);
+      canvas.height = Math.round(rect.height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const w = rect.width, h = rect.height;
+      ctx.clearRect(0, 0, w, h);
+      ctx.font = "11px system-ui";
+      const corners = [[-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1], [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]];
+      const projectV = (v) => {
+        const x = v[0] * Math.cos(yaw) - v[1] * Math.sin(yaw), y = v[0] * Math.sin(yaw) + v[1] * Math.cos(yaw), z = v[2] * Math.cos(pitch) - y * Math.sin(pitch), y2 = v[2] * Math.sin(pitch) + y * Math.cos(pitch), s = Math.min(w, h) * 0.27 / (2.8 - z * 0.28);
+        return [w * 0.5 + x * s, h * 0.51 - y2 * s];
+      };
+      ctx.strokeStyle = "rgba(90,145,175,.42)";
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 8; i++) for (let j = i + 1; j < 8; j++) if (corners[i].filter((v, k) => v !== corners[j][k]).length === 1) {
+        const a = projectV(corners[i]), b = projectV(corners[j]);
+        ctx.beginPath();
+        ctx.moveTo(...a);
+        ctx.lineTo(...b);
+        ctx.stroke();
+      }
+      const axis = [[[-1, -1, -1], [1, -1, -1], labels2[0]], [[-1, -1, -1], [-1, 1, -1], labels2[1]], [[-1, -1, -1], [-1, -1, 1], labels2[2]]];
+      ctx.fillStyle = "#a9c3d2";
+      axis.forEach(([a, b, label]) => {
+        const p = projectV(a), q = projectV(b);
+        ctx.fillText(label, q[0] - 45, q[1] + 18);
+      });
+      points = data.map((r) => project(r, w, h)).sort((a, b) => a.depth - b.depth);
+      points.forEach((p) => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 3.4, 0, Math.PI * 2);
+        ctx.fillStyle = outcomeColor(p.row);
+        ctx.globalAlpha = 0.78;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      });
+    }
+    const show = (p) => {
+      var _a2;
+      const r = p.row, text = `${r.id || `Test ${r.test}`} \xB7 ${r.fuel || "Fuel unreported"} \xB7 O\u2082 ${(r.oxygen_mole_fraction * 100).toFixed(1)}% \xB7 d\u2080 ${r.initial_droplet_diameter_mm} mm \xB7 K ${r.burning_rate_mm_s} mm\xB2/s \xB7 ${r.test_end || "Outcome unreported"} \xB7 ${(_a2 = r.pressure_mmHg) != null ? _a2 : "\u2014"} mmHg`;
+      root.querySelector("[data-flex3d-selection]").textContent = text;
+    };
+    canvas.addEventListener("pointerdown", (e) => {
+      drag = { x: e.clientX, y: e.clientY, moved: false };
+      canvas.setPointerCapture(e.pointerId);
+    });
+    canvas.addEventListener("pointermove", (e) => {
+      if (!drag) return;
+      const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+      if (Math.abs(dx) + Math.abs(dy) > 2) drag.moved = true;
+      yaw += dx * 8e-3;
+      pitch = Math.max(-1.15, Math.min(1.15, pitch + dy * 8e-3));
+      drag.x = e.clientX;
+      drag.y = e.clientY;
+      draw();
+    });
+    canvas.addEventListener("pointerup", (e) => {
+      if (drag && !drag.moved) {
+        const x = e.clientX - canvas.getBoundingClientRect().left, y = e.clientY - canvas.getBoundingClientRect().top;
+        const nearest = points.reduce((best, p) => Math.hypot(p.x - x, p.y - y) < best.d ? { p, d: Math.hypot(p.x - x, p.y - y) } : best, { p: null, d: 16 });
+        if (nearest.p) show(nearest.p);
+      }
+      drag = null;
+    });
+    canvas.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft") yaw -= 0.12;
+      else if (e.key === "ArrowRight") yaw += 0.12;
+      else if (e.key === "ArrowUp") pitch = Math.min(1.15, pitch + 0.12);
+      else if (e.key === "ArrowDown") pitch = Math.max(-1.15, pitch - 0.12);
+      else return;
+      e.preventDefault();
+      draw();
+    });
+    (_a = root.querySelector("[data-flex3d-reset]")) == null ? void 0 : _a.addEventListener("click", () => {
+      yaw = -0.62;
+      pitch = 0.35;
+      draw();
+    });
+    new ResizeObserver(draw).observe(canvas);
+    draw();
+    const legend = document.createElement("p");
+    legend.className = "sub flex-3d-legend";
+    legend.innerHTML = `<span style="color:#42b883">\u25CF ${esc(lang2 === "ar" ? "\u0627\u0646\u0637\u0641\u0627\u0621" : "Extinction")}</span> &nbsp; <span style="color:#e4a84c">\u25CF ${esc(lang2 === "ar" ? "\u0627\u0636\u0637\u0631\u0627\u0628" : "Disruption")}</span> &nbsp; <span style="color:#8c79d8">\u25CF ${esc(lang2 === "ar" ? "\u0627\u0633\u062A\u0645\u0631\u0627\u0631/\u0623\u062E\u0631\u0649" : "Sustained/other")}</span>`;
+    canvas.after(legend);
+  }
+
   // public/challenge-research.js
   var studyNotes = {
     "PSI-20": "ACME BRE \xB7 gaseous flames and burning-rate emulator test conditions",
@@ -2598,6 +2711,25 @@ void main() {
     ];
     const ref = ar ? "\u0645\u0628\u0627\u062F\u0626 \u062A\u0635\u0645\u064A\u0645 \u0628\u062D\u062B\u064A\u0629 \u0648\u0644\u064A\u0633\u062A \u0625\u062C\u0631\u0627\u0621\u0627\u062A \u062A\u0634\u063A\u064A\u0644 \u0623\u0648 \u0648\u0635\u0641\u0627\u062A \u0644\u062C\u0648 \u0627\u0644\u0645\u0631\u0643\u0628\u0629." : "Research design implications only; these are not vehicle operating procedures or cabin-atmosphere prescriptions.";
     return `${pageHead(ar ? "\u0627\u0633\u062A\u0646\u062A\u0627\u062C\u0627\u062A \u0633\u0644\u0627\u0645\u0629 \u0627\u0644\u062D\u0631\u064A\u0642" : "Fire Safety Insights", ar ? "\u062A\u062D\u0648\u064A\u0644 \u0627\u0644\u0623\u062F\u0644\u0629 \u0625\u0644\u0649 \u0623\u0633\u0626\u0644\u0629 \u062A\u0635\u0645\u064A\u0645 \u0642\u0627\u0628\u0644\u0629 \u0644\u0644\u0627\u062E\u062A\u0628\u0627\u0631 \u0645\u0646 \u062F\u0648\u0646 \u0627\u062F\u0639\u0627\u0621 \u062A\u0635\u062F\u064A\u0642 \u0623\u0648 \u062A\u0635\u0646\u064A\u0641 \u062E\u0637\u0631 \u0639\u0627\u0645." : "Turn NASA evidence into testable design actions without claiming certification or a universal hazard ranking.")}<div class="equation"><b>${ar ? "\u0636\u063A\u0637 \u0627\u0644\u0623\u0643\u0633\u062C\u064A\u0646 \u0627\u0644\u062C\u0632\u0626\u064A" : "Oxygen partial pressure"}</b><code>pO\u2082 = xO\u2082 \xB7 Ptotal</code><p class="sub">${ar ? "\u0646\u0633\u0628\u0629 \u0627\u0644\u0623\u0643\u0633\u062C\u064A\u0646 \u0648\u062D\u062F\u0647\u0627 \u0644\u0627 \u062A\u0643\u0641\u064A \u0644\u0648\u0635\u0641 \u0627\u0644\u062C\u0648. \u062A\u063A\u064A\u0651\u0631 \u0627\u0644\u0636\u063A\u0637 \u0623\u0648 \u0627\u0644\u062A\u0631\u0643\u064A\u0628 \u0642\u062F \u064A\u063A\u064A\u0651\u0631 \u062D\u062F\u0648\u062F \u0627\u0644\u0627\u0634\u062A\u0639\u0627\u0644\u061B \u0644\u0627 \u0646\u0648\u0635\u064A \u0628\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u062C\u0648 \u0644\u0644\u0637\u0627\u0642\u0645." : "Oxygen fraction alone does not define the atmosphere. Changing total pressure or composition changes flammability conditions; this dashboard does not prescribe crew atmosphere settings."}</p></div><div class="grid two safety-grid">${cards.map(([title, body, evidence]) => `<article class="card safety-card"><span class="tag comp">${ar ? "\u0625\u062C\u0631\u0627\u0621 \u0648\u0642\u0627\u0626\u064A" : "DESIGN CONTROL"}</span><h2>${title}</h2><p>${body}</p><div class="callout">${evidence}</div></article>`).join("")}</div><article class="card" style="margin-top:15px"><h2>${ar ? "\u0623\u0633\u0626\u0644\u0629 \u0627\u062E\u062A\u0628\u0627\u0631 \u0642\u0627\u0628\u0644\u0629 \u0644\u0644\u062A\u0646\u0641\u064A\u0630" : "Actionable qualification questions"}</h2><ol><li>${ar ? "\u0647\u0644 \u0627\u0644\u0645\u0627\u062F\u0629 \u0646\u0641\u0633\u0647\u0627 \u0627\u062E\u062A\u064F\u0628\u0631\u062A \u0639\u0646\u062F \u0636\u063A\u0637 \u0627\u0644\u0623\u0643\u0633\u062C\u064A\u0646 \u0627\u0644\u0645\u062A\u0648\u0642\u0639\u060C \u0644\u0627 \u0639\u0646\u062F \u0646\u0633\u0628\u0629 O\u2082 \u0648\u062D\u062F\u0647\u0627\u061F" : "Was the exact material tested at the expected oxygen partial pressure, not oxygen fraction alone?"}</li><li>${ar ? "\u0647\u0644 \u0627\u062A\u062C\u0627\u0647 \u0648\u0633\u0631\u0639\u0629 \u0627\u0644\u062A\u0647\u0648\u064A\u0629 \u0648\u0645\u0648\u0636\u0639 \u0627\u0644\u0643\u0627\u0634\u0641 \u0645\u0637\u0627\u0628\u0642 \u0644\u0628\u064A\u0626\u0629 \u0627\u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645\u061F" : "Do airflow speed/direction and detector location match the intended environment?"}</li><li>${ar ? "\u0647\u0644 \u0646\u062A\u064A\u062C\u0629 \u0627\u0644\u0625\u062E\u0645\u0627\u062F \u062A\u0642\u064A\u0633 \u0625\u0637\u0641\u0627\u0621 \u0627\u0644\u0644\u0647\u0628 \u0627\u0644\u0645\u0631\u0626\u064A \u0648\u062A\u0648\u0642\u0641 \u0627\u0644\u062A\u0641\u0627\u0639\u0644 \u0627\u0644\u0643\u064A\u0645\u064A\u0627\u0626\u064A \u0643\u0644\u0651\u064C \u0639\u0644\u0649 \u062D\u062F\u0629\u061F" : "Does the suppression outcome separately measure visible-flame extinction and cessation of chemical reaction?"}</li><li>${ar ? "\u0647\u0644 \u0639\u062F\u062F \u0627\u0644\u062A\u0643\u0631\u0627\u0631\u0627\u062A \u0648\u0639\u062F\u0645 \u0627\u0644\u064A\u0642\u064A\u0646 \u0643\u0627\u0641\u064A\u0627\u0646 \u0642\u0628\u0644 \u062A\u0639\u0645\u064A\u0645 \u0627\u0644\u0627\u0633\u062A\u0646\u062A\u0627\u062C\u061F" : "Are replication and uncertainty adequate before generalizing the result?"}</li></ol><p class="sub">${ref}</p><div class="list-row"><span>NASA OCHMO-TB-008 \xB7 Fire Protection</span><a href="https://www.nasa.gov/wp-content/uploads/2023/12/ochmo-tb-008-fire-protection.pdf" target="_blank" rel="noreferrer">${ar ? "\u0641\u062A\u062D \u0627\u0644\u0645\u0635\u062F\u0631 \u2197" : "Open source \u2197"}</a></div><div class="list-row"><span>NASA-STD-3001 Volume 2 \xB7 Revision F</span><a href="https://www.nasa.gov/wp-content/uploads/2025/05/nasa-std-3001-vol-2.pdf" target="_blank" rel="noreferrer">${ar ? "\u0641\u062A\u062D \u0627\u0644\u0645\u0635\u062F\u0631 \u2197" : "Open source \u2197"}</a></div><div class="list-row"><span>NASA combustion and fire safety investigations</span><a href="https://www.nasa.gov/missions/station/studying-combustion-and-fire-safety/" target="_blank" rel="noreferrer">${ar ? "\u0641\u062A\u062D \u0627\u0644\u0645\u0635\u062F\u0631 \u2197" : "Open source \u2197"}</a></div></article>`;
+  }
+  async function bindSafetyInsightCharts(root, lang2 = "en") {
+    const ar = lang2 === "ar";
+    const section = document.createElement("section");
+    section.className = "card safety-evidence-trends";
+    section.innerHTML = `<h2>${ar ? "\u0627\u062A\u062C\u0627\u0647\u0627\u062A \u0645\u0646 \u0642\u064A\u0627\u0633\u0627\u062A NASA \u0627\u0644\u0641\u0639\u0644\u064A\u0629" : "Trends from measured NASA records"}</h2><p class="sub">${ar ? "\u0645\u062E\u0637\u0637\u0627\u062A \u0645\u0646\u0641\u0635\u0644\u0629 \u0644\u0628\u064A\u0627\u0646\u0627\u062A FLEX PSI-69\u061B \u0627\u0644\u0646\u0642\u0627\u0637 \u0635\u0641\u0648\u0641 \u0645\u0635\u062F\u0631\u064A\u0629 \u0648\u0644\u064A\u0633\u062A \u0645\u0646\u062D\u0646\u0649 \u062A\u0646\u0628\u0624\u064A\u0627\u064B." : "Separate plots for FLEX PSI-69 source rows; points are observations, not a fitted prediction curve."}</p><div class="empty" role="status">${ar ? "\u062C\u0627\u0631\u064D \u062A\u062D\u0645\u064A\u0644 \u062C\u062F\u0648\u0644 \u0627\u0644\u0645\u0635\u062F\u0631\u2026" : "Loading source table\u2026"}</div>`;
+    const anchor = root.querySelector(".safety-grid");
+    if (anchor) anchor.after(section);
+    else root.append(section);
+    try {
+      const [table, dataset2] = await Promise.all([loadStudyTable("PSI-69"), get("/api/datasets/flex")]);
+      section.innerHTML = `<h2>${ar ? "\u0627\u062A\u062C\u0627\u0647\u0627\u062A \u0645\u0646 \u0642\u064A\u0627\u0633\u0627\u062A NASA \u0627\u0644\u0641\u0639\u0644\u064A\u0629" : "Trends from measured NASA records"}</h2><p class="sub">${ar ? `\u062C\u062F\u0648\u0644 NASA PSI-69 FLEX \xB7 ${table.rows.length} \u0635\u0641\u0627\u064B \u0641\u064A \u0627\u0644\u0645\u0635\u062F\u0631. \u062A\u0639\u0631\u0636 \u0627\u0644\u0631\u0633\u0648\u0645 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0642\u0627\u0633\u0629 \u0627\u0644\u0645\u062A\u0627\u062D\u0629 \u0645\u0639 \u0648\u062D\u062F\u0627\u062A\u0647\u0627 \u0648\u062D\u062F\u0648\u062F \u0643\u0644 \u0639\u0644\u0627\u0642\u0629.` : `NASA PSI-69 FLEX source table \xB7 ${table.rows.length} rows. Plots use measured fields, units, and per-relationship limitations.`}</p>${flex3DMarkup(lang2)}${renderSourceStudyCharts("PSI-69", table.rows, lang2, "https://psi.nasa.gov/physci/repo/data/investigations/PSI-69")}`;
+      bindFlex3DPlot(section, dataset2.rows, lang2);
+      bindInteractiveCharts(section);
+    } catch (error) {
+      const loading = section.querySelector(".empty");
+      if (loading) loading.outerHTML = `<div class="callout warn">${esc(error.message)}</div>`;
+      else section.insertAdjacentHTML("beforeend", `<div class="callout warn">${esc(error.message)}</div>`);
+    }
   }
 
   // public/csv-safe.js
@@ -3738,6 +3870,7 @@ void main() {
         });
       }
       if (name === "Challenge Evidence") bindChallengeLibrary(c, lang);
+      if (name === "Safety Insights") bindSafetyInsightCharts(c, lang);
       if (name === "Investigation Lab") bindInvestigationLab(c, lang);
       if (name === "Flame Physics") bindFlameScene3d(c, lang);
       if (name === "System Concepts") bindSystemConcepts(c, lang);
