@@ -343,6 +343,46 @@
       top: Math.max(padding, Math.min(viewportRect.height - height - padding, top))
     };
   }
+  function clampChartView(next, original) {
+    const width = Math.max(original.width / 8, Math.min(original.width * 8, next.width));
+    const height = Math.max(original.height / 8, Math.min(original.height * 8, next.height));
+    const minX = Math.min(original.x, original.x + original.width - width);
+    const maxX = Math.max(original.x, original.x + original.width - width);
+    const minY = Math.min(original.y, original.y + original.height - height);
+    const maxY = Math.max(original.y, original.y + original.height - height);
+    return {
+      x: Math.max(minX, Math.min(maxX, next.x)),
+      y: Math.max(minY, Math.min(maxY, next.y)),
+      width,
+      height
+    };
+  }
+  function zoomChartView(current2, factor, anchorX, anchorY, original) {
+    const scale = Math.max(1 / 8, Math.min(8, current2.width / original.width * factor));
+    const width = original.width * scale;
+    const height = original.height * scale;
+    const rx = (anchorX - current2.x) / current2.width;
+    const ry = (anchorY - current2.y) / current2.height;
+    return clampChartView({
+      x: anchorX - width * rx,
+      y: anchorY - height * ry,
+      width,
+      height
+    }, original);
+  }
+  function panChartView(current2, deltaX, deltaY, original) {
+    return clampChartView(__spreadProps(__spreadValues({}, current2), { x: current2.x + deltaX, y: current2.y + deltaY }), original);
+  }
+  function pointerDeltaToChart({ deltaX, deltaY, rect, view }) {
+    const viewRatio = view.width / view.height;
+    const rectRatio = rect.width / rect.height;
+    const contentWidth = rectRatio > viewRatio ? rect.height * viewRatio : rect.width;
+    const contentHeight = rectRatio > viewRatio ? rect.height : rect.width / viewRatio;
+    return {
+      x: deltaX * view.width / contentWidth,
+      y: deltaY * view.height / contentHeight
+    };
+  }
   function scientificScatter({
     rows,
     xKey,
@@ -393,7 +433,7 @@
     const trend = fitted.map(
       ([group, fit]) => `<line class="chart-trendline" stroke="${colorByGroup.get(group)}" x1="${sx(domain.xMin)}" y1="${sy(fit.intercept + fit.slope * domain.xMin)}" x2="${sx(domain.xMax)}" y2="${sy(fit.intercept + fit.slope * domain.xMax)}" visibility="hidden"/>`
     ).join("");
-    return `<section class="scientific-chart" data-chart-panel><div class="chart-toolbar" role="group" aria-label="${esc(labels2.controls)}"><button type="button" data-chart-action="zoom-in" aria-label="${esc(labels2.zoomIn)}">\uFF0B</button><button type="button" data-chart-action="zoom-out" aria-label="${esc(labels2.zoomOut)}">\u2212</button><button type="button" data-chart-action="reset">${esc(labels2.reset)}</button>${fitted.length ? `<button type="button" data-chart-action="fit" aria-pressed="false">${esc(labels2.fitLine)}</button>` : ""}<button type="button" data-chart-action="draw" aria-pressed="false" data-idle-label="${esc(labels2.drawLine)}" data-active-label="${esc(labels2.drawLineActive)}">${esc(labels2.drawLine)}</button><button type="button" data-chart-action="undo">${esc(labels2.undo)}</button></div><p class="chart-interaction-hint">${esc(labels2.interactionHint || "")}</p><div class="chart-viewport"><svg class="scientific-plot" viewBox="${base.x} ${base.y} ${base.width} ${base.height}" role="group" aria-label="${esc(`${xLabel} versus ${yLabel}`)}"><g class="chart-grid">${grid}</g><line x1="${plot2.left}" y1="${base.height - plot2.bottom}" x2="${base.width - plot2.right}" y2="${base.height - plot2.bottom}" class="chart-axis"/><line x1="${plot2.left}" y1="${plot2.top}" x2="${plot2.left}" y2="${base.height - plot2.bottom}" class="chart-axis"/><g class="chart-trend">${trend}</g><g class="chart-annotations"></g><g>${marks}</g><text x="${(plot2.left + base.width - plot2.right) / 2}" y="${base.height - 12}" class="chart-axis-label" text-anchor="middle">${esc(xLabel)}${xUnit ? ` (${esc(xUnit)})` : ""}</text><text transform="translate(18 ${(plot2.top + base.height - plot2.bottom) / 2}) rotate(-90)" class="chart-axis-label" text-anchor="middle">${esc(yLabel)}${yUnit ? ` (${esc(yUnit)})` : ""}</text></svg><div class="chart-tooltip" role="status" aria-live="polite" hidden></div></div><div class="chart-legend">${legend}</div><p class="sub chart-caption">${esc(labels2.rows)}: n=${points.length}/${rows.length} \xB7 ${esc(labels2.fitNote)} ${esc(fitSummary)}</p></section>`;
+    return `<section class="scientific-chart" data-chart-panel><div class="chart-toolbar" role="group" aria-label="${esc(labels2.controls)}"><button type="button" data-chart-action="zoom-in" aria-label="${esc(labels2.zoomIn)}">\uFF0B</button><button type="button" data-chart-action="zoom-out" aria-label="${esc(labels2.zoomOut)}">\u2212</button><button type="button" data-chart-action="reset">${esc(labels2.reset)}</button>${fitted.length ? `<button type="button" data-chart-action="fit" aria-pressed="false">${esc(labels2.fitLine)}</button>` : ""}<button type="button" data-chart-action="draw" aria-pressed="false" data-idle-label="${esc(labels2.drawLine)}" data-active-label="${esc(labels2.drawLineActive)}">${esc(labels2.drawLine)}</button><button type="button" data-chart-action="undo">${esc(labels2.undo)}</button></div><p class="chart-interaction-hint">${esc(labels2.interactionHint || "")}</p><div class="chart-viewport"><svg class="scientific-plot" viewBox="${base.x} ${base.y} ${base.width} ${base.height}" role="group" aria-label="${esc(`${xLabel} versus ${yLabel}`)}"><g class="chart-grid">${grid}</g><line x1="${plot2.left}" y1="${base.height - plot2.bottom}" x2="${base.width - plot2.right}" y2="${base.height - plot2.bottom}" class="chart-axis"/><line x1="${plot2.left}" y1="${plot2.top}" x2="${plot2.left}" y2="${base.height - plot2.bottom}" class="chart-axis"/><g class="chart-trend">${trend}</g><g class="chart-annotations"></g><g>${marks}</g><text x="${(plot2.left + base.width - plot2.right) / 2}" y="${base.height - 12}" class="chart-axis-label" text-anchor="middle">${esc(xLabel)}${xUnit ? ` (${esc(xUnit)})` : ""}</text><text transform="translate(18 ${(plot2.top + base.height - plot2.bottom) / 2}) rotate(-90)" class="chart-axis-label" text-anchor="middle">${esc(yLabel)}${yUnit ? ` (${esc(yUnit)})` : ""}</text></svg><div class="chart-tooltip" aria-hidden="true" hidden></div></div><div class="chart-selection" role="status" aria-live="polite" hidden><b>${esc(labels2.selectedPoint)}</b><span data-chart-selection-text></span></div><div class="chart-legend">${legend}</div><p class="sub chart-caption">${esc(labels2.rows)}: n=${points.length}/${rows.length} \xB7 ${esc(labels2.fitNote)} ${esc(fitSummary)}</p></section>`;
   }
   function chartControlLabels(lang2 = "en") {
     const ar = lang2 === "ar";
@@ -407,12 +447,14 @@
       drawLine: ar ? "\u0627\u0631\u0633\u0645 \u062E\u0637\u0627\u064B \u0625\u0631\u0634\u0627\u062F\u064A\u0627\u064B" : "Draw guide line",
       drawLineActive: ar ? "\u0627\u0633\u062D\u0628 \u0644\u0631\u0633\u0645 \u0627\u0644\u062E\u0637 \xB7 \u0627\u0636\u063A\u0637 \u0644\u0644\u0625\u064A\u0642\u0627\u0641" : "Drag to draw \xB7 tap to stop",
       undo: ar ? "\u062A\u0631\u0627\u062C\u0639 \u0639\u0646 \u0627\u0644\u062E\u0637" : "Undo line",
+      selectedPoint: ar ? "\u062A\u0641\u0627\u0635\u064A\u0644 \u0646\u0642\u0637\u0629 \u0627\u0644\u0645\u0635\u062F\u0631 \u0627\u0644\u0645\u062D\u062F\u062F\u0629" : "Selected source point details",
       fit: ar ? "\u0645\u0644\u0627\u0621\u0645\u0629 \u062E\u0637\u064A\u0629 \u0627\u0633\u062A\u0643\u0634\u0627\u0641\u064A\u0629" : "Exploratory linear fit",
       fitUnavailable: ar ? "\u0644\u0627 \u064A\u0645\u0643\u0646 \u062D\u0633\u0627\u0628 \u0627\u0644\u0645\u0644\u0627\u0621\u0645\u0629 (\u064A\u0644\u0632\u0645 3 \u0646\u0642\u0627\u0637 \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644)" : "Fit unavailable (need at least 3 points)",
       fitNote: ar ? "\u0627\u0631\u062A\u0628\u0627\u0637 \u0627\u0633\u062A\u0643\u0634\u0627\u0641\u064A \u0641\u0642\u0637\u061B \u0644\u0627 \u064A\u062B\u0628\u062A \u0627\u0644\u0633\u0628\u0628\u064A\u0629." : "Exploratory association only; it does not show causation.",
       rows: ar ? "\u0635\u0641\u0648\u0641 \u0627\u0644\u0645\u0635\u062F\u0631 \u0627\u0644\u0635\u0627\u0644\u062D\u0629" : "Valid source rows",
       points: ar ? "\u0627\u0644\u0646\u0642\u0627\u0637 \u0627\u0644\u0645\u0639\u0631\u0648\u0636\u0629" : "Plotted points",
       reference: ar ? "\u062E\u0637 \u0645\u0631\u062C\u0639\u064A" : "Reference line",
+      zeroReference: ar ? "\u0635\u0641\u0631 \u0627\u0644\u062A\u063A\u064A\u0631" : "Zero-change reference",
       binRows: ar ? "\u0635\u0641\u0648\u0641 \u0627\u0644\u0645\u0635\u062F\u0631 \u0636\u0645\u0646 \u0627\u0644\u0641\u0626\u0629" : "Source rows in bin"
     };
   }
@@ -424,6 +466,7 @@
     yUnit = "",
     categories = null,
     identityReference = false,
+    zeroReference = false,
     labels: labels2,
     sourceRowCount,
     validRowCount,
@@ -442,8 +485,8 @@
     const domain = {
       xMin: categoriesList ? -0.5 : rawXMin - xPad,
       xMax: categoriesList ? categoriesList.length - 0.5 : rawXMax + xPad,
-      yMin: yDataMin - yPad,
-      yMax: yDataMax + yPad
+      yMin: zeroReference ? Math.min(0, yDataMin - yPad) : yDataMin - yPad,
+      yMax: zeroReference ? Math.max(0, yDataMax + yPad) : yDataMax + yPad
     };
     const sx = (value) => plot2.left + (value - domain.xMin) / (domain.xMax - domain.xMin) * (base.width - plot2.left - plot2.right);
     const sy = (value) => base.height - plot2.bottom - (value - domain.yMin) / (domain.yMax - domain.yMin || 1) * (base.height - plot2.top - plot2.bottom);
@@ -532,6 +575,10 @@
         referenceLegend = '<span class="chart-reference-key"><i></i>' + esc(labels2.reference) + " \xB7 y=x</span>";
       }
     }
+    if (zeroReference && domain.yMin <= 0 && domain.yMax >= 0) {
+      reference += '<line class="chart-reference-line" x1="' + plot2.left + '" y1="' + sy(0) + '" x2="' + (base.width - plot2.right) + '" y2="' + sy(0) + '"/>';
+      referenceLegend += '<span class="chart-reference-key"><i></i>' + esc(labels2.zeroReference) + "</span>";
+    }
     const legend = groupLegend + referenceLegend;
     const caption = labels2.rows + ": n=" + validRowCount + "/" + sourceRowCount + " \xB7 " + labels2.points + ": " + points.length + (captionNote ? " \xB7 " + captionNote : "");
     return [
@@ -602,7 +649,10 @@
       esc(yLabel),
       yUnit ? " (" + esc(yUnit) + ")" : "",
       "</text>",
-      '</svg><div class="chart-tooltip" role="status" aria-live="polite" hidden></div></div>',
+      '</svg><div class="chart-tooltip" aria-hidden="true" hidden></div></div>',
+      '<div class="chart-selection" role="status" aria-live="polite" hidden><b>',
+      esc(labels2.selectedPoint),
+      "</b><span data-chart-selection-text></span></div>",
       legend ? '<div class="chart-legend">' + legend + "</div>" : "",
       '<p class="sub chart-caption">',
       esc(caption),
@@ -762,7 +812,11 @@
       ') rotate(-90)" class="chart-axis-label" text-anchor="middle">',
       esc(labels2.binRows),
       "</text>",
-      '</svg><div class="chart-tooltip" role="status" aria-live="polite" hidden></div></div><p class="sub chart-caption">',
+      '</svg><div class="chart-tooltip" aria-hidden="true" hidden></div></div>',
+      '<div class="chart-selection" role="status" aria-live="polite" hidden><b>',
+      esc(labels2.selectedPoint),
+      "</b><span data-chart-selection-text></span></div>",
+      '<p class="sub chart-caption">',
       esc(caption),
       "</p></section>"
     ].join("");
@@ -773,6 +827,8 @@
       panel.dataset.bound = "true";
       const svg = panel.querySelector("svg");
       const tooltip = panel.querySelector(".chart-tooltip");
+      const selection = panel.querySelector(".chart-selection");
+      const selectionText = panel.querySelector("[data-chart-selection-text]");
       const initial = svg.viewBox.baseVal;
       const original = { x: initial.x, y: initial.y, width: initial.width, height: initial.height };
       const annotations = svg.querySelector(".chart-annotations");
@@ -781,10 +837,17 @@
       let lineStart = null;
       let tooltipPinned = false;
       const view = () => svg.viewBox.baseVal;
-      const setView = (next) => svg.setAttribute("viewBox", `${next.x} ${next.y} ${next.width} ${next.height}`);
-      const showPoint = (mark, event) => {
+      const setView = (next) => {
+        const bounded = clampChartView(next, original);
+        svg.setAttribute("viewBox", `${bounded.x} ${bounded.y} ${bounded.width} ${bounded.height}`);
+      };
+      const showPoint = (mark, event, persistent = false) => {
         tooltip.textContent = mark.dataset.info;
         tooltip.hidden = false;
+        if (persistent && selection && selectionText) {
+          selectionText.textContent = mark.dataset.info;
+          selection.hidden = false;
+        }
         const box = panel.querySelector(".chart-viewport").getBoundingClientRect();
         const keyboardClick = event.type === "click" && event.detail === 0;
         const bounds = chartTooltipPosition({
@@ -804,11 +867,7 @@
       };
       const zoom = (factor, anchorX = view().x + view().width / 2, anchorY = view().y + view().height / 2) => {
         const current2 = view();
-        const width = Math.max(100, Math.min(original.width * 8, current2.width * factor));
-        const height = Math.max(70, Math.min(original.height * 8, current2.height * factor));
-        const rx = (anchorX - current2.x) / current2.width;
-        const ry = (anchorY - current2.y) / current2.height;
-        setView({ x: anchorX - width * rx, y: anchorY - height * ry, width, height });
+        setView(zoomChartView(current2, factor, anchorX, anchorY, original));
       };
       panel.querySelectorAll("[data-chart-action]").forEach((button) => {
         button.addEventListener("click", () => {
@@ -845,11 +904,12 @@
       svg.addEventListener("pointerdown", (event) => {
         if (event.target.closest(".chart-point")) {
           tooltipPinned = true;
-          showPoint(event.target.closest(".chart-point"), event);
+          showPoint(event.target.closest(".chart-point"), event, true);
           return;
         }
         tooltipPinned = false;
         tooltip.hidden = true;
+        if (selection) selection.hidden = true;
         const p = point(event);
         if (drawing) {
           lineStart = p;
@@ -881,9 +941,13 @@
           drag.line.setAttribute("y2", p.y);
         } else {
           const rect = svg.getBoundingClientRect();
-          const dx = (event.clientX - drag.x) * drag.view.width / rect.width;
-          const dy = (event.clientY - drag.y) * drag.view.height / rect.height;
-          setView(__spreadProps(__spreadValues({}, drag.view), { x: drag.view.x - dx, y: drag.view.y - dy }));
+          const delta = pointerDeltaToChart({
+            deltaX: event.clientX - drag.x,
+            deltaY: event.clientY - drag.y,
+            rect,
+            view: drag.view
+          });
+          setView(panChartView(drag.view, -delta.x, -delta.y, original));
           if (tooltip) tooltip.hidden = true;
         }
       });
@@ -903,20 +967,21 @@
         const mark = (_b = (_a = event.target).closest) == null ? void 0 : _b.call(_a, ".chart-point");
         if (!mark) return;
         tooltipPinned = true;
-        showPoint(mark, event);
+        showPoint(mark, event, true);
       });
       svg.addEventListener("keydown", (event) => {
         var _a, _b;
         if (event.key === "Escape") {
           tooltipPinned = false;
           tooltip.hidden = true;
+          if (selection) selection.hidden = true;
           return;
         }
         const mark = (_b = (_a = event.target).closest) == null ? void 0 : _b.call(_a, ".chart-point");
         if (mark && (event.key === "Enter" || event.key === " ")) {
           event.preventDefault();
           tooltipPinned = true;
-          showPoint(mark, __spreadProps(__spreadValues({}, event), { type: "click", detail: 0 }));
+          showPoint(mark, __spreadProps(__spreadValues({}, event), { type: "click", detail: 0 }), true);
         }
       });
       svg.addEventListener("pointerleave", (event) => {
@@ -956,6 +1021,19 @@
       { groupField: "Fuel Bottle", rowIdField: "Date", detailFields: ["Year", "Month", "Fuel Bottle", "Oxygen Conc (percent)"], aggregateDuplicates: true }
     ),
     plot(
+      "psi20-ignitions-year",
+      "PSI-20",
+      "Year",
+      "Flames Ignited",
+      "year",
+      "reported daily count",
+      bilingual("Reported ignition counts across recorded years", "\u0623\u0639\u062F\u0627\u062F \u0627\u0644\u0625\u0634\u0639\u0627\u0644 \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0639\u0628\u0631 \u0627\u0644\u0633\u0646\u0648\u0627\u062A \u0627\u0644\u0648\u0627\u0631\u062F\u0629"),
+      bilingual("How do the daily ignition summaries sit across the years listed in the source?", "\u0643\u064A\u0641 \u062A\u062A\u0648\u0632\u0639 \u0645\u0644\u062E\u0635\u0627\u062A \u0627\u0644\u0625\u0634\u0639\u0627\u0644 \u0627\u0644\u064A\u0648\u0645\u064A\u0629 \u0639\u0628\u0631 \u0627\u0644\u0633\u0646\u0648\u0627\u062A \u0627\u0644\u0645\u062F\u0631\u062C\u0629 \u0641\u064A \u0627\u0644\u0645\u0635\u062F\u0631\u061F"),
+      bilingual("Inspect the time coverage and year-to-year source summaries by fuel label.", "\u0627\u0641\u062D\u0635 \u0627\u0644\u062A\u063A\u0637\u064A\u0629 \u0627\u0644\u0632\u0645\u0646\u064A\u0629 \u0648\u0645\u0644\u062E\u0635\u0627\u062A \u0627\u0644\u0645\u0635\u062F\u0631 \u0627\u0644\u0633\u0646\u0648\u064A\u0629 \u0628\u062D\u0633\u0628 \u062A\u0633\u0645\u064A\u0629 \u0627\u0644\u0648\u0642\u0648\u062F."),
+      bilingual("Rows summarize source days; year, fuel, oxygen mixture, and chamber pressure vary together. This is not a controlled performance trend.", "\u062A\u0644\u062E\u0635 \u0627\u0644\u0635\u0641\u0648\u0641 \u0623\u064A\u0627\u0645 \u0627\u0644\u0645\u0635\u062F\u0631\u061B \u0648\u062A\u062A\u063A\u064A\u0631 \u0627\u0644\u0633\u0646\u0629 \u0648\u0627\u0644\u0648\u0642\u0648\u062F \u0648\u0645\u0632\u064A\u062C \u0627\u0644\u0623\u0643\u0633\u062C\u064A\u0646 \u0648\u0636\u063A\u0637 \u0627\u0644\u062D\u062C\u0631\u0629 \u0645\u0639\u0627\u064B. \u0644\u0627 \u064A\u0645\u062B\u0644 \u0630\u0644\u0643 \u0627\u062A\u062C\u0627\u0647\u0627\u064B \u0645\u0636\u0628\u0648\u0637\u0627\u064B \u0644\u0644\u0623\u062F\u0627\u0621."),
+      { groupField: "Fuel Bottle", rowIdField: "Date", detailFields: ["Month", "Date", "Fuel Bottle", "Oxygen Conc (percent)"], aggregateDuplicates: true }
+    ),
+    plot(
       "psi21-ignitions-fuel-mfc",
       "PSI-21",
       "Fuel MFC",
@@ -982,6 +1060,19 @@
       { groupField: "Fuel Bottle", rowIdField: "Test Day", detailFields: ["Test Type", "Fuel Bottle", "Fuel MFC", "Fuel conc. Range"], aggregateDuplicates: true }
     ),
     plot(
+      "psi21-ignitions-test-day",
+      "PSI-21",
+      "Test Day",
+      "Flames ignited",
+      "source test-day label",
+      "reported test-day count",
+      bilingual("Reported ignition counts across PSI-21 test days", "\u0623\u0639\u062F\u0627\u062F \u0627\u0644\u0625\u0634\u0639\u0627\u0644 \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0639\u0628\u0631 \u0623\u064A\u0627\u0645 \u0627\u062E\u062A\u0628\u0627\u0631 PSI-21"),
+      bilingual("How do the ignition summaries vary over the listed test-day sequence?", "\u0643\u064A\u0641 \u062A\u062E\u062A\u0644\u0641 \u0645\u0644\u062E\u0635\u0627\u062A \u0627\u0644\u0625\u0634\u0639\u0627\u0644 \u0639\u0628\u0631 \u062A\u0633\u0644\u0633\u0644 \u0623\u064A\u0627\u0645 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631 \u0627\u0644\u0645\u062F\u0631\u062C\u061F"),
+      bilingual("Review coverage and recorded counts by day, with fuel bottle shown separately.", "\u0631\u0627\u062C\u0639 \u062A\u063A\u0637\u064A\u0629 \u0648\u0639\u062F\u062F \u0627\u0644\u0625\u0634\u0639\u0627\u0644\u0627\u062A \u0628\u062D\u0633\u0628 \u0627\u0644\u064A\u0648\u0645 \u0645\u0639 \u0625\u0638\u0647\u0627\u0631 \u0639\u0628\u0648\u0629 \u0627\u0644\u0648\u0642\u0648\u062F \u0645\u0646\u0641\u0635\u0644\u0629."),
+      bilingual("These are day summaries, not independent flames. Fuel, nitrogen flow, concentration, and procedures change across days.", "\u0647\u0630\u0647 \u0645\u0644\u062E\u0635\u0627\u062A \u0623\u064A\u0627\u0645 \u0648\u0644\u064A\u0633\u062A \u0623\u0644\u0633\u0646\u0629 \u0644\u0647\u0628 \u0645\u0633\u062A\u0642\u0644\u0629. \u064A\u062A\u063A\u064A\u0631 \u0627\u0644\u0648\u0642\u0648\u062F \u0648\u062A\u062F\u0641\u0642 \u0627\u0644\u0646\u064A\u062A\u0631\u0648\u062C\u064A\u0646 \u0648\u0627\u0644\u062A\u0631\u0643\u064A\u0632 \u0648\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0628\u064A\u0646 \u0627\u0644\u0623\u064A\u0627\u0645."),
+      { groupField: "Fuel Bottle", rowIdField: "Test Day", detailFields: ["Test Type", "Fuel Bottle", "Fuel MFC", "N2 MFC", "Fuel conc. Range"], aggregateDuplicates: true }
+    ),
+    plot(
       "psi22-ignitions-fuel-concentration",
       "PSI-22",
       "Fuel Conc",
@@ -993,6 +1084,19 @@
       bilingual("Compare the observed day summaries by concentration label; colors separate mesh polarity.", "\u0642\u0627\u0631\u0646 \u0645\u0644\u062E\u0635\u0627\u062A \u0627\u0644\u0623\u064A\u0627\u0645 \u0627\u0644\u0645\u0631\u0635\u0648\u062F\u0629 \u0628\u062D\u0633\u0628 \u062A\u0633\u0645\u064A\u0629 \u0627\u0644\u062A\u0631\u0643\u064A\u0632\u061B \u0648\u064A\u0641\u0635\u0644 \u0627\u0644\u0644\u0648\u0646 \u0642\u0637\u0628\u064A\u0629 \u0627\u0644\u0634\u0628\u0643\u0629."),
       bilingual("Only 21 rows have a numeric ignition count. These are day summaries, not per-flame outcomes or a controlled concentration-only test.", "\u064A\u0648\u062C\u062F \u0639\u062F\u062F \u0625\u0634\u0639\u0627\u0644 \u0631\u0642\u0645\u064A \u0641\u064A 21 \u0635\u0641\u0627\u064B \u0641\u0642\u0637. \u0647\u0630\u0647 \u0645\u0644\u062E\u0635\u0627\u062A \u0623\u064A\u0627\u0645 \u0648\u0644\u064A\u0633\u062A \u0646\u062A\u0627\u0626\u062C \u0644\u0643\u0644 \u0644\u0647\u0628 \u0623\u0648 \u0627\u062E\u062A\u0628\u0627\u0631\u0627\u064B \u0645\u0636\u0628\u0648\u0637\u0627\u064B \u0644\u0644\u062A\u0631\u0643\u064A\u0632 \u0648\u062D\u062F\u0647."),
       { xCategory: true, groupField: "Mesh Polarity", rowIdField: "Test Day", detailFields: ["Mesh Polarity", "Fuel Bottle", "Fuel Conc"], aggregateDuplicates: true }
+    ),
+    plot(
+      "psi22-ignitions-test-day",
+      "PSI-22",
+      "Test Day",
+      "Flames Ignited",
+      "source test-day label",
+      "reported count",
+      bilingual("Reported ignition counts across PSI-22 test days", "\u0623\u0639\u062F\u0627\u062F \u0627\u0644\u0625\u0634\u0639\u0627\u0644 \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0639\u0628\u0631 \u0623\u064A\u0627\u0645 \u0627\u062E\u062A\u0628\u0627\u0631 PSI-22"),
+      bilingual("How do the daily ignition summaries vary across the PSI-22 source sequence?", "\u0643\u064A\u0641 \u062A\u062E\u062A\u0644\u0641 \u0645\u0644\u062E\u0635\u0627\u062A \u0627\u0644\u0625\u0634\u0639\u0627\u0644 \u0627\u0644\u064A\u0648\u0645\u064A\u0629 \u0639\u0628\u0631 \u062A\u0633\u0644\u0633\u0644 PSI-22 \u0641\u064A \u0627\u0644\u0645\u0635\u062F\u0631\u061F"),
+      bilingual("Inspect reported day coverage and retain mesh polarity as a color group.", "\u0627\u0641\u062D\u0635 \u062A\u063A\u0637\u064A\u0629 \u0627\u0644\u0623\u064A\u0627\u0645 \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0645\u0639 \u062A\u0645\u064A\u064A\u0632 \u0642\u0637\u0628\u064A\u0629 \u0627\u0644\u0634\u0628\u0643\u0629 \u0628\u0627\u0644\u0623\u0644\u0648\u0627\u0646."),
+      bilingual("These are daily summaries; fuel concentration, mesh polarity, and other conditions vary. They are not per-flame outcomes.", "\u0647\u0630\u0647 \u0645\u0644\u062E\u0635\u0627\u062A \u064A\u0648\u0645\u064A\u0629\u061B \u0648\u064A\u062A\u063A\u064A\u0631 \u062A\u0631\u0643\u064A\u0632 \u0627\u0644\u0648\u0642\u0648\u062F \u0648\u0642\u0637\u0628\u064A\u0629 \u0627\u0644\u0634\u0628\u0643\u0629 \u0648\u0638\u0631\u0648\u0641 \u0623\u062E\u0631\u0649. \u0644\u064A\u0633\u062A \u0646\u062A\u0627\u0626\u062C \u0644\u0643\u0644 \u0644\u0647\u0628."),
+      { groupField: "Mesh Polarity", rowIdField: "Test Day", detailFields: ["Mesh Polarity", "Fuel Bottle", "Fuel Conc"], aggregateDuplicates: true }
     ),
     plot(
       "psi23-ignitions-test-day",
@@ -1021,6 +1125,27 @@
       { rowIdField: "Test #", detailFields: ["Date", "Fuel Sample Material"], aggregateDuplicates: true, identityReference: true }
     ),
     plot(
+      "psi25-o2-change",
+      "PSI-25",
+      "Calibrated  initial O2 % by vol",
+      "Calibrated final O2 % by vol",
+      "% by volume",
+      "percentage points",
+      bilingual("Within-record oxygen change", "\u0627\u0644\u062A\u063A\u064A\u0631 \u0641\u064A \u0627\u0644\u0623\u0643\u0633\u062C\u064A\u0646 \u062F\u0627\u062E\u0644 \u0633\u062C\u0644 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631"),
+      bilingual("How large and in which direction is the final-minus-initial O\u2082 change in each paired record?", "\u0645\u0627 \u0645\u0642\u062F\u0627\u0631 \u0648\u0627\u062A\u062C\u0627\u0647 \u0641\u0631\u0642 O\u2082 \u0627\u0644\u0646\u0647\u0627\u0626\u064A \u0646\u0627\u0642\u0635 \u0627\u0644\u0627\u0628\u062A\u062F\u0627\u0626\u064A \u0641\u064A \u0643\u0644 \u0633\u062C\u0644 \u0645\u0632\u062F\u0648\u062C\u061F"),
+      bilingual("The zero line separates records with no net change from positive or negative changes; select a point to inspect both readings.", "\u064A\u0641\u0635\u0644 \u0627\u0644\u0635\u0641\u0631 \u0627\u0644\u0633\u062C\u0644\u0627\u062A \u0628\u0644\u0627 \u062A\u063A\u064A\u0631 \u0635\u0627\u0641\u064D \u0639\u0646 \u0627\u0644\u062A\u063A\u064A\u0631 \u0627\u0644\u0645\u0648\u062C\u0628 \u0623\u0648 \u0627\u0644\u0633\u0627\u0644\u0628\u061B \u0627\u062E\u062A\u0631 \u0646\u0642\u0637\u0629 \u0644\u0641\u062D\u0635 \u0627\u0644\u0642\u0631\u0627\u0621\u062A\u064A\u0646."),
+      bilingual("The paired difference is descriptive for this test record. Conditions and material vary, and it does not establish a suppression effect.", "\u0627\u0644\u0641\u0631\u0642 \u0627\u0644\u0645\u0632\u062F\u0648\u062C \u0648\u0635\u0641 \u0644\u0647\u0630\u0627 \u0627\u0644\u0633\u062C\u0644\u061B \u062A\u062E\u062A\u0644\u0641 \u0627\u0644\u0638\u0631\u0648\u0641 \u0648\u0627\u0644\u0645\u0627\u062F\u0629 \u0648\u0644\u0627 \u064A\u062B\u0628\u062A \u0623\u062B\u0631 \u0627\u0644\u0625\u062E\u0645\u0627\u062F."),
+      {
+        yDeltaFrom: "Calibrated  initial O2 % by vol",
+        zeroReference: true,
+        yAxisLabel: bilingual("\u0394 O\u2082 (final \u2212 initial)", "\u0394 O\u2082 (\u0627\u0644\u0646\u0647\u0627\u0626\u064A \u2212 \u0627\u0644\u0627\u0628\u062A\u062F\u0627\u0626\u064A)"),
+        yAxisUnit: "percentage points",
+        rowIdField: "Test #",
+        detailFields: ["Date", "Fuel Sample Material", "Calibrated  initial O2 % by vol", "Calibrated final O2 % by vol"],
+        aggregateDuplicates: true
+      }
+    ),
+    plot(
       "psi25-co2-initial-final",
       "PSI-25",
       "Initial CO2 % by vol",
@@ -1032,6 +1157,27 @@
       bilingual("The dashed 1:1 line marks equal readings; select a point to inspect its test and material.", "\u064A\u0645\u062B\u0644 \u0627\u0644\u062E\u0637 \u0627\u0644\u0645\u062A\u0642\u0637\u0639 1:1 \u062A\u0633\u0627\u0648\u064A \u0627\u0644\u0642\u0631\u0627\u0621\u062A\u064A\u0646\u061B \u0627\u062E\u062A\u0631 \u0646\u0642\u0637\u0629 \u0644\u0641\u062D\u0635 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631 \u0648\u0627\u0644\u0645\u0627\u062F\u0629."),
       bilingual("Values are paired source readings; material, ventilation display, and test conditions vary. Missing cells remain missing.", "\u0627\u0644\u0642\u064A\u0645 \u0642\u0631\u0627\u0621\u0627\u062A \u0645\u0635\u062F\u0631 \u0645\u0632\u062F\u0648\u062C\u0629\u061B \u0648\u062A\u062E\u062A\u0644\u0641 \u0627\u0644\u0645\u0648\u0627\u062F \u0648\u0639\u0631\u0636 \u0627\u0644\u062A\u0647\u0648\u064A\u0629 \u0648\u0638\u0631\u0648\u0641 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631. \u062A\u0628\u0642\u0649 \u0627\u0644\u062E\u0644\u0627\u064A\u0627 \u0627\u0644\u0645\u0641\u0642\u0648\u062F\u0629 \u0645\u0641\u0642\u0648\u062F\u0629."),
       { rowIdField: "Test #", detailFields: ["Date", "Fuel Sample Material"], aggregateDuplicates: true, identityReference: true }
+    ),
+    plot(
+      "psi25-co2-change",
+      "PSI-25",
+      "Initial CO2 % by vol",
+      "Final CO2 % by vol",
+      "% by volume",
+      "percentage points",
+      bilingual("Within-record carbon-dioxide change", "\u0627\u0644\u062A\u063A\u064A\u0631 \u0641\u064A \u062B\u0627\u0646\u064A \u0623\u0643\u0633\u064A\u062F \u0627\u0644\u0643\u0631\u0628\u0648\u0646 \u062F\u0627\u062E\u0644 \u0633\u062C\u0644 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631"),
+      bilingual("What final-minus-initial CO\u2082 change is recorded for each paired observation?", "\u0645\u0627 \u0641\u0631\u0642 CO\u2082 \u0627\u0644\u0646\u0647\u0627\u0626\u064A \u0646\u0627\u0642\u0635 \u0627\u0644\u0627\u0628\u062A\u062F\u0627\u0626\u064A \u0627\u0644\u0645\u0633\u062C\u0644 \u0644\u0643\u0644 \u0645\u0644\u0627\u062D\u0638\u0629 \u0645\u0632\u062F\u0648\u062C\u0629\u061F"),
+      bilingual("Inspect the signed paired change and read both original concentrations from a selected point.", "\u0627\u0641\u062D\u0635 \u0627\u0644\u0641\u0631\u0642 \u0627\u0644\u0645\u0632\u062F\u0648\u062C \u0628\u0625\u0634\u0627\u0631\u062A\u0647 \u0648\u0627\u0642\u0631\u0623 \u0627\u0644\u062A\u0631\u0643\u064A\u0632\u064A\u0646 \u0627\u0644\u0623\u0635\u0644\u064A\u064A\u0646 \u0639\u0646\u062F \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0646\u0642\u0637\u0629."),
+      bilingual("The table combines different material and test conditions. A paired change is not a causal material or ventilation effect.", "\u064A\u062C\u0645\u0639 \u0627\u0644\u062C\u062F\u0648\u0644 \u0645\u0648\u0627\u062F \u0648\u0638\u0631\u0648\u0641 \u0627\u062E\u062A\u0628\u0627\u0631 \u0645\u062E\u062A\u0644\u0641\u0629\u061B \u0648\u0627\u0644\u0641\u0631\u0642 \u0627\u0644\u0645\u0632\u062F\u0648\u062C \u0644\u0627 \u064A\u062B\u0628\u062A \u0623\u062B\u0631\u0627\u064B \u0633\u0628\u0628\u064A\u0627\u064B \u0644\u0644\u0645\u0627\u062F\u0629 \u0623\u0648 \u0627\u0644\u062A\u0647\u0648\u064A\u0629."),
+      {
+        yDeltaFrom: "Initial CO2 % by vol",
+        zeroReference: true,
+        yAxisLabel: bilingual("\u0394 CO\u2082 (final \u2212 initial)", "\u0394 CO\u2082 (\u0627\u0644\u0646\u0647\u0627\u0626\u064A \u2212 \u0627\u0644\u0627\u0628\u062A\u062F\u0627\u0626\u064A)"),
+        yAxisUnit: "percentage points",
+        rowIdField: "Test #",
+        detailFields: ["Date", "Fuel Sample Material", "Initial CO2 % by vol", "Final CO2 % by vol"],
+        aggregateDuplicates: true
+      }
     ),
     plot(
       "psi25-co-initial-final",
@@ -1047,6 +1193,27 @@
       { rowIdField: "Test #", detailFields: ["Date", "Fuel Sample Material"], aggregateDuplicates: true, identityReference: true }
     ),
     plot(
+      "psi25-co-change",
+      "PSI-25",
+      "Initial CO (ppm)",
+      "Final CO (ppm)",
+      "ppm",
+      "ppm",
+      bilingual("Within-record carbon-monoxide change", "\u0627\u0644\u062A\u063A\u064A\u0631 \u0641\u064A \u0623\u0648\u0644 \u0623\u0643\u0633\u064A\u062F \u0627\u0644\u0643\u0631\u0628\u0648\u0646 \u062F\u0627\u062E\u0644 \u0633\u062C\u0644 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631"),
+      bilingual("What final-minus-initial CO change is recorded for each paired observation?", "\u0645\u0627 \u0641\u0631\u0642 CO \u0627\u0644\u0646\u0647\u0627\u0626\u064A \u0646\u0627\u0642\u0635 \u0627\u0644\u0627\u0628\u062A\u062F\u0627\u0626\u064A \u0627\u0644\u0645\u0633\u062C\u0644 \u0644\u0643\u0644 \u0645\u0644\u0627\u062D\u0638\u0629 \u0645\u0632\u062F\u0648\u062C\u0629\u061F"),
+      bilingual("Compare the signed change directly; selected-point details retain the raw source readings.", "\u0642\u0627\u0631\u0646 \u0645\u0642\u062F\u0627\u0631 \u0627\u0644\u062A\u063A\u064A\u0631 \u0648\u0625\u0634\u0627\u0631\u062A\u0647 \u0645\u0628\u0627\u0634\u0631\u0629\u061B \u0648\u062A\u062D\u062A\u0641\u0638 \u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0646\u0642\u0637\u0629 \u0628\u0642\u0631\u0627\u0621\u0627\u062A \u0627\u0644\u0645\u0635\u062F\u0631."),
+      bilingual("This describes paired sensor readings across different tests and materials; negative values stay as published and are not clipped.", "\u0647\u0630\u0627 \u0648\u0635\u0641 \u0644\u0642\u0631\u0627\u0621\u0627\u062A \u062D\u0633\u0627\u0633\u0627\u062A \u0645\u0632\u062F\u0648\u062C\u0629 \u0639\u0628\u0631 \u0627\u062E\u062A\u0628\u0627\u0631\u0627\u062A \u0648\u0645\u0648\u0627\u062F \u0645\u062E\u062A\u0644\u0641\u0629\u061B \u0648\u062A\u0628\u0642\u0649 \u0627\u0644\u0642\u064A\u0645 \u0627\u0644\u0633\u0627\u0644\u0628\u0629 \u0643\u0645\u0627 \u0646\u064F\u0634\u0631\u062A \u0648\u0644\u0627 \u062A\u064F\u0642\u0635."),
+      {
+        yDeltaFrom: "Initial CO (ppm)",
+        zeroReference: true,
+        yAxisLabel: bilingual("\u0394 CO (final \u2212 initial)", "\u0394 CO (\u0627\u0644\u0646\u0647\u0627\u0626\u064A \u2212 \u0627\u0644\u0627\u0628\u062A\u062F\u0627\u0626\u064A)"),
+        yAxisUnit: "ppm",
+        rowIdField: "Test #",
+        detailFields: ["Date", "Fuel Sample Material", "Initial CO (ppm)", "Final CO (ppm)"],
+        aggregateDuplicates: true
+      }
+    ),
+    plot(
       "psi39-oxygen-helium-conditions",
       "PSI-39",
       "Oxygen",
@@ -1058,6 +1225,45 @@
       bilingual("Colors separate nitrogen values; larger circles indicate more source rows with the same combination.", "\u062A\u0641\u0635\u0644 \u0627\u0644\u0623\u0644\u0648\u0627\u0646 \u0642\u064A\u0645 \u0627\u0644\u0646\u064A\u062A\u0631\u0648\u062C\u064A\u0646\u061B \u0648\u062A\u0634\u064A\u0631 \u0627\u0644\u062F\u0648\u0627\u0626\u0631 \u0627\u0644\u0623\u0643\u0628\u0631 \u0625\u0644\u0649 \u0635\u0641\u0648\u0641 \u0645\u0635\u062F\u0631 \u0623\u0643\u062B\u0631 \u0628\u0627\u0644\u0642\u064A\u0645 \u0646\u0641\u0633\u0647\u0627."),
       bilingual("The source table does not state units in these headers. This plots reported conditions, not combustion outcomes or a flammability limit.", "\u0644\u0627 \u064A\u0630\u0643\u0631 \u062C\u062F\u0648\u0644 \u0627\u0644\u0645\u0635\u062F\u0631 \u0648\u062D\u062F\u0627\u062A \u0647\u0630\u0647 \u0627\u0644\u062D\u0642\u0648\u0644. \u064A\u0639\u0631\u0636 \u0627\u0644\u0631\u0633\u0645 \u0638\u0631\u0648\u0641\u0627\u064B \u0645\u0633\u062C\u0644\u0629 \u0644\u0627 \u0646\u0648\u0627\u062A\u062C \u0627\u062D\u062A\u0631\u0627\u0642 \u0623\u0648 \u062D\u062F\u0648\u062F \u0642\u0627\u0628\u0644\u064A\u0629 \u0627\u0634\u062A\u0639\u0627\u0644."),
       { groupField: "Nitrogen", rowIdField: "Flex Number", detailFields: ["Flex Number", "Nitrogen", "Pressure", "Fuel"], aggregateDuplicates: true }
+    ),
+    plot(
+      "psi69-nitrogen-burning-rate",
+      "PSI-69",
+      "N initial ambient composition; mole fraction",
+      "Burning rate; mm",
+      "mole fraction",
+      "mm\xB2/s",
+      bilingual("Recorded nitrogen fraction and droplet burning rate", "\u0646\u0633\u0628\u0629 \u0627\u0644\u0646\u064A\u062A\u0631\u0648\u062C\u064A\u0646 \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0648\u0645\u0639\u062F\u0644 \u0627\u062D\u062A\u0631\u0627\u0642 \u0627\u0644\u0642\u0637\u0631\u0629"),
+      bilingual("How do recorded droplet burning-rate constants sit across the nitrogen fractions in FLEX tests?", "\u0643\u064A\u0641 \u062A\u062A\u0648\u0632\u0639 \u062B\u0648\u0627\u0628\u062A \u0645\u0639\u062F\u0644 \u0627\u062D\u062A\u0631\u0627\u0642 \u0627\u0644\u0642\u0637\u0631\u0629 \u0639\u0628\u0631 \u0646\u0633\u0628 \u0627\u0644\u0646\u064A\u062A\u0631\u0648\u062C\u064A\u0646 \u0641\u064A \u0627\u062E\u062A\u0628\u0627\u0631\u0627\u062A FLEX\u061F"),
+      bilingual("Inspect measured conditions and outcomes by fuel; source points remain individual test records.", "\u0627\u0641\u062D\u0635 \u0627\u0644\u0638\u0631\u0648\u0641 \u0648\u0627\u0644\u0646\u062A\u0627\u0626\u062C \u0627\u0644\u0645\u0642\u0627\u0633\u0629 \u0628\u062D\u0633\u0628 \u0627\u0644\u0648\u0642\u0648\u062F\u061B \u0648\u062A\u0645\u062B\u0644 \u0627\u0644\u0646\u0642\u0627\u0637 \u0633\u062C\u0644\u0627\u062A \u0627\u062E\u062A\u0628\u0627\u0631\u0627\u062A \u0627\u0644\u0645\u0635\u062F\u0631."),
+      bilingual("Pressure, fuel, oxygen and other diluents also vary. This descriptive view cannot isolate nitrogen or establish causality.", "\u064A\u062A\u063A\u064A\u0631 \u0627\u0644\u0636\u063A\u0637 \u0648\u0627\u0644\u0648\u0642\u0648\u062F \u0648\u0627\u0644\u0623\u0643\u0633\u062C\u064A\u0646 \u0648\u0627\u0644\u063A\u0627\u0632\u0627\u062A \u0627\u0644\u0645\u062E\u0641\u0641\u0629 \u0627\u0644\u0623\u062E\u0631\u0649 \u0623\u064A\u0636\u0627\u064B\u061B \u0644\u0630\u0644\u0643 \u0644\u0627 \u064A\u0639\u0632\u0644 \u0647\u0630\u0627 \u0627\u0644\u0639\u0631\u0636 \u0627\u0644\u0648\u0635\u0641\u064A \u0623\u062B\u0631 \u0627\u0644\u0646\u064A\u062A\u0631\u0648\u062C\u064A\u0646 \u0648\u0644\u0627 \u064A\u062B\u0628\u062A \u0627\u0644\u0633\u0628\u0628\u064A\u0629."),
+      { groupField: "Fuel", rowIdField: "FLEX Test #", detailFields: ["Fuel", "Ambient pressure; mmHg", "O initial ambient composition; mole fraction", "CO initial ambient composition; mole fraction", "He initial ambient composition; mole fraction"], aggregateDuplicates: true }
+    ),
+    plot(
+      "psi69-carbon-monoxide-burning-rate",
+      "PSI-69",
+      "CO initial ambient composition; mole fraction",
+      "Burning rate; mm",
+      "mole fraction",
+      "mm\xB2/s",
+      bilingual("Recorded carbon-monoxide fraction and droplet burning rate", "\u0646\u0633\u0628\u0629 \u0623\u0648\u0644 \u0623\u0643\u0633\u064A\u062F \u0627\u0644\u0643\u0631\u0628\u0648\u0646 \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0648\u0645\u0639\u062F\u0644 \u0627\u062D\u062A\u0631\u0627\u0642 \u0627\u0644\u0642\u0637\u0631\u0629"),
+      bilingual("What burning-rate constants are recorded across tests with different CO fractions?", "\u0645\u0627 \u062B\u0648\u0627\u0628\u062A \u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642 \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0639\u0628\u0631 \u0627\u062E\u062A\u0628\u0627\u0631\u0627\u062A \u062A\u062E\u062A\u0644\u0641 \u0641\u064A\u0647\u0627 \u0646\u0633\u0628\u0629 CO\u061F"),
+      bilingual("Review the recorded diluent conditions alongside each measured test result.", "\u0631\u0627\u062C\u0639 \u0638\u0631\u0648\u0641 \u0627\u0644\u063A\u0627\u0632 \u0627\u0644\u0645\u062E\u0641\u0641 \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0625\u0644\u0649 \u062C\u0627\u0646\u0628 \u0646\u062A\u064A\u062C\u0629 \u0643\u0644 \u0627\u062E\u062A\u0628\u0627\u0631 \u0645\u0642\u0627\u0633\u0629."),
+      bilingual("Fuel, pressure, oxygen and helium vary across tests. The pattern is descriptive and does not establish a CO effect.", "\u064A\u062E\u062A\u0644\u0641 \u0627\u0644\u0648\u0642\u0648\u062F \u0648\u0627\u0644\u0636\u063A\u0637 \u0648\u0627\u0644\u0623\u0643\u0633\u062C\u064A\u0646 \u0648\u0627\u0644\u0647\u064A\u0644\u064A\u0648\u0645 \u0628\u064A\u0646 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631\u0627\u062A\u061B \u0648\u0627\u0644\u0646\u0645\u0637 \u0648\u0635\u0641\u064A \u0648\u0644\u0627 \u064A\u062B\u0628\u062A \u0623\u062B\u0631 CO."),
+      { groupField: "Fuel", rowIdField: "FLEX Test #", detailFields: ["Fuel", "Ambient pressure; mmHg", "O initial ambient composition; mole fraction", "N initial ambient composition; mole fraction", "He initial ambient composition; mole fraction"], aggregateDuplicates: true }
+    ),
+    plot(
+      "psi69-helium-burning-rate",
+      "PSI-69",
+      "He initial ambient composition; mole fraction",
+      "Burning rate; mm",
+      "mole fraction",
+      "mm\xB2/s",
+      bilingual("Recorded helium fraction and droplet burning rate", "\u0646\u0633\u0628\u0629 \u0627\u0644\u0647\u064A\u0644\u064A\u0648\u0645 \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0648\u0645\u0639\u062F\u0644 \u0627\u062D\u062A\u0631\u0627\u0642 \u0627\u0644\u0642\u0637\u0631\u0629"),
+      bilingual("How do recorded burning-rate constants distribute across tests with varying helium fraction?", "\u0643\u064A\u0641 \u062A\u062A\u0648\u0632\u0639 \u062B\u0648\u0627\u0628\u062A \u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642 \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0639\u0628\u0631 \u0627\u062E\u062A\u0628\u0627\u0631\u0627\u062A \u062A\u062E\u062A\u0644\u0641 \u0641\u064A\u0647\u0627 \u0646\u0633\u0628\u0629 \u0627\u0644\u0647\u064A\u0644\u064A\u0648\u0645\u061F"),
+      bilingual("Inspect test-level values by fuel, with other reported composition and pressure in the point details.", "\u0627\u0641\u062D\u0635 \u0627\u0644\u0642\u064A\u0645 \u0639\u0644\u0649 \u0645\u0633\u062A\u0648\u0649 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631 \u0628\u062D\u0633\u0628 \u0627\u0644\u0648\u0642\u0648\u062F\u060C \u0645\u0639 \u0628\u0642\u064A\u0629 \u062A\u0631\u0643\u064A\u0628 \u0627\u0644\u062C\u0648 \u0648\u0627\u0644\u0636\u063A\u0637 \u0641\u064A \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644."),
+      bilingual("Oxygen, pressure, fuel, nitrogen and CO also vary. This does not isolate helium or define a safe limit.", "\u064A\u062A\u063A\u064A\u0631 \u0627\u0644\u0623\u0643\u0633\u062C\u064A\u0646 \u0648\u0627\u0644\u0636\u063A\u0637 \u0648\u0627\u0644\u0648\u0642\u0648\u062F \u0648\u0627\u0644\u0646\u064A\u062A\u0631\u0648\u062C\u064A\u0646 \u0648CO \u0623\u064A\u0636\u0627\u064B\u061B \u0648\u0644\u0627 \u064A\u0639\u0632\u0644 \u0647\u0630\u0627 \u0623\u062B\u0631 \u0627\u0644\u0647\u064A\u0644\u064A\u0648\u0645 \u0648\u0644\u0627 \u064A\u062D\u062F\u062F \u062D\u062F\u0627\u064B \u0622\u0645\u0646\u0627\u064B."),
+      { groupField: "Fuel", rowIdField: "FLEX Test #", detailFields: ["Fuel", "Ambient pressure; mmHg", "O initial ambient composition; mole fraction", "N initial ambient composition; mole fraction", "CO initial ambient composition; mole fraction"], aggregateDuplicates: true }
     ),
     plot(
       "psi98-sample-burn-time",
@@ -1097,6 +1303,45 @@
       bilingual("The bubble size reveals repeated source-record values; inspect descriptions before interpreting a pattern.", "\u064A\u0643\u0634\u0641 \u062D\u062C\u0645 \u0627\u0644\u062F\u0627\u0626\u0631\u0629 \u062A\u0643\u0631\u0627\u0631 \u0642\u064A\u0645 \u0633\u062C\u0644\u0627\u062A \u0627\u0644\u0645\u0635\u062F\u0631\u061B \u0627\u0641\u062D\u0635 \u0627\u0644\u0623\u0648\u0635\u0627\u0641 \u0642\u0628\u0644 \u062A\u0641\u0633\u064A\u0631 \u0623\u064A \u0646\u0645\u0637."),
       bilingual("Repeated test identifiers and incomplete fields mean rows are not assumed to be independent samples.", "\u062A\u0643\u0631\u0627\u0631 \u0645\u0639\u0631\u0651\u0641\u0627\u062A \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631 \u0648\u0646\u0642\u0635 \u0627\u0644\u062D\u0642\u0648\u0644 \u064A\u0639\u0646\u064A \u0623\u0646\u0646\u0627 \u0644\u0627 \u0646\u0641\u062A\u0631\u0636 \u0627\u0633\u062A\u0642\u0644\u0627\u0644 \u0627\u0644\u0635\u0641\u0648\u0641 \u0643\u0639\u064A\u0646\u0627\u062A."),
       { groupField: "Sample Type", rowIdField: "SAME Test #", detailFields: ["Sample Type", "Description"], aggregateDuplicates: true }
+    ),
+    plot(
+      "psi101-duration-rt-r0",
+      "PSI-101",
+      "Duration (sec)",
+      "Rt/R0",
+      "s",
+      "ratio as published",
+      bilingual("Reported test duration and Rt/R0", "\u0645\u062F\u0629 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631 \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0648\u0646\u0633\u0628\u0629 Rt/R0"),
+      bilingual("How do the listed measurement durations sit alongside the reported aerosol size ratios?", "\u0643\u064A\u0641 \u062A\u0642\u0639 \u0645\u062F\u062F \u0627\u0644\u0642\u064A\u0627\u0633 \u0627\u0644\u0645\u062F\u0631\u062C\u0629 \u0645\u0642\u0627\u0631\u0646\u0629 \u0628\u0646\u0633\u0628 \u0623\u062D\u062C\u0627\u0645 \u0627\u0644\u0647\u0628\u0627\u0621 \u0627\u0644\u0645\u0633\u062C\u0644\u0629\u061F"),
+      bilingual("Inspect sample-level records by sample type and retain the source description.", "\u0627\u0641\u062D\u0635 \u0633\u062C\u0644\u0627\u062A \u0627\u0644\u0639\u064A\u0646\u0627\u062A \u0628\u062D\u0633\u0628 \u0646\u0648\u0639\u0647\u0627 \u0645\u0639 \u0627\u0644\u0625\u0628\u0642\u0627\u0621 \u0639\u0644\u0649 \u0648\u0635\u0641 \u0627\u0644\u0645\u0635\u062F\u0631."),
+      bilingual("Only rows with both numeric fields are shown. Repeated test IDs and changing samples mean points are not assumed independent.", "\u062A\u064F\u0639\u0631\u0636 \u0627\u0644\u0635\u0641\u0648\u0641 \u0627\u0644\u062A\u064A \u062A\u062D\u0648\u064A \u0627\u0644\u062D\u0642\u0644\u064A\u0646 \u0627\u0644\u0631\u0642\u0645\u064A\u064A\u0646 \u0641\u0642\u0637. \u062A\u062A\u0643\u0631\u0631 \u0645\u0639\u0631\u0651\u0641\u0627\u062A \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631 \u0648\u062A\u062A\u063A\u064A\u0631 \u0627\u0644\u0639\u064A\u0646\u0627\u062A\u060C \u0644\u0630\u0644\u0643 \u0644\u0627 \u0646\u0641\u062A\u0631\u0636 \u0627\u0633\u062A\u0642\u0644\u0627\u0644 \u0627\u0644\u0646\u0642\u0627\u0637."),
+      { groupField: "Sample Type", rowIdField: "SAME Test #", detailFields: ["Sample Type", "Description", "Date"], aggregateDuplicates: true }
+    ),
+    plot(
+      "psi101-primary-aging-rt-r0",
+      "PSI-101",
+      "Primary aging time (sec)",
+      "Rt/R0",
+      "s",
+      "ratio as published",
+      bilingual("Primary aerosol aging time and Rt/R0", "\u0632\u0645\u0646 \u062A\u0642\u0627\u062F\u0645 \u0627\u0644\u0647\u0628\u0627\u0621 \u0627\u0644\u0623\u0648\u0644\u064A \u0648\u0646\u0633\u0628\u0629 Rt/R0"),
+      bilingual("What Rt/R0 values accompany the reported primary aging-time settings?", "\u0645\u0627 \u0642\u064A\u0645 Rt/R0 \u0627\u0644\u0645\u0635\u0627\u062D\u0628\u0629 \u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0632\u0645\u0646 \u0627\u0644\u062A\u0642\u0627\u062F\u0645 \u0627\u0644\u0623\u0648\u0644\u064A \u0627\u0644\u0645\u0633\u062C\u0644\u0629\u061F"),
+      bilingual("Compare the instrument-recorded aging-time fields with the same-row ratio and sample type.", "\u0642\u0627\u0631\u0646 \u062D\u0642\u0648\u0644 \u0632\u0645\u0646 \u0627\u0644\u062A\u0642\u0627\u062F\u0645 \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0645\u0639 \u0627\u0644\u0646\u0633\u0628\u0629 \u0648\u0646\u0648\u0639 \u0627\u0644\u0639\u064A\u0646\u0629 \u0641\u064A \u0627\u0644\u0635\u0641 \u0646\u0641\u0633\u0647."),
+      bilingual("The dataset has incomplete fields and repeated test IDs; this is descriptive, not an isolated aging-time effect.", "\u062A\u062D\u062A\u0648\u064A \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u062D\u0642\u0648\u0644\u0627\u064B \u0646\u0627\u0642\u0635\u0629 \u0648\u0645\u0639\u0631\u0651\u0641\u0627\u062A \u0627\u062E\u062A\u0628\u0627\u0631 \u0645\u062A\u0643\u0631\u0631\u0629\u061B \u0648\u0647\u0630\u0627 \u0648\u0635\u0641 \u0648\u0644\u064A\u0633 \u0623\u062B\u0631\u0627\u064B \u0645\u0639\u0632\u0648\u0644\u0627\u064B \u0644\u0632\u0645\u0646 \u0627\u0644\u062A\u0642\u0627\u062F\u0645."),
+      { groupField: "Sample Type", rowIdField: "SAME Test #", detailFields: ["Sample Type", "Description", "Primary mixing time (sec)", "Net aging time (sec)"], aggregateDuplicates: true }
+    ),
+    plot(
+      "psi101-primary-mixing-rt-r0",
+      "PSI-101",
+      "Primary mixing time (sec)",
+      "Rt/R0",
+      "s",
+      "ratio as published",
+      bilingual("Primary aerosol mixing time and Rt/R0", "\u0632\u0645\u0646 \u062E\u0644\u0637 \u0627\u0644\u0647\u0628\u0627\u0621 \u0627\u0644\u0623\u0648\u0644\u064A \u0648\u0646\u0633\u0628\u0629 Rt/R0"),
+      bilingual("What Rt/R0 values accompany the recorded primary mixing times?", "\u0645\u0627 \u0642\u064A\u0645 Rt/R0 \u0627\u0644\u0645\u0635\u0627\u062D\u0628\u0629 \u0644\u0623\u0632\u0645\u0646\u0629 \u0627\u0644\u062E\u0644\u0637 \u0627\u0644\u0623\u0648\u0644\u064A\u0629 \u0627\u0644\u0645\u0633\u062C\u0644\u0629\u061F"),
+      bilingual("Inspect the mixing-time field separately from inlet velocity and net aging time.", "\u0627\u0641\u062D\u0635 \u062D\u0642\u0644 \u0632\u0645\u0646 \u0627\u0644\u062E\u0644\u0637 \u0645\u0646\u0641\u0635\u0644\u0627\u064B \u0639\u0646 \u0633\u0631\u0639\u0629 \u0627\u0644\u062F\u062E\u0648\u0644 \u0648\u0632\u0645\u0646 \u0627\u0644\u062A\u0642\u0627\u062F\u0645 \u0627\u0644\u0635\u0627\u0641\u064A."),
+      bilingual("Fields are incomplete and test identifiers repeat. The displayed association is not a causal or independent-sample estimate.", "\u0627\u0644\u062D\u0642\u0648\u0644 \u0646\u0627\u0642\u0635\u0629 \u0648\u0645\u0639\u0631\u0651\u0641\u0627\u062A \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631 \u062A\u062A\u0643\u0631\u0631\u061B \u0648\u0627\u0644\u0627\u0631\u062A\u0628\u0627\u0637 \u0627\u0644\u0638\u0627\u0647\u0631 \u0644\u064A\u0633 \u062A\u0642\u062F\u064A\u0631\u0627\u064B \u0633\u0628\u0628\u064A\u0627\u064B \u0623\u0648 \u0644\u0639\u064A\u0646\u0627\u062A \u0645\u0633\u062A\u0642\u0644\u0629."),
+      { groupField: "Sample Type", rowIdField: "SAME Test #", detailFields: ["Sample Type", "Description", "Primary aging time (sec)", "Net aging time (sec)"], aggregateDuplicates: true }
     ),
     plot(
       "psi102-airflow-weight-loss",
@@ -1149,6 +1394,19 @@
       bilingual("Inspect the source operating-condition records; bubble size reveals repeated combinations.", "\u0627\u0641\u062D\u0635 \u0633\u062C\u0644\u0627\u062A \u0638\u0631\u0648\u0641 \u0627\u0644\u062A\u0634\u063A\u064A\u0644 \u0627\u0644\u0645\u0635\u062F\u0631\u064A\u0629\u061B \u0648\u064A\u0643\u0634\u0641 \u062D\u062C\u0645 \u0627\u0644\u062F\u0627\u0626\u0631\u0629 \u0627\u0644\u062A\u0631\u0627\u0643\u064A\u0628 \u0627\u0644\u0645\u062A\u0643\u0631\u0631\u0629."),
       bilingual("The rows are repeated SPICE log entries, not independent fire trials. Nozzle and fuel-rate association is descriptive only.", "\u0627\u0644\u0635\u0641\u0648\u0641 \u0625\u062F\u062E\u0627\u0644\u0627\u062A \u0645\u062A\u0643\u0631\u0631\u0629 \u0641\u064A \u0633\u062C\u0644 SPICE \u0648\u0644\u064A\u0633\u062A \u062A\u062C\u0627\u0631\u0628 \u062D\u0631\u064A\u0642 \u0645\u0633\u062A\u0642\u0644\u0629. \u0627\u0644\u0627\u0631\u062A\u0628\u0627\u0637 \u0628\u064A\u0646 \u0627\u0644\u0641\u0648\u0647\u0629 \u0648\u0645\u0639\u062F\u0644 \u0627\u0644\u0648\u0642\u0648\u062F \u0648\u0635\u0641\u064A \u0641\u0642\u0637."),
       { groupField: "Fuel", rowIdField: "GMT ignition", detailFields: ["GMT date", "Fuel", "Air Rate (cm/s)"], aggregateDuplicates: true }
+    ),
+    plot(
+      "psi107-volumetric-mass-fuel-rate",
+      "PSI-107",
+      "Fuel Rate (sccm)",
+      "Fuel Rate (mg/s)",
+      "sccm",
+      "mg/s",
+      bilingual("Volumetric and mass fuel-rate records", "\u0645\u0639\u062F\u0644\u0627\u062A \u0627\u0644\u0648\u0642\u0648\u062F \u0627\u0644\u062D\u062C\u0645\u064A\u0629 \u0648\u0627\u0644\u0643\u062A\u0644\u064A\u0629 \u0627\u0644\u0645\u0633\u062C\u0644\u0629"),
+      bilingual("How do source volumetric fuel rates correspond to the reported mass rates for each fuel?", "\u0643\u064A\u0641 \u062A\u0642\u0627\u0628\u0644 \u0645\u0639\u062F\u0644\u0627\u062A \u0627\u0644\u0648\u0642\u0648\u062F \u0627\u0644\u062D\u062C\u0645\u064A\u0629 \u0641\u064A \u0627\u0644\u0645\u0635\u062F\u0631 \u0645\u0639\u062F\u0644\u0627\u062A \u0627\u0644\u0643\u062A\u0644\u0629 \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0644\u0643\u0644 \u0648\u0642\u0648\u062F\u061F"),
+      bilingual("Inspect the reported conversion relationship, with fuel identity shown by color.", "\u0627\u0641\u062D\u0635 \u0639\u0644\u0627\u0642\u0629 \u0627\u0644\u062A\u062D\u0648\u064A\u0644 \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0645\u0639 \u062A\u0645\u064A\u064A\u0632 \u0646\u0648\u0639 \u0627\u0644\u0648\u0642\u0648\u062F \u0628\u0627\u0644\u0644\u0648\u0646."),
+      bilingual("These are repeated SPICE log conditions, not independent flame trials. This checks paired rate records and does not establish combustion performance.", "\u0647\u0630\u0647 \u0638\u0631\u0648\u0641 \u0645\u062A\u0643\u0631\u0631\u0629 \u0645\u0646 \u0633\u062C\u0644 SPICE \u0648\u0644\u064A\u0633\u062A \u062A\u062C\u0627\u0631\u0628 \u0644\u0647\u0628 \u0645\u0633\u062A\u0642\u0644\u0629. \u064A\u0642\u0627\u0631\u0646 \u0627\u0644\u0631\u0633\u0645 \u0645\u0639\u062F\u0644\u064A \u0627\u0644\u062A\u062F\u0641\u0642 \u0641\u064A \u0627\u0644\u0633\u062C\u0644 \u0648\u0644\u0627 \u064A\u062B\u0628\u062A \u0623\u062F\u0627\u0621 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642."),
+      { groupField: "Fuel", rowIdField: "GMT ignition", detailFields: ["GMT date", "Fuel", "Nozzle (mm)", "HC Fuel Rate (mg/s)"], aggregateDuplicates: true }
     )
   ];
   var SOURCE_STUDY_NO_PLOT_REASON = {
@@ -1190,12 +1448,13 @@
     for (const { row, index } of filtered) {
       const category = config.xCategory ? String((_a = row[config.xField]) != null ? _a : "").trim() : null;
       const x = config.xCategory ? null : parseSourceNumber(row[config.xField]);
-      const y = parseSourceNumber(row[config.yField]);
-      if (!config.xCategory && x === null || config.xCategory && !category || y === null) continue;
+      const sourceY = parseSourceNumber(row[config.yField]);
+      const baseline = config.yDeltaFrom ? parseSourceNumber(row[config.yDeltaFrom]) : null;
+      if (!config.xCategory && x === null || config.xCategory && !category || sourceY === null || config.yDeltaFrom && baseline === null) continue;
       valid.push({
         rawX: config.xCategory ? category : x,
         x,
-        y,
+        y: config.yDeltaFrom ? sourceY - baseline : sourceY,
         group: config.groupField ? String(row[config.groupField] || "Unreported") : "",
         label: sourceLabel(row, index, config, lang2)
       });
@@ -1250,6 +1509,8 @@
   }
   function renderChartCard(config, plotData, lang2, sourceUrl, sourceRowCount) {
     const ar = lang2 === "ar";
+    const xLabel = config.xAxisLabel ? config.xAxisLabel[lang2] : config.xField;
+    const yLabel = config.yAxisLabel ? config.yAxisLabel[lang2] : config.yField;
     const title = config.title[lang2];
     const question = config.question[lang2];
     const purpose = config.purpose[lang2];
@@ -1262,14 +1523,18 @@
     if (config.xCategory) {
       notes.push(ar ? "\u0627\u0644\u0625\u0632\u0627\u062D\u0629 \u0627\u0644\u0623\u0641\u0642\u064A\u0629 \u0627\u0644\u0635\u063A\u064A\u0631\u0629 \u0644\u0625\u0638\u0647\u0627\u0631 \u0627\u0644\u062A\u062F\u0627\u062E\u0644 \u0628\u0635\u0631\u064A\u0629 \u0641\u0642\u0637\u061B \u0627\u0644\u062A\u0633\u0645\u064A\u0629 \u0627\u0644\u062F\u0642\u064A\u0642\u0629 \u0638\u0627\u0647\u0631\u0629 \u0641\u064A \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644." : "Small horizontal offsets reveal overlapping category points; the offset is visual only and the exact label is shown in point details.");
     }
+    if (config.yDeltaFrom) {
+      notes.push(ar ? "\u0627\u0644\u062A\u063A\u064A\u0631 \u0645\u0634\u062A\u0642 \u0644\u0643\u0644 \u0635\u0641: \u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0646\u0647\u0627\u0626\u064A\u0629 \u0646\u0627\u0642\u0635 \u0627\u0644\u0627\u0628\u062A\u062F\u0627\u0626\u064A\u0629\u061B \u0648\u0627\u0644\u062E\u0637 \u0627\u0644\u0645\u062A\u0642\u0637\u0639 \u064A\u0645\u062B\u0644 \u0635\u0641\u0631\u0627\u064B\u060C \u0648\u0639\u0646\u062F \u0627\u062E\u062A\u064A\u0627\u0631 \u0646\u0642\u0637\u0629 \u062A\u0638\u0647\u0631 \u0627\u0644\u0642\u0631\u0627\u0621\u062A\u0627\u0646 \u0627\u0644\u0623\u0635\u0644\u064A\u062A\u0627\u0646." : "Change is derived within each row as final minus initial; the dashed line marks zero and point details reveal both original readings.");
+    }
     const chart = scientificSourceScatter({
       points: plotData.points,
-      xLabel: config.xField,
-      yLabel: config.yField,
-      xUnit: config.xUnit,
-      yUnit: config.yUnit,
+      xLabel,
+      yLabel,
+      xUnit: config.xAxisUnit || config.xUnit,
+      yUnit: config.yAxisUnit || config.yUnit,
       categories: plotData.categories,
       identityReference: Boolean(config.identityReference),
+      zeroReference: Boolean(config.zeroReference),
       labels: labels2,
       sourceRowCount,
       validRowCount: plotData.validRows,
@@ -1305,6 +1570,7 @@
       esc(config.xField),
       " \u2192 ",
       esc(config.yField),
+      config.yDeltaFrom ? ar ? " \xB7 \u0641\u0631\u0642 \u0645\u062D\u0633\u0648\u0628: \u0627\u0644\u0646\u0647\u0627\u0626\u064A \u2212 \u0627\u0644\u0627\u0628\u062A\u062F\u0627\u0626\u064A" : " \xB7 derived difference: final \u2212 initial" : "",
       sourceLink ? " \xB7 " + sourceLink : "",
       "</p>",
       chart,
@@ -1359,9 +1625,9 @@
     const totalCharts = SOURCE_STUDY_CHARTS.length;
     return [
       '<section class="chart-gallery source-chart-guide"><div class="section-title"><div><h2>',
-      ar ? "\u0645\u062E\u0637\u0637\u0627\u062A \u0628\u0642\u064A\u0629 \u062C\u062F\u0627\u0648\u0644 NASA PSI" : "Plots from the other NASA PSI tables",
+      ar ? "\u0645\u062E\u0637\u0637\u0627\u062A \u062C\u062F\u0627\u0648\u0644 NASA PSI" : "NASA PSI source-table plots",
       "</h2><p>",
-      ar ? "\u062A\u064F\u0639\u0631\u0636 \u0647\u0646\u0627 " + totalCharts + " \u0645\u062E\u0637\u0637\u0627\u064B \u0639\u0628\u0631 " + studyIds.length + " \u062A\u062D\u0642\u064A\u0642\u0627\u062A. \u064A\u062D\u062A\u0641\u0638 \u0643\u0644 \u0645\u062E\u0637\u0637 \u0628\u0648\u062D\u062F\u0627\u062A\u0647 \u0648\u062D\u0642\u0648\u0644\u0647 \u0648\u062D\u062F\u0648\u062F \u062A\u0641\u0633\u064A\u0631\u0647 \u0627\u0644\u062E\u0627\u0635\u0629." : totalCharts + " plots cover " + studyIds.length + " investigations. Each keeps its own source fields, units, and interpretation limits.",
+      ar ? "\u062A\u064F\u0639\u0631\u0636 \u0647\u0646\u0627 " + totalCharts + " \u0645\u062E\u0637\u0637\u0627\u064B \u0639\u0628\u0631 " + studyIds.length + " \u062A\u062D\u0642\u064A\u0642\u0627\u064B. \u064A\u062D\u062A\u0641\u0638 \u0643\u0644 \u0645\u062E\u0637\u0637 \u0628\u0648\u062D\u062F\u0627\u062A\u0647 \u0648\u062D\u0642\u0648\u0644\u0647 \u0648\u062D\u062F\u0648\u062F \u062A\u0641\u0633\u064A\u0631\u0647 \u0627\u0644\u062E\u0627\u0635\u0629." : totalCharts + " plots cover " + studyIds.length + " investigations. Each keeps its own source fields, units, and interpretation limits.",
       '</p></div></div><div class="source-chart-study-list">',
       results.join(""),
       '</div><h2 style="margin-top:24px">',

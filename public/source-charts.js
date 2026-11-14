@@ -39,12 +39,13 @@ function sourcePlotData(rows, config, lang) {
   for (const { row, index } of filtered) {
     const category = config.xCategory ? String(row[config.xField] ?? '').trim() : null;
     const x = config.xCategory ? null : parseSourceNumber(row[config.xField]);
-    const y = parseSourceNumber(row[config.yField]);
-    if ((!config.xCategory && x === null) || (config.xCategory && !category) || y === null) continue;
+    const sourceY = parseSourceNumber(row[config.yField]);
+    const baseline = config.yDeltaFrom ? parseSourceNumber(row[config.yDeltaFrom]) : null;
+    if ((!config.xCategory && x === null) || (config.xCategory && !category) || sourceY === null || (config.yDeltaFrom && baseline === null)) continue;
     valid.push({
       rawX: config.xCategory ? category : x,
       x,
-      y,
+      y: config.yDeltaFrom ? sourceY - baseline : sourceY,
       group: config.groupField ? String(row[config.groupField] || 'Unreported') : '',
       label: sourceLabel(row, index, config, lang),
     });
@@ -104,6 +105,8 @@ function sourcePlotData(rows, config, lang) {
 
 function renderChartCard(config, plotData, lang, sourceUrl, sourceRowCount) {
   const ar = lang === 'ar';
+  const xLabel = config.xAxisLabel ? config.xAxisLabel[lang] : config.xField;
+  const yLabel = config.yAxisLabel ? config.yAxisLabel[lang] : config.yField;
   const title = config.title[lang];
   const question = config.question[lang];
   const purpose = config.purpose[lang];
@@ -120,14 +123,20 @@ function renderChartCard(config, plotData, lang, sourceUrl, sourceRowCount) {
       ? 'الإزاحة الأفقية الصغيرة لإظهار التداخل بصرية فقط؛ التسمية الدقيقة ظاهرة في التفاصيل.'
       : 'Small horizontal offsets reveal overlapping category points; the offset is visual only and the exact label is shown in point details.');
   }
+  if (config.yDeltaFrom) {
+    notes.push(ar
+      ? 'التغير مشتق لكل صف: القيمة النهائية ناقص الابتدائية؛ والخط المتقطع يمثل صفراً، وعند اختيار نقطة تظهر القراءتان الأصليتان.'
+      : 'Change is derived within each row as final minus initial; the dashed line marks zero and point details reveal both original readings.');
+  }
   const chart = scientificSourceScatter({
     points: plotData.points,
-    xLabel: config.xField,
-    yLabel: config.yField,
-    xUnit: config.xUnit,
-    yUnit: config.yUnit,
+    xLabel,
+    yLabel,
+    xUnit: config.xAxisUnit || config.xUnit,
+    yUnit: config.yAxisUnit || config.yUnit,
     categories: plotData.categories,
     identityReference: Boolean(config.identityReference),
+    zeroReference: Boolean(config.zeroReference),
     labels,
     sourceRowCount,
     validRowCount: plotData.validRows,
@@ -145,7 +154,7 @@ function renderChartCard(config, plotData, lang, sourceUrl, sourceRowCount) {
     '<p class="sub"><b>', ar ? 'حدود التفسير' : 'Interpretation limit', '</b><br>', esc(limit), '</p>',
     '</div>',
     '<p class="sub source-chart-fields">', ar ? 'حقول NASA PSI الأصلية: ' : 'Original NASA PSI fields: ',
-    esc(config.xField), ' → ', esc(config.yField), sourceLink ? ' · ' + sourceLink : '', '</p>',
+    esc(config.xField), ' → ', esc(config.yField), config.yDeltaFrom ? (ar ? ' · فرق محسوب: النهائي − الابتدائي' : ' · derived difference: final − initial') : '', sourceLink ? ' · ' + sourceLink : '', '</p>',
     chart,
     '</article>',
   ].join('');
@@ -202,10 +211,10 @@ export async function renderSourceChartGuide(lang = 'en') {
   const totalCharts = SOURCE_STUDY_CHARTS.length;
   return [
     '<section class="chart-gallery source-chart-guide"><div class="section-title"><div><h2>',
-    ar ? 'مخططات بقية جداول NASA PSI' : 'Plots from the other NASA PSI tables',
+    ar ? 'مخططات جداول NASA PSI' : 'NASA PSI source-table plots',
     '</h2><p>',
     ar
-      ? 'تُعرض هنا ' + totalCharts + ' مخططاً عبر ' + studyIds.length + ' تحقيقات. يحتفظ كل مخطط بوحداته وحقوله وحدود تفسيره الخاصة.'
+      ? 'تُعرض هنا ' + totalCharts + ' مخططاً عبر ' + studyIds.length + ' تحقيقاً. يحتفظ كل مخطط بوحداته وحقوله وحدود تفسيره الخاصة.'
       : totalCharts + ' plots cover ' + studyIds.length + ' investigations. Each keeps its own source fields, units, and interpretation limits.',
     '</p></div></div><div class="source-chart-study-list">',
     results.join(''),
