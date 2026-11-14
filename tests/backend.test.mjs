@@ -118,10 +118,13 @@ test('trusted HTTPS reverse-proxy origin is scoped to the configured host', { ti
   const trustedHeaders = { host: 'judge.example', origin: 'https://judge.example', 'sec-fetch-site': 'same-origin' };
   const page = await request('/', trustedHeaders);
   assert.equal(page.status, 401);
-  assert.match(page.body, /Enter the access token/);
+  assert.match(page.body, /Enter the access code/);
+  assert.match(page.body, /type="password"/);
+  assert.match(page.body, /The research workspace loads after the code is verified/);
+  assert.doesNotMatch(page.body, /<script\b|app\.bundle\.js/);
   const auth = await request('/api/auth', { ...trustedHeaders, 'content-type': 'application/x-www-form-urlencoded' }, 'POST', 'token=invalid');
   assert.equal(auth.status, 401, 'trusted origin reaches token validation rather than origin rejection');
-  assert.match(auth.body, /Access token was not accepted/);
+  assert.match(auth.body, /access code was not accepted/i);
   const evil = await request('/', { host: 'evil.example', origin: 'https://evil.example' });
   assert.equal(evil.status, 403);
   const mismatched = await request('/', { host: 'judge.example', origin: 'https://evil.example' });

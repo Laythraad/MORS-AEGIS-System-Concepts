@@ -33,6 +33,21 @@ test('network binding refuses to start without an access token',()=>{
   assert.notEqual(attempt.status,0);
   assert.match(attempt.stderr,/MORS_ACCESS_TOKEN/);
 });
+test('network binding accepts the configured twelve-character access code minimum',async t=>{
+  const base=await startLanServer(t,{MORS_ACCESS_TOKEN:'test-code-12'});
+  assert.equal((await fetch(`${base}/`)).status,401);
+  const response=await fetch(`${base}/api/auth`,{method:'POST',headers:form,body:new URLSearchParams({token:'test-code-12'}),redirect:'manual'});
+  assert.equal(response.status,303);
+});
+test('public read-only mode keeps the access gate and disallows mutations', {timeout:20000}, async t=>{
+  const base=await startLanServer(t,{MORS_PUBLIC_READONLY:'1'});
+  assert.equal(await health(base),401);
+  const {cookie}=await login(base);
+  assert.equal((await fetch(`${base}/`,{headers:{cookie}})).status,200);
+  const mutation=await fetch(`${base}/api/copilot`,{method:'POST',headers:{cookie,'content-type':'application/json'},body:'{"question":"Summarize evidence."}'});
+  assert.equal(mutation.status,405);
+  assert.match((await mutation.json()).error,/Read-only public mode/);
+});
 test('network mode requires a session before static or API access', {timeout:20000}, async t=>{
   const base=await startLanServer(t);
   assert.equal(await health(base),401);
