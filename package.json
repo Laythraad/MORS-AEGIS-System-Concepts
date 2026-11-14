@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server.mjs",
     "dev": "node --watch server.mjs",
+    "build:client": "esbuild public/app.js --bundle --format=iife --target=es2017 --external:/vendor/* --outfile=public/app.bundle.js",
     "test": "node --test",
     "data:fetch": "npm run data:tables",
     "data:normalize": "node scripts/fetch-psi69.mjs --offline",
@@ -17,5 +18,10 @@
     "format:check": "npx --yes prettier@3 --check public/app.js public/lib",
     "lint": "npx --yes eslint@10 ."
   },
-  "engines": { "node": ">=22.13" }
+  "engines": {
+    "node": ">=22.13"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
 }
