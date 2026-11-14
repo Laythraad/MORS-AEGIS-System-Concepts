@@ -112,7 +112,7 @@ Browser SPA (public/)
   └─ /api/copilot ──────────── optional Gemini, server-side key handling
 ```
 
-`server.mjs` wires the HTTP application; `src/server/` contains configuration, request/security helpers and routes; `ms02-connectors/challenge-data/` holds the immutable source package and catalog; `ms05-analysis/` holds deterministic calculations; `public/` contains the accessible interface and visual explanations. See `docs/` for research decisions and data interpretation.
+`server.mjs` wires the HTTP application; `src/server/` contains configuration, request/security helpers and routes; `ms02-connectors/challenge-data/` holds the immutable source package and catalog; `ms05-analysis/` holds deterministic calculations; `public/` contains the accessible interface and visual explanations. See `docs/` for research decisions and data interpretation. For Coolify redeployment, public routing, recovery, and asset checks, use the [backup deployment runbook](docs/COOLIFY_BACKUP_DEPLOYMENT.md).
 
 ## Current verification status
 
