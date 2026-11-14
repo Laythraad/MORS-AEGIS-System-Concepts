@@ -29,7 +29,15 @@ const nav = [
   ['Reports', 'Scientific reports & exports', '↗', 'RESEARCH'],
   ['Settings', 'Language & appearance', '⚙', 'SYSTEM'],
 ];
-let current = 'Overview',
+function pageFromHash() {
+  try {
+    const requested = decodeURIComponent(location.hash.slice(1));
+    return nav.some(([name]) => name === requested) ? requested : 'Overview';
+  } catch {
+    return 'Overview';
+  }
+}
+let current = pageFromHash(),
   lang = localStorage.getItem('mors-lang') || 'en',
   theme = localStorage.getItem('mors-theme') || 'arctic',
   dataset = null,
@@ -113,7 +121,7 @@ function renderNav() {
       const heading =
         section !== group ? `<div class="nav-group">${lang === 'ar' ? sectionArabic[section] : section}</div>` : '';
       group = section;
-      return `${heading}<button data-page="${k}" title="${esc(lang === 'ar' ? label : navArabic[k] || label)}" class="${current === k ? 'active' : ''}"><span class="nav-icon">${ico}</span>${esc(lang === 'ar' ? navArabic[k] || label : label)}</button>`;
+      return `${heading}<button data-page="${k}" title="${esc(lang === 'ar' ? label : navArabic[k] || label)}" ${current === k ? 'aria-current="page"' : ''} class="${current === k ? 'active' : ''}"><span class="nav-icon">${ico}</span>${esc(lang === 'ar' ? navArabic[k] || label : label)}</button>`;
     })
     .join('');
   n.querySelectorAll('button').forEach((b) => (b.onclick = () => go(b.dataset.page)));
@@ -489,6 +497,8 @@ const pageMap = {
 async function go(name) {
   const id = ++navigationId;
   current = name;
+  const nextHash = `#${encodeURIComponent(name)}`;
+  if (location.hash !== nextHash) location.hash = nextHash;
   renderNav();
   $('#pageTitle').textContent = pageLabel(name);
   $('#crumb').textContent = lang === 'ar' ? `MORS AEGIS / ${pageLabel(name)}` : 'MORS AEGIS / ' + name.toUpperCase();
@@ -779,6 +789,10 @@ $('#themeBtn').onclick = () => {
   setTheme();
   go(current);
 };
+window.addEventListener('hashchange', () => {
+  const requested = pageFromHash();
+  if (requested !== current) go(requested);
+});
 setTheme();
 renderNav();
 (async () => {
