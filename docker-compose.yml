@@ -1,0 +1,12 @@
+services:
+  mors-aegis:
+    build: .
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      HOST: 0.0.0.0
+      PORT: 4173
+      MORS_ACCESS_TOKEN: ${MORS_ACCESS_TOKEN:?Set a random access token of at least 32 characters in .env}
+    ports:
+      - "127.0.0.1:4173:4173"

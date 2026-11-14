@@ -1,0 +1,794 @@
+import {
+  renderChallengeLibrary,
+  renderFlamePhysics,
+  renderMissionAtmospheres,
+  renderSafetyInsights,
+  bindChallengeLibrary,
+  renderInvestigationLab,
+  bindInvestigationLab,
+} from './challenge-research.js';
+import { csvCell } from './csv-safe.js';
+import { $, esc, toast, pageHead, stat, download } from './lib/dom.js';
+import { get, post } from './lib/api.js';
+import { chartSVG, flexOxygenScatterSVG } from './lib/charts.js';
+import { bindFlameScene3d } from './lib/flame-scene3d.js';
+import { renderSystemConcepts, bindSystemConcepts } from './lib/system-concepts.js';
+const nav = [
+  ['Overview', 'Challenge overview', '⌂', 'COMMAND'],
+  ['Flame Physics', 'Gravity, transport & flame behavior', '∿', 'SCIENCE'],
+  ['Mission Atmospheres', 'Oxygen, pressure & EVA transitions', '◉', 'SCIENCE'],
+  ['Safety Insights', 'Prevention, detection & suppression', '◇', 'SCIENCE'],
+  ['System Concepts', 'HARBOR observation concept & microgravity fire-response map', '⌘', 'SCIENCE'],
+  ['Mission Lessons', 'NASA incidents & technology transfer', '⌁', 'SCIENCE'],
+  ['Challenge Evidence', 'NASA PSI investigation tables', '▤', 'SCIENCE'],
+  ['Investigation Lab', 'Study-specific NASA PSI evidence summaries', '◉', 'ANALYSIS'],
+  ['Analysis Workbench', 'FLEX-only descriptive analysis', '∑', 'ANALYSIS'],
+  ['Comparison Studio', 'Compare matched FLEX tests', '◫', 'ANALYSIS'],
+  ['AI Copilot', 'Evidence-grounded research assistant', '✧', 'RESEARCH'],
+  ['Sources', 'NASA PSI sources & methods', '◎', 'RESEARCH'],
+  ['Reports', 'Scientific reports & exports', '↗', 'RESEARCH'],
+  ['Settings', 'Language & appearance', '⚙', 'SYSTEM'],
+];
+let current = 'Overview',
+  lang = localStorage.getItem('mors-lang') || 'en',
+  theme = localStorage.getItem('mors-theme') || 'arctic',
+  dataset = null,
+  analysis = null,
+  chatThread = [],
+  chatBusy = false;
+let navigationId = 0;
+try {
+  const saved = JSON.parse(localStorage.getItem('mors-chat-v1') || '[]');
+  if (Array.isArray(saved))
+    chatThread = saved
+      .filter((m) => m && ['user', 'assistant'].includes(m.role) && typeof m.content === 'string')
+      .slice(-60)
+      .map((m) => ({
+        role: m.role,
+        content: m.content.slice(0, 8000),
+        provider: typeof m.provider === 'string' ? m.provider.slice(0, 120) : '',
+        citation: m.role === 'assistant' ? '/psi-69' : '',
+        toolsExecuted: Array.isArray(m.toolsExecuted)
+          ? m.toolsExecuted
+              .slice(0, 3)
+              .filter(
+                (x) =>
+                  x &&
+                  ['runAnalysis', 'compareExperiments', 'pearson', 'lookupExperiment'].includes(x.tool) &&
+                  x.status === 'complete',
+              )
+              .map((x) => ({
+                tool: x.tool,
+                status: 'complete',
+                evidence: x.tool === 'lookupExperiment' ? 'OBSERVED' : 'COMPUTED',
+                resultSha256: typeof x.resultSha256 === 'string' ? x.resultSha256.slice(0, 64) : '',
+              }))
+          : [],
+      }));
+} catch {
+  chatThread = [];
+}
+const t = (a, b) => (lang === 'ar' ? b : a);
+const navArabic = {
+  Overview: 'نظرة عامة',
+  'Flame Physics': 'فيزياء اللهب',
+  'Mission Atmospheres': 'أجواء المهمات',
+  'Safety Insights': 'رؤى سلامة الحريق',
+  'System Concepts': 'تصاميم الأنظمة',
+  'Mission Lessons': 'دروس المهمات والتقنية',
+  'Challenge Evidence': 'أدلة التحدي',
+  'Investigation Lab': 'مختبر التحقيقات',
+  'Analysis Workbench': 'منضدة التحليل',
+  'Comparison Studio': 'مقارنة التجارب',
+  'AI Copilot': 'مساعد الأبحاث',
+  Sources: 'المصادر والمنهجية',
+  Reports: 'التقارير',
+  Settings: 'الإعدادات',
+};
+const sectionArabic = {
+  COMMAND: 'الرئيسية',
+  SCIENCE: 'العلم',
+  ANALYSIS: 'التحليل',
+  RESEARCH: 'البحث',
+  SYSTEM: 'النظام',
+};
+const pageLabel = (key) => (lang === 'ar' ? navArabic[key] || key : key);
+function setTheme() {
+  document.documentElement.lang = lang;
+  document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  $('#langBtn').textContent = lang === 'ar' ? 'English' : 'عربي';
+  document.body.className =
+    (theme === 'space' ? 'theme-space' : theme === 'observatory' ? 'theme-observatory' : '') +
+    (lang === 'ar' ? ' rtl' : '');
+  $('#themeBtn').textContent = t(
+    'Theme · ' + { arctic: 'Arctic', space: 'Deep Space', observatory: 'Observatory' }[theme],
+    'المظهر · ' + { arctic: 'قطبي', space: 'فضاء عميق', observatory: 'مرصد' }[theme],
+  );
+}
+function renderNav() {
+  const n = $('#nav');
+  let group = '';
+  n.innerHTML = nav
+    .map(([k, label, ico, section]) => {
+      const heading =
+        section !== group ? `<div class="nav-group">${lang === 'ar' ? sectionArabic[section] : section}</div>` : '';
+      group = section;
+      return `${heading}<button data-page="${k}" title="${esc(lang === 'ar' ? label : navArabic[k] || label)}" class="${current === k ? 'active' : ''}"><span class="nav-icon">${ico}</span>${esc(lang === 'ar' ? navArabic[k] || label : label)}</button>`;
+    })
+    .join('');
+  n.querySelectorAll('button').forEach((b) => (b.onclick = () => go(b.dataset.page)));
+}
+function rowsTable(rows) {
+  return `<div class="table-wrap"><table><thead><tr><th>${t('Test ID', 'معرّف الاختبار')}</th><th>${t('Date · UTC', 'التاريخ · UTC')}</th><th>${t('Fuel', 'الوقود')}</th><th>${t('Pressure · mmHg', 'الضغط · mmHg')}</th><th>O₂</th><th>CO₂</th><th>He</th><th>${t('Droplet · mm', 'القطرة · mm')}</th><th>${t('Extinction · mm', 'الإخماد · mm')}</th><th>${t('Burn-rate constant · mm²/s', 'ثابت معدل الاحتراق · mm²/s')}</th><th>${t('Burn · s', 'الاحتراق · s')}</th><th>${t('End state', 'الحالة النهائية')}</th></tr></thead><tbody>${rows.map((r) => `<tr><td class="mono">${esc(r.id)}</td><td>${esc(r.date)} <span class="mono">${esc(r.time_utc)}</span></td><td>${esc(r.fuel)}</td><td>${esc(r.pressure_mmHg ?? '—')}</td><td>${esc(r.oxygen_mole_fraction ?? '—')}</td><td>${esc(r.carbon_dioxide_mole_fraction ?? '—')}</td><td>${esc(r.helium_mole_fraction ?? '—')}</td><td>${esc(r.initial_droplet_diameter_mm ?? '—')}</td><td>${esc(r.visible_flame_extinction_diameter_mm ?? '—')}</td><td>${esc(r.burning_rate_mm_s ?? '—')}</td><td>${esc(r.burn_time_s ?? '—')}</td><td>${esc(r.test_end)}</td></tr>`).join('')}</tbody></table></div>`;
+}
+function hero() {
+  return `<div class="hero"><div class="hero-copy"><div class="eyebrow">MORS AEGIS · FLAME IN FREEFALL</div><h2>${t('NASA microgravity combustion evidence, connected to fire-safety research.', 'أدلة ناسا عن الاحتراق في الجاذبية الصغرى، مرتبطة ببحوث سلامة الحرائق.')}</h2><p>${t('Explore challenge-relevant NASA PSI investigations, inspect original experiment tables, and compare what gravity changes in flame transport. Every study remains linked to its own evidence and limits.', 'استكشف تحقيقات NASA PSI المرتبطة بالتحدي، وافحص جداول التجارب الأصلية، وقارن أثر الجاذبية على انتقال الحرارة والمواد. لكل دراسة مصدرها وحدودها.')}</p><div class="hero-actions"><button class="primary-btn" data-go="Challenge Evidence">${t('Explore NASA PSI data →', 'استكشف بيانات NASA PSI ←')}</button><button class="secondary-btn" data-go="Flame Physics">${t('Study flame physics →', 'افهم فيزياء اللهب ←')}</button></div></div><div class="hero-meta">NASA PSI · COMBUSTION SCIENCE<br>${t('CHALLENGE-SCOPED · INVESTIGATION-LEVEL EVIDENCE', 'نطاق التحدي · الأدلة حسب كل تحقيق')}</div></div>`;
+}
+function flexScatterPanel() {
+  const fuels = [...new Set(dataset.rows.map((row) => row.fuel).filter(Boolean))].sort();
+  const options = fuels.map((fuel) => `<option value="${esc(fuel)}">${esc(fuel)}</option>`).join('');
+  const included = dataset.rows.filter(
+    (row) => Number.isFinite(row.oxygen_mole_fraction) && Number.isFinite(row.burning_rate_mm_s),
+  ).length;
+  return `<article class="card flex-scatter-card"><div class="card-head"><div><h3>${t('PSI-69 · Oxygen fraction and droplet burning rate', 'PSI-69 · نسبة الأكسجين ومعدل احتراق القطرة')}</h3><p class="sub">${t('Each point is one NASA FLEX source row. Hover for test ID, fuel, pressure and recorded end state.', 'كل نقطة تمثل صفاً واحداً من NASA FLEX. مرر المؤشر لعرض المعرّف والوقود والضغط والحالة النهائية.')}</p></div><span class="tag obs">${t('OBSERVED ROWS', 'صفوف مرصودة')}</span></div><div class="toolbar"><label>${t('Fuel', 'الوقود')} <select id="flexScatterFuel"><option value="">${t('All fuels', 'كل أنواع الوقود')}</option>${options}</select></label><label>${t('Pressure · mmHg', 'الضغط · mmHg')} <select id="flexScatterPressure"><option value="all">${t('All pressures', 'كل الضغوط')}</option><option value="low">≤ 760</option><option value="mid">760–1520</option><option value="high">&gt; 1520</option><option value="unknown">${t('Unreported', 'غير مسجل')}</option></select></label></div><div id="flexScatterPlot">${flexOxygenScatterSVG(dataset.rows, t('Oxygen mole fraction (%)', 'الكسر المولي للأكسجين (%)'), t('Droplet burning-rate constant (mm²/s)', 'ثابت معدل احتراق القطرة (mm²/s)'))}</div><p class="sub" id="flexScatterCount">${t('Rows shown', 'الصفوف المعروضة')}: n=${included} / ${dataset.rows.length} ${t('source rows with both plotted values', 'صف مصدر يحوي القيمتين')}</p><div class="legend"><span style="--legend-color:#39a77e">${t('Source test_end: Extinction', 'قيمة المصدر test_end: Extinction')}</span><span style="--legend-color:#d59a3d">${t('Source test_end: Disruption', 'قيمة المصدر test_end: Disruption')}</span><span style="--legend-color:#7d73d3">${t('Other / source label', 'أخرى / تسمية المصدر')}</span></div><div class="callout warn">${t('The FLEX burning-rate constant is for liquid droplets under the d² law, not solid-material flame-spread speed. These points are descriptive; mixed conditions do not establish an oxygen effect or causality. Source: PSI-69 · DOI 10.60555/mbq8-0451.', 'ثابت معدل الاحتراق في FLEX خاص بالقطرات السائلة وفق قانون d²، وليس سرعة انتشار اللهب على مادة صلبة. النقاط وصفية؛ اختلاف الشروط لا يثبت أثر الأكسجين أو السببية. المصدر: PSI-69 · DOI 10.60555/mbq8-0451.')}</div></article>`;
+}
+function bindFlexScatter(root) {
+  const fuel = root.querySelector('#flexScatterFuel');
+  const pressure = root.querySelector('#flexScatterPressure');
+  const plot = root.querySelector('#flexScatterPlot');
+  const count = root.querySelector('#flexScatterCount');
+  if (!fuel || !pressure || !plot) return;
+  const update = () => {
+    const rows = dataset.rows.filter((row) => {
+      if (fuel.value && row.fuel !== fuel.value) return false;
+      if (pressure.value === 'unknown') return !Number.isFinite(row.pressure_mmHg);
+      if (!Number.isFinite(row.pressure_mmHg) && pressure.value !== 'all') return false;
+      if (pressure.value === 'low') return row.pressure_mmHg <= 760;
+      if (pressure.value === 'mid') return row.pressure_mmHg > 760 && row.pressure_mmHg <= 1520;
+      if (pressure.value === 'high') return row.pressure_mmHg > 1520;
+      return true;
+    });
+    plot.innerHTML = flexOxygenScatterSVG(
+      rows,
+      t('Oxygen mole fraction (%)', 'الكسر المولي للأكسجين (%)'),
+      t('Droplet burning-rate constant (mm²/s)', 'ثابت معدل احتراق القطرة (mm²/s)'),
+    );
+    const shown = rows.filter(
+      (row) => Number.isFinite(row.oxygen_mole_fraction) && Number.isFinite(row.burning_rate_mm_s),
+    ).length;
+    if (count)
+      count.textContent = `${t('Rows shown', 'الصفوف المعروضة')}: n=${shown} / ${rows.length} ${t('filtered source rows with both plotted values', 'صف مفلتر يحوي القيمتين')}`;
+  };
+  fuel.onchange = update;
+  pressure.onchange = update;
+}
+function challengeGoals() {
+  const goals =
+    lang === 'ar'
+      ? [
+          [
+            '1 · اكتشاف دراسات الطاقم',
+            'يعرض فهرس NASA PSI الكامل (24 تحقيقاً) مع درجة صلة بالمهمة من البيانات الوصفية. توفر الجدول ظاهر منفصلاً ولا يدخل في الدرجة؛ ليست درجة خطورة.',
+          ],
+          [
+            '2 · أدلة للنمذجة التنبؤية',
+            'يكشف المختبر ظروف القياس والحقول والنتائج والنقص لكل دراسة؛ ويحلل FLEX منفصلاً بحسب ظروفه. البيانات الحالية لا تثبت نموذج خطر موحداً عبر التحقيقات.',
+          ],
+          [
+            '3 · أنظمة سلامة الجيل القادم',
+            'تربط صفحة السلامة الأدلة بأسئلة الوقاية والكشف والإخماد. هذه اتجاهات بحثية وليست توصيات تشغيلية مصدّقة.',
+          ],
+        ]
+      : [
+          [
+            '1 · Find crew-relevant studies',
+            'Browse all 24 NASA PSI investigations with a metadata-based mission-relevance score. Table availability is separate and does not change the score; this is not a fire-hazard ranking.',
+          ],
+          [
+            '2 · Expose evidence for predictive models',
+            'Inspect conditions, fields, outcomes, and gaps per study; analyze FLEX separately by test conditions. Current evidence does not validate a universal cross-study risk model.',
+          ],
+          [
+            '3 · Inform next-generation safety systems',
+            'Connect evidence to prevention, detection, and suppression research questions. These are design directions, not certified operating recommendations.',
+          ],
+        ];
+  return `<article class="card" style="margin:15px 0"><div class="card-head"><div><span class="eyebrow">OFFICIAL CHALLENGE VIDEO · 07:15–08:39</span><h3>${t('What the challenge asks us to deliver', 'ما الذي يطلبه التحدي من المشروع')}</h3></div><a href="https://www.youtube.com/watch?v=AVuEiKxOpc0" target="_blank" rel="noreferrer">${t('Watch video ↗', 'شاهد الفيديو ↗')}</a></div><div class="grid three">${goals.map(([title, body]) => `<section class="card"><h3>${title}</h3><p class="sub">${body}</p></section>`).join('')}</div><p class="sub">${t('SI is used to help navigate and explain cited evidence; generated text is not an experimental measurement. Optional Earth applications are documented separately.', 'يساعد SI على استكشاف الأدلة الموثقة وشرحها؛ النص المولّد ليس قياساً تجريبياً. تطبيقات الأرض الاختيارية موثقة منفصلة.')}</p></article>`;
+}
+async function overview() {
+  const evidence = await get('/api/challenge/catalog');
+  return `${hero()}${challengeGoals()}<div class="grid stats">${stat(t('PSI COMBUSTION INVESTIGATIONS', 'تحقيقات الاحتراق في PSI'), evidence.officialInventory.total, t('Official NASA inventory snapshot', 'لقطة من فهرس NASA الرسمي'), '◉')}${stat(t('TABLES BUNDLED', 'الجداول المرفقة'), evidence.investigations.length, t('NASA PSI tables · checksums verified', 'جداول NASA PSI · البصمات متحققة'), '▤')}${stat(t('SEPARATE SOURCE ROWS', 'صفوف المصدر المنفصلة'), evidence.recordCountAcrossFiles, t('Separate studies · never pooled', 'دراسات منفصلة · غير مدمجة'), '▤')}${stat(t('VERIFIED TABLE HASHES', 'بصمات الجداول المتحققة'), evidence.investigations.filter((x) => x.sourceIntegrity === 'VERIFIED').length, t('Original source bytes verified', 'تم التحقق من بايتات الملفات الأصلية'), '✓')}</div><div class="grid two"><article class="card"><div class="card-head"><div><h3>FLEX · PSI-69</h3><p class="sub">${t('One investigation selected for detailed, condition-stratified analysis.', 'تحقيق واحد للتحليل التفصيلي بحسب ظروف الاختبار.')}</p></div><span class="tag obs">${t('OBSERVED', 'مرصود')}</span></div>${chartSVG(dataset.rows, 'burning_rate_mm_s', t('FLEX droplet burning-rate constant', 'ثابت احتراق قطرات FLEX'), 'mm²/s')}<div class="legend"><span>PSI-69 · DOI 10.60555/mbq8-0451</span></div></article><article class="card"><h3>${t('NASA challenge-source coverage', 'تغطية مصدر بيانات التحدي')}</h3><p class="sub">${t(`Measurements come from the challenge-relevant NASA PSI Combustion Science repository. NASA PSI lists ${evidence.officialInventory.total} investigations; ${evidence.investigations.length} original table files are bundled, checksummed, and inspectable. Studies remain separate because their methods and outcomes differ.`, `تأتي القياسات من مستودع NASA PSI Combustion Science المرتبط بالتحدي. يسجل الفهرس ${evidence.officialInventory.total} تحقيقاً؛ أرفقنا ${evidence.investigations.length} جدولاً أصلياً مع بصماتها لفحصها. بقيت الدراسات منفصلة لاختلاف طرقها ونتائجها.`)}</p><div class="list-row"><span>${t('Flame and droplet studies', 'دراسات اللهب والقطرات')}</span><b>ACME · CFI · FLEX · SPICE</b></div><div class="list-row"><span>${t('Solid materials and spacecraft fires', 'المواد الصلبة وحرائق المركبات')}</span><b>BASS · SAFFIRE</b></div><div class="list-row"><span>${t('Smoke and aerosol studies', 'دراسات الدخان والهباء')}</span><b>SAME · DAFT</b></div><div class="callout warn">${t('Other PSI records remain metadata and source links. Unlike experiments are not pooled into a universal fire-hazard rank.', 'تبقى سجلات PSI الأخرى بيانات وصفية وروابط للمصادر. لا ندمج تجارب مختلفة في تصنيف عام لخطر الحريق.')}</div></article></div>${flexScatterPanel()}<div class="grid three"><article class="card"><h3>${t('Study the physics', 'ادرس الفيزياء')}</h3><p class="sub">${t('Buoyancy-driven convection weakens in microgravity; diffusion and forced ventilation remain.', 'يضعف الحمل الناتج عن الطفو في الجاذبية الصغرى، بينما يستمر الانتشار والتهوية القسرية.')}</p><button class="outline-btn" data-go="Flame Physics">${t('Open Flame Physics →', 'افتح فيزياء اللهب ←')}</button></article><article class="card"><h3>${t('Inspect primary data', 'افحص البيانات الأساسية')}</h3><p class="sub">${t('Browse source rows, missing values, DOIs, and integrity checks for each study.', 'استعرض صفوف المصدر والقيم المفقودة وDOI وفحوص السلامة لكل دراسة.')}</p><button class="outline-btn" data-go="Challenge Evidence">${t('Open evidence library →', 'افتح مكتبة الأدلة ←')}</button></article><article class="card"><h3>${t('Decision-support boundary', 'حدود دعم القرار')}</h3><p class="sub">${t('This research dashboard does not certify spacecraft fire risk or replace flight-safety procedures.', 'لوحة الأبحاث لا تصادق على مخاطر الحريق ولا تستبدل إجراءات سلامة الطيران.')}</p><a href="https://www.nasa.gov/missions/station/studying-combustion-and-fire-safety/" target="_blank" rel="noreferrer">NASA · ${t('fire-safety research', 'أبحاث سلامة الحريق')} ↗</a></article></div>`;
+}
+const WB_VARIABLES = [
+  ['burning_rate_mm_s', 'Burning-rate constant (mm²/s)'],
+  ['initial_droplet_diameter_mm', 'Initial droplet diameter (mm)'],
+  ['visible_flame_extinction_diameter_mm', 'Flame extinction diameter (mm)'],
+  ['burn_time_s', 'Burn time (s)'],
+  ['pressure_mmHg', 'Pressure (mmHg)'],
+  ['oxygen_mole_fraction', 'Oxygen mole fraction'],
+];
+const WB_DEFAULT = { fuel: '', pressureBand: '', diluent: '', variable: 'burning_rate_mm_s' };
+let wbFilter = { ...WB_DEFAULT };
+const fmt = (v, d = 3) => (Number.isFinite(v) ? v.toFixed(d) : '—');
+function ciCell(ci) {
+  if (!ci) return '—';
+  if (ci.low === null)
+    return `<span style="color:var(--muted)" title="${esc(ci.reason || '')}">${ci.n < 5 ? t('not reported (n &lt; 5)', 'غير مُبلغ عنه (n &lt; 5)') : t('not reported', 'غير مُبلغ عنه')}</span>`;
+  return `${fmt(ci.low)} – ${fmt(ci.high)}`;
+}
+function wbSelect(id, label, options, value) {
+  return `<label style="font-size:10px;color:var(--muted)">${label} <select id="${id}">${options.map(([v, text]) => `<option value="${esc(v)}" ${v === value ? 'selected' : ''}>${esc(text)}</option>`).join('')}</select></label>`;
+}
+function wbGroupRow(label, g, bold = false) {
+  const a = g.association,
+    name = bold ? `<b>${esc(label)}</b>` : esc(label);
+  return `<tr><td>${name}</td><td>${g.records}</td><td>${g.n}</td><td><b>${fmt(g.mean)}</b></td><td>${ciCell(g.ci95)}</td><td>${fmt(g.sampleSd)}</td><td>${a.r === null ? '—' : fmt(a.r)} <span style="color:var(--muted)">(n=${a.n})</span></td><td>${a.r === null ? '—' : ciCell(a.ci95)}</td></tr>`;
+}
+async function analysisPage() {
+  const params = new URLSearchParams(Object.entries(wbFilter).filter(([, v]) => v));
+  const wb = await get(`/api/analysis?${params}`);
+  const variableLabels = WB_VARIABLES.map(([key, label]) => [
+    key,
+    t(
+      label,
+      {
+        'Burning-rate constant (mm²/s)': 'ثابت معدل الاحتراق (mm²/s)',
+        'Initial droplet diameter (mm)': 'قطر القطرة الابتدائي (mm)',
+        'Flame extinction diameter (mm)': 'قطر إخماد اللهب (mm)',
+        'Burn time (s)': 'زمن الاحتراق (s)',
+        'Pressure (mmHg)': 'الضغط (mmHg)',
+        'Oxygen mole fraction': 'الكسر المولي للأكسجين',
+      }[label],
+    ),
+  ]);
+  const c = wb.conditions,
+    strata = wb.strata,
+    filtered = Object.keys(wb.filter).length > 0,
+    varLabel = variableLabels.find(([k]) => k === wbFilter.variable)?.[1] || wbFilter.variable,
+    any = (label) => [['', label]];
+  const bar = `<article class="card"><div class="card-head"><div><h3>${t('Test-condition filter', 'تصفية ظروف الاختبار')}</h3><p class="sub">${esc(c.bandDefinition)} ${t('Diluent is the added inert gas (CO₂ or He); “no diluent” means O₂/N₂ only.', 'المخفف هو الغاز الخامل المضاف (CO₂ أو He)؛ وتعني «من دون مخفف» مزيج O₂/N₂ فقط.')}</p></div><span class="tag obs">${wb.records} ${t('OF', 'من أصل')} ${dataset.dataset.records} ${t('TESTS', 'اختباراً')}</span></div><div class="toolbar" style="margin:0">${wbSelect('wbFuel', t('Fuel', 'الوقود'), any(t('All fuels', 'كل أنواع الوقود')).concat(c.fuels.map((f) => [f.id, `${f.label} (${f.n})`])), wbFilter.fuel)}${wbSelect('wbBand', t('Pressure', 'الضغط'), any(t('All pressures', 'كل الضغوط')).concat(c.pressureBands.map((b) => [b.id, `${b.label} · ${b.observed} (${b.n})`])), wbFilter.pressureBand)}${wbSelect('wbDiluent', t('Diluent', 'الغاز المخفف'), any(t('All diluents', 'كل الغازات المخففة')).concat(c.diluents.map((d) => [d.id, `${d.label} (${d.n})`])), wbFilter.diluent)}${wbSelect('wbVariable', t('Grouped variable', 'متغير التجميع'), variableLabels, wbFilter.variable)}<button class="outline-btn" id="wbReset">${t('Reset', 'إعادة ضبط')}</button></div></article>`;
+  if (!strata)
+    return `${pageHead(t('Scientific Analysis Workbench', 'منضدة التحليل العلمي'), t('Reproducible summary statistics computed from source rows.', 'إحصاءات وصفية قابلة لإعادة الإنتاج ومحسوبة من صفوف المصدر.'))}${bar}<div class="callout warn" style="margin-top:15px">${t('No bundled test matches', 'لا يوجد اختبار مرفق يطابق')} ${esc(wb.conditionLabel)}. ${t('Nothing is computed for an empty group.', 'لا تُحسب نتائج لمجموعة فارغة.')}</div>`;
+  const st = wb.summary.stats,
+    pooled = strata.pooled,
+    boot = strata.bootstrap,
+    highBand = c.pressureBands.find((b) => b.id === '>2atm');
+  const metrics = Object.entries(st)
+    .map(
+      ([k, v]) =>
+        `<article class="card metric"><div class="label">${t({ burning_rate_mm_s: 'Burning-rate constant', burn_time_s: 'Burn time', initial_droplet_diameter_mm: 'Initial droplet diameter', visible_flame_extinction_diameter_mm: 'Visible flame extinction diameter' }[k] || k.replaceAll('_', ' '), { burning_rate_mm_s: 'ثابت معدل الاحتراق', burn_time_s: 'زمن الاحتراق', initial_droplet_diameter_mm: 'قطر القطرة الابتدائي', visible_flame_extinction_diameter_mm: 'قطر إخماد اللهب المرئي' }[k] || k.replaceAll('_', ' '))}</div><strong>${v.mean === null ? '—' : v.mean.toFixed(3)}</strong><small>${t('Mean', 'المتوسط')} · ${v.unit} · n=${v.n} · ${t('missing', 'مفقود')}=${v.missing}</small><p class="sub">${t('Sample SD', 'الانحراف المعياري للعينة')} ${v.sd === null ? '—' : v.sd.toFixed(3)} · ${t('range', 'النطاق')} ${v.min ?? '—'}–${v.max ?? '—'}</p></article>`,
+    )
+    .join('');
+  const table = `<article class="card" style="margin-top:15px"><div class="card-head"><div><h3>${t('Per-condition results', 'النتائج بحسب ظروف الاختبار')} · ${esc(varLabel)}</h3><p class="sub">${esc(wb.conditionLabel)} · ${t('grouped by fuel, pressure band and diluent. 95% CIs are seeded percentile bootstrap intervals', 'مجمعة حسب الوقود ونطاق الضغط والغاز المخفف. فواصل الثقة 95% محسوبة بإعادة معاينة bootstrap ذات بذرة ثابتة')} (seed ${boot.seed}, ${boot.resamples} ${t('resamples; withheld when n', 'إعادة معاينة؛ لا تُعرض عندما n')} &lt; ${boot.minN}.</p></div><span class="tag comp">${t('COMPUTED', 'محسوب')}</span></div><div class="table-wrap"><table><thead><tr><th>${t('Condition', 'الظرف')}</th><th>${t('Tests', 'الاختبارات')}</th><th>n</th><th>${t('Mean', 'المتوسط')}</th><th>95% CI (${t('mean', 'المتوسط')})</th><th>SD (${t('sample', 'العينة')})</th><th>Pearson r · ${t('diameter vs burning rate', 'القطر مقابل معدل الاحتراق')}</th><th>95% CI (r)</th></tr></thead><tbody>${wbGroupRow(filtered ? `${wb.conditionLabel} (${t('all', 'الكل')})` : t('All tests (pooled)', 'كل الاختبارات (مجمعة)'), pooled, true)}${strata.groups.map((g) => wbGroupRow(g.label, g)).join('')}</tbody></table></div><div class="callout warn" style="margin-top:12px">${filtered ? t('Oxygen fraction, diluent fraction and droplet size still vary among tests within each row.', 'ما تزال نسبة الأكسجين والغاز المخفف وحجم القطرة تختلف بين الاختبارات في الصف الواحد.') : t('The first row pools different fuels, pressures and diluents; prefer the per-condition rows.', 'يجمع الصف الأول أنواع وقود وضغوطاً وغازات مخففة مختلفة؛ اعتمد صفوف ظروف الاختبار المنفصلة.')} ${t('The >2 atm band spans 2.0–3.1 atm and contains', 'يمتد نطاق >2 atm من 2.0 إلى 3.1 atm ويضم')} ${highBand?.n ?? 0} ${t('tests. Intervals describe resampling, not instrument uncertainty.', 'اختباراً. تصف الفواصل إعادة معاينة السجلات ولا تمثل عدم يقين الأجهزة.')}</div></article>`;
+  const assoc = `<article class="card"><div class="card-head"><div><h3>${t('Exploratory association', 'ارتباط استكشافي')}</h3><p class="sub">${t('Initial droplet diameter vs. burning rate', 'قطر القطرة الابتدائي مقابل معدل الاحتراق')} · ${esc(wb.conditionLabel)}</p></div><span class="tag comp">${t('COMPUTED', 'محسوب')}</span></div><div style="font-size:34px;font-weight:800;margin:18px 0">${wb.associations.r?.toFixed(3) ?? '—'}</div><p class="sub">Pearson r · n = ${wb.associations.n} · 95% CI ${wb.associations.r === null ? '—' : ciCell(pooled.association.ci95)}. ${t('Conditions still vary within this selection, so this association cannot establish causality.', 'تبقى ظروف الاختبار متغيرة ضمن هذا الاختيار، لذلك لا يثبت الارتباط علاقة سببية.')}</p><div class="callout warn">${t('No hypothesis test is run. Small-group r values are exploratory.', 'لم يُجرَ اختبار فرضية. قيم r للمجموعات الصغيرة استكشافية.')}</div></article>`;
+  const methods = `<article class="card"><h3>${t('Methods & reproducibility', 'الطرق وقابلية إعادة الإنتاج')}</h3><div class="list-row"><span>${t('Mean', 'المتوسط')}</span><b>${t('Arithmetic mean', 'المتوسط الحسابي')}</b></div><div class="list-row"><span>${t('Spread', 'التشتت')}</span><b>${t('Sample standard deviation (n − 1)', 'الانحراف المعياري للعينة (n − 1)')}</b></div><div class="list-row"><span>${t('Interval', 'الفاصل')}</span><b>95% ${t('percentile bootstrap', 'bootstrap المئيني')} · seed ${boot.seed} · ${boot.resamples} · n ≥ ${boot.minN}</b></div><div class="list-row"><span>${t('Grouping', 'التجميع')}</span><b>${t('Fuel · pressure band · diluent', 'الوقود · نطاق الضغط · الغاز المخفف')}</b></div><div class="list-row"><span>${t('Missing values', 'القيم المفقودة')}</span><b>${t('Excluded per variable; no imputation', 'تُستبعد لكل متغير؛ بلا تعويض')}</b></div><div class="list-row"><span>${t('Source table', 'جدول المصدر')}</span><b>NASA PSI-69</b></div><div class="list-row"><span>${t('Software', 'البرنامج')}</span><b>MORS AEGIS 3.0 · JS</b></div></article>`;
+  return `${pageHead(t('Scientific Analysis Workbench', 'منضدة التحليل العلمي'), t('Reproducible statistics computed from source rows by test condition; nulls are excluded per variable.', 'إحصاءات قابلة لإعادة الإنتاج من صفوف المصدر بحسب ظرف الاختبار؛ تُستبعد القيم الفارغة لكل متغير.'))}${bar}<div class="grid three" style="margin-top:15px">${metrics}</div>${table}<div class="grid two" style="margin-top:15px">${assoc}${methods}</div>`;
+}
+function comparePage() {
+  return `${pageHead(t('Experiment Comparison Studio', 'استوديو مقارنة التجارب'), t('Compare two FLEX tests. Differences are computed only when fuel and gas composition match.', 'قارن اختبارين من FLEX. لا تُحسب الفروق إلا إذا تطابق الوقود وتركيب الغاز.'))}<div class="grid two"><article class="card"><h3>${t('Test A', 'الاختبار A')}</h3><label class="field-label">${t('Select record', 'اختر سجلاً')}</label><select id="compareA" class="field">${dataset.rows.map((r) => `<option value="${esc(r.id)}">${esc(r.id)} · ${r.burning_rate_mm_s ?? '—'} mm²/s</option>`).join('')}</select><div id="compareResultA"></div></article><article class="card"><h3>${t('Test B', 'الاختبار B')}</h3><label class="field-label">${t('Select record', 'اختر سجلاً')}</label><select id="compareB" class="field">${dataset.rows.map((r, i) => `<option value="${esc(r.id)}" ${i === 1 ? 'selected' : ''}>${esc(r.id)} · ${r.burning_rate_mm_s ?? '—'} mm²/s</option>`).join('')}</select><div id="compareResultB"></div></article></div><article class="card" style="margin-top:15px"><div class="card-head"><div><h3>${t('Paired variables', 'المتغيرات المقارنة')}</h3><p class="sub">${t('Observed source values shown side by side', 'قيم المصدر المرصودة معروضة جنباً إلى جنب')}</p></div><span class="tag obs">${t('OBSERVED', 'مرصود')}</span></div><div id="compareTable"></div></article><div class="callout warn" style="margin-top:14px">${t('These are individual records, not controlled matched groups. A difference does not establish a physical effect.', 'هذه سجلات اختبار منفردة وليست مجموعات مضبوطة ومتطابقة؛ والفرق الظاهر لا يثبت أثراً فيزيائياً.')}</div>`;
+}
+function renderCompare() {
+  const a = dataset.rows.find((r) => r.id === $('#compareA').value),
+    b = dataset.rows.find((r) => r.id === $('#compareB').value);
+  for (const [id, r] of [
+    ['compareResultA', a],
+    ['compareResultB', b],
+  ])
+    $('#' + id).innerHTML =
+      `<div style="margin:20px 0 5px;font-size:29px;font-weight:800">${r.burning_rate_mm_s ?? '—'} <small style="font-size:11px;color:var(--muted)">mm²/s</small></div><p class="sub">${r.date} ${r.time_utc ?? '—'} UTC · ${r.test_end}</p>`;
+  // Same rule as the server's compareExperiments: differences are only computed between tests
+  // with the same fuel and ambient gas composition; observed values are always shown.
+  const conditions = [
+    'fuel',
+    'oxygen_mole_fraction',
+    'nitrogen_mole_fraction',
+    'carbon_dioxide_mole_fraction',
+    'helium_mole_fraction',
+  ];
+  const mismatched = conditions.filter((k) => a[k] == null || b[k] == null || a[k] !== b[k]);
+  const comparable = a.id !== b.id && mismatched.length === 0;
+  const keys = [
+    ...conditions,
+    'pressure_mmHg',
+    'initial_droplet_diameter_mm',
+    'visible_flame_extinction_diameter_mm',
+    'burning_rate_mm_s',
+    'burn_time_s',
+  ];
+  const difference = (k) =>
+    !conditions.includes(k) && comparable && Number.isFinite(a[k]) && Number.isFinite(b[k])
+      ? (b[k] - a[k]).toFixed(3)
+      : '—';
+  const notice = comparable
+    ? ''
+    : `<div class="callout warn" style="margin-bottom:12px">${a.id === b.id ? t('Select two different tests.', 'اختر اختبارين مختلفين.') : `${t('Differences withheld; the tests differ in', 'حُجبت الفروق لاختلاف الاختبارين في')} ${mismatched.map((k) => k.replaceAll('_', ' ')).join(', ')}. ${t('A numeric comparison requires the same fuel and gas composition.', 'تتطلب المقارنة العددية تطابق الوقود وتركيب الغاز.')}`}</div>`;
+  $('#compareTable').innerHTML =
+    `${notice}<table><thead><tr><th>${t('Variable', 'المتغير')}</th><th>${esc(a.id)}</th><th>${esc(b.id)}</th><th>${t('Difference · B − A', 'الفرق · B − A')}</th></tr></thead><tbody>${keys.map((k) => `<tr${mismatched.includes(k) ? ' class="mismatch"' : ''}><td>${k.replaceAll('_', ' ')}</td><td>${esc(a[k] ?? '—')}</td><td>${esc(b[k] ?? '—')}</td><td>${difference(k)}</td></tr>`).join('')}</tbody></table>`;
+}
+function copilot() {
+  const ar = lang === 'ar';
+  return `${pageHead(ar ? 'مساعد أبحاث MORS AEGIS' : 'AEGIS AI Research Chat', ar ? 'محادثة بحثية مرتبطة ببيانات NASA PSI-69 مع إظهار المصدر والقيود.' : 'Ask about the FLEX evidence, methods, or limitations. Answers distinguish source observations from computed results.')}<article class="card chat-shell"><div class="chat-top"><div class="chat-brand"><div class="chat-avatar">✧</div><div><h3>${ar ? 'مساعد البحث العلمي' : 'AEGIS Research Assistant'}</h3><p class="sub">${ar ? 'NASA PSI-69 · جدول التجارب الكامل · DOI 10.60555/mbq8-0451' : 'NASA PSI-69 · full experimental table · DOI 10.60555/mbq8-0451'}</p></div></div><div class="chat-top-actions"><span class="tag" id="copilotMode">${ar ? 'جارٍ التحقق من الخدمة…' : 'Checking provider…'}</span><button class="outline-btn" id="newChat" type="button">${ar ? 'محادثة جديدة' : 'New chat'}</button></div></div><div class="chat-context"><span class="tag obs">OBSERVED · PSI-69</span><span class="tag comp">COMPUTED · ${ar ? 'إحصاءات وصفية' : 'descriptive statistics'}</span><span class="tag">${ar ? 'السجل محفوظ محليًا في هذا المتصفح' : 'Chat saved locally in this browser'}</span></div><div class="chat-log" id="chatLog" role="log" aria-live="polite" aria-relevant="additions text"></div><div id="chatTyping" class="chat-typing" hidden>${ar ? 'يفحص الأدلة…' : 'Checking the evidence…'}</div><div class="chat-suggestions" id="chatSuggestions"><button class="suggestion" data-question="${t('What is the mean burning rate, and how was it computed?', 'ما متوسط ثابت معدل الاحتراق، وكيف حُسب؟')}">${t('Mean burning rate', 'متوسط معدل الاحتراق')}</button><button class="suggestion" data-question="${t('What do these records tell us about droplet diameter and burning rate?', 'ماذا تخبرنا السجلات عن قطر القطرة ومعدل الاحتراق؟')}">${t('Explore relationship', 'استكشف العلاقة')}</button><button class="suggestion" data-question="${t('What are the main limitations of this table?', 'ما أبرز حدود هذا الجدول؟')}">${t('Evidence limits', 'حدود الأدلة')}</button></div><div class="chat-compose"><form id="chatForm"><textarea class="field" id="question" rows="2" maxlength="1500" required aria-label="${ar ? 'رسالة إلى مساعد أبحاث AEGIS' : 'Message AEGIS research assistant'}" placeholder="${ar ? 'اكتب سؤالك عن الأدلة…' : 'Message AEGIS about the evidence…'}"></textarea><button class="primary-btn chat-send" id="chatSend" type="submit">${ar ? 'إرسال ↑' : 'Send ↑'}</button></form><div class="chat-disclosure">${ar ? 'تُحفظ المحادثة في تخزين المتصفح فقط. لا تدخل معلومات شخصية أو سرية.' : 'Conversation is stored in this browser only. Do not enter personal or confidential information.'} · ${ar ? 'قد يستخدم السؤال Gemini إذا كانت الخدمة متاحة؛ وإلا يظهر ملخص محلي محدد بوضوح.' : 'Questions may be sent to Gemini when configured; otherwise a clearly labeled local summary is shown.'}</div></div></article>`;
+}
+function missionLessons() {
+  const ar = lang === 'ar';
+  const incidents = [
+    {
+      title: 'Apollo 1 · Pad test, 1967',
+      tag: ar ? 'حادث أرضي · ليس بيانات جاذبية صغرى' : 'GROUND INCIDENT · NOT MICROGRAVITY DATA',
+      facts: ar
+        ? 'كان اختبار ما قبل الإطلاق داخل الكبسولة المضغوطة بأكسجين نقي. لم يحدد التحقيق مصدر اشتعال واحداً بشكل قاطع، لكنه وجد أدلة على تقوس كهربائي. أدى الجو الغني بالأكسجين إلى انتشار سريع وارتفاع الضغط، وتعذر فتح الفتحة بسرعة.'
+        : 'The prelaunch capsule test used a pressurized, pure-oxygen atmosphere. Investigators did not identify one definitive ignition source, but found evidence of electrical arcing. The oxygen-rich environment supported rapid fire growth and pressure rise; the hatch could not be opened quickly.',
+      insight: ar
+        ? 'درس التصميم: اضبط مصادر الاشتعال والمواد القابلة للاحتراق، وراجع فتحات الخروج والإنقاذ في ظروف الضغط الفعلية. الحادث يوضح الخطر ولا يقيس انتشار لهب في انعدام الجاذبية.'
+        : 'Design lesson: control ignition sources and combustible materials, and validate egress and rescue under the actual pressure condition. This incident demonstrates a hazard; it does not measure flame spread in microgravity.',
+      url: 'https://sma.nasa.gov/sma-disciplines/accllp/apollo-1',
+      label: 'NASA Apollo 1 accident record',
+    },
+    {
+      title: 'Apollo 13 · Oxygen-tank failure, 1970',
+      tag: ar ? 'عطل نظام أكسجين · ليس تجربة لهب' : 'OXYGEN-SYSTEM FAILURE · NOT A FLAME TEST',
+      facts: ar
+        ? 'تضررت أسلاك وعوازل داخل خزان الأكسجين بعد تسخين مفرط في الاختبار الأرضي، ثم وقع انفجار أثناء الرحلة وفُقد الأكسجين والطاقة من خلايا الوقود. كانت المشكلة تفاعلاً بين التصميم والتغيير الهندسي والاختبار.'
+        : 'Wiring and insulation inside an oxygen tank were damaged by overheating during ground testing. The tank later failed in flight, causing oxygen loss and fuel-cell power loss. The review identified interacting design, configuration, and test-process failures.',
+      insight: ar
+        ? 'درس التصميم: تتبع تغييرات التهيئة، وهوامش درجات الحرارة والجهد، واعزل أعطال أنظمة الأكسجين والطاقة. لا نعامل انفجار الخزان كقياس لانتشار حريق المقصورة.'
+        : 'Design lesson: maintain configuration control, temperature and voltage margins, and fault isolation for oxygen and power systems. Do not treat the tank failure as a cabin-fire propagation measurement.',
+      url: 'https://sma.nasa.gov/sma-disciplines/accllp/apollo-13',
+      label: 'NASA Apollo 13 accident record',
+    },
+    {
+      title: 'Mir · Solid-fuel oxygen generator fire, 1997',
+      tag: ar ? 'حريق على متن محطة · استجابة الطاقم والدخان' : 'ON-ORBIT FIRE · CREW RESPONSE & SMOKE',
+      facts: ar
+        ? 'اشتعل مولد أكسجين كيميائي صلب أثناء وجود ستة أفراد. أنتج لهباً وشرراً ودخاناً كثيفاً وسدّ مساراً إلى مركبة هروب. أخمد الطاقم الحريق بطفايات؛ ثم احتاجت أنظمة دعم الحياة ساعات لإزالة الدخان. رجّح التحقيق دخول مادة هيدروكربونية إلى العبوة.'
+        : 'A solid-fuel oxygen generator ignited with six crew aboard, producing flame, sparks, and dense smoke that blocked an escape route. The crew used extinguishers; life support took hours to clear the smoke. Investigators later considered hydrocarbon contamination of the canister the likely cause.',
+      insight: ar
+        ? 'درس التصميم: قيّم مولدات الأكسجين كمصدر اشتعال مستقل، خطط للمسارات البديلة، واجمع بين التدريب والإطفاء وكشف الدخان وتنقيته. هذا حادث تشغيلي وليس تجربة احتراق مضبوطة.'
+        : 'Design lesson: treat oxygen-generation hardware as a potential ignition source, protect alternate egress, and combine training, suppression, smoke detection, and cleanup. This is an operational incident, not a controlled combustion experiment.',
+      url: 'https://www.nasa.gov/history/25-years-ago-fire-aboard-space-station-mir/',
+      label: 'NASA Mir fire history',
+    },
+  ];
+  const transfers = [
+    {
+      title: ar ? 'كشف الحريق المبكر' : 'Incipient-fire detection',
+      facts: ar
+        ? 'يعرض مورد NASA Spinoff كاشفاً لمكوك الفضاء يرصد جسيمات الاحتراق ويميّزها عن الغبار، وقد صُمم للتنبيه قبل ظهور لهب أو دخان واضح.'
+        : 'The NASA Spinoff resource describes a Shuttle detector that samples combustion particles and distinguishes them from dust, aiming to signal a fire condition before visible flame or smoke.',
+      use: ar
+        ? 'فرصة بحث: اختبر زمن الاستجابة والإنذارات الكاذبة مع أنواع الدخان والهباء ومسارات التهوية المناسبة للمركبات المأهولة.'
+        : 'Research opportunity: test response time and false alarms across smoke/aerosol types and ventilation paths relevant to crewed vehicles.',
+      url: 'https://spinoff.nasa.gov/node/9407',
+      label: 'NASA Spinoff · Fire Detector',
+    },
+    {
+      title: ar ? 'معدات تنفس أخف' : 'Lighter firefighter air tanks',
+      facts: ar
+        ? 'يوثق المورد تعاوناً لنقل تصميم أسطوانة مركبة أخف مع قناع أوضح ومنبه شخصي لانخفاض الهواء إلى معدات رجال الإطفاء.'
+        : 'The resource documents transfer of a lighter composite air-tank design, improved mask visibility, and a personal low-air warning to firefighter equipment.',
+      use: ar
+        ? 'صلة المشروع: قابلية الحركة والإنذار والاحتياطي عناصر في تجهيز الطاقم؛ هذا المثال لا يبرر تغيير خليط أكسجين المقصورة.'
+        : 'Project relevance: mobility, alerts, and reserve capacity matter to crew equipment; this example does not justify changing cabin oxygen composition.',
+      url: 'https://spinoff.nasa.gov/node/9582',
+      label: "NASA Spinoff · Fireman's Air Tanks",
+    },
+    {
+      title: ar ? 'مواد ملابس واقية' : 'Protective clothing materials',
+      facts: ar
+        ? 'يصف Project FIRES تكييف مواد وتصاميم خفيفة ومقاومة للحرارة طُورت لبدلات الفضاء أو الحماية الحرارية إلى ملابس رجال الإطفاء.'
+        : 'Project FIRES adapted lightweight, heat-protective materials and design concepts from spacesuits and spacecraft thermal protection for firefighter ensembles.',
+      use: ar
+        ? 'صلة المشروع: نقل التقنية يحتاج اختبارات أداء وراحة وسلامة مستقلة؛ نجاح مادة في الملابس لا يجعلها تلقائياً مناسبة لمقصورة أو بدلة فضاء.'
+        : 'Project relevance: technology transfer still requires independent performance, comfort, and safety testing; a material suitable for clothing is not automatically suitable for a spacecraft cabin or suit.',
+      url: 'https://spinoff.nasa.gov/node/9918',
+      label: 'NASA Spinoff · New Technology for the Fire Attire',
+    },
+  ];
+  const card = (item) =>
+    `<article class="card"><div class="card-head"><h3>${item.title}</h3><span class="tag">${item.tag || (ar ? 'نقل تقنية · ليس قياس احتراق' : 'TECH TRANSFER · NOT COMBUSTION DATA')}</span></div><p>${item.facts}</p><div class="callout">${item.insight || item.use}</div><a href="${item.url}" target="_blank" rel="noreferrer">${item.label} ↗</a></article>`;
+  return `${pageHead(ar ? 'دروس سلامة المهمات' : 'Mission Safety Lessons', ar ? 'تحليل موارد ناسا التي أرفقها التحدي: حوادث فضائية ونقل تقنية، مع فصلها عن بيانات التجارب.' : 'Analyze the NASA incident histories and technology-transfer resources supplied with the challenge, separately from experiment data.')}<div class="callout warn"><b>${ar ? 'حدود الدليل:' : 'Evidence boundary:'}</b> ${ar ? 'هذه السجلات تشرح أنماط الخطر والاستجابة ونقل التقنية. لا تضيف قياسات إلى قاعدة NASA PSI ولا تثبت أثراً سببياً في الجاذبية الصغرى.' : 'These records describe hazards, response, and technology transfer. They add no measurements to the NASA PSI dataset and do not establish causal effects in microgravity.'}</div><h2 style="margin:22px 0 12px">${ar ? 'حوادث موثقة من ناسا' : 'NASA incident records'}</h2><div class="grid three">${incidents.map(card).join('')}</div><h2 style="margin:22px 0 12px">${ar ? 'أمثلة نقل التقنية' : 'Technology-transfer examples'}</h2><div class="grid three">${transfers.map(card).join('')}</div><article class="card" style="margin-top:15px"><h2>${ar ? 'كيف تتحول إلى أسئلة تصميم قابلة للاختبار؟' : 'Turn lessons into testable design questions'}</h2><ol>${(ar ? ['هل اختُبرت المواد والمكونات عند ضغط الأكسجين والضغط الكلي وتدفق الهواء المقصود؟', 'هل تكشف الحساسات نواتج الاحتراق المبكر وتفصلها عن الغبار والإنذارات الكاذبة؟', 'هل يبقى مسار هروب بديل متاحاً مع دخان كثيف أو عطل في مولد الأكسجين؟', 'هل اختُبرت إجراءات العزل والإطفاء وتصفية الجو مع الطاقم والأجهزة الفعلية؟'] : ['Were materials and components tested at the intended oxygen partial pressure, total pressure, and airflow?', 'Can detectors identify early combustion products while rejecting dust and nuisance alarms?', 'Does an alternate egress route remain available during dense smoke or oxygen-generator failure?', 'Were isolation, suppression, and atmosphere-cleanup procedures tested with representative crew and hardware?']).map((x) => `<li>${x}</li>`).join('')}</ol><p class="sub">${ar ? 'هذه أسئلة بحث وتأهيل وليست إعدادات تشغيلية أو توصيات معتمدة للمركبات.' : 'These are research and qualification questions, not operational settings or certified spacecraft recommendations.'}</p></article>`;
+}
+async function sourcesPage() {
+  const evidence = await get('/api/challenge/catalog');
+  const ar = lang === 'ar';
+  const challengeResources = [
+    [
+      'NASA PSI Data Repository · Combustion Science (challenge-specified source)',
+      'https://psi.nasa.gov/physci/repo/search?q=combustion',
+      'PRIMARY DATA',
+    ],
+    [
+      '2026 Space Apps challenge video · Flame in Freefall',
+      'https://www.youtube.com/watch?v=AVuEiKxOpc0',
+      'OFFICIAL CHALLENGE VIDEO',
+    ],
+    [
+      'NASA Combustion Science overview',
+      'https://www.nasa.gov/glenn/glenn-expertise-space-exploration/physical-sciences-program/combustion-science/',
+      'CONTEXT',
+    ],
+    ['NASA ScienceCasts · combustion on the ISS (2018)', 'https://www.youtube.com/watch?v=W1oXykoz9zg', 'VIDEO'],
+    [
+      "NASA Researcher's Guide to ISS Combustion Science",
+      'https://www.nasa.gov/missions/station/a-researchers-guide-to-combustion-science/',
+      'CONTEXT',
+    ],
+    ['Apollo 1 investigation and lessons', 'https://sma.nasa.gov/sma-disciplines/accllp/apollo-1', 'INCIDENT HISTORY'],
+    [
+      'Apollo 13 oxygen-tank investigation',
+      'https://sma.nasa.gov/sma-disciplines/accllp/apollo-13',
+      'INCIDENT HISTORY',
+    ],
+    [
+      'Fire aboard Mir (1997)',
+      'https://www.nasa.gov/history/25-years-ago-fire-aboard-space-station-mir/',
+      'INCIDENT HISTORY',
+    ],
+    ["NASA Spinoff · Fireman's air tanks", 'https://spinoff.nasa.gov/node/9582', 'TECHNOLOGY TRANSFER'],
+    ['NASA Spinoff · Shuttle fire detector', 'https://spinoff.nasa.gov/node/9407', 'TECHNOLOGY TRANSFER'],
+    ['NASA Spinoff · Firefighter attire', 'https://spinoff.nasa.gov/node/9918', 'TECHNOLOGY TRANSFER'],
+  ];
+  const categoryArabic = {
+    'PRIMARY DATA': 'بيانات أساسية',
+    CONTEXT: 'سياق علمي',
+    VIDEO: 'فيديو',
+    'OFFICIAL CHALLENGE VIDEO': 'فيديو التحدي الرسمي',
+    'INCIDENT HISTORY': 'حوادث تاريخية',
+    'TECHNOLOGY TRANSFER': 'نقل التقنية',
+  };
+  return `${pageHead(t('Sources & Methods', 'المصادر والمنهجية'), t('Challenge data, background explanations, the official challenge video, and the separate NASA ScienceCasts video.', 'بيانات التحدي والمراجع العلمية وفيديو التحدي الرسمي وفيديو NASA ScienceCasts المنفصل.'))}
+    <article class="card"><h3>${t('Primary experimental evidence · NASA Physical Sciences Informatics', 'بيانات التجارب الأساسية · NASA Physical Sciences Informatics')}</h3>
+    <p class="sub">${t('The official challenge names NASA PSI Combustion Science as its data source. PSI is the only source of experimental measurements in this project. The 24-record PSI index and file metadata are shown in Challenge Evidence. Sixteen original tables are bundled and linked to their NASA records; DOI and rights information are shown only when available. Eight manifest lookups returned no listing in this snapshot. PSI does not provide one harmonized cross-study experiment table.', 'يحدد التحدي الرسمي مستودع NASA PSI Combustion Science مصدراً للبيانات، وهو المصدر الوحيد لقياسات التجارب في هذا المشروع. يعرض قسم أدلة التحدي فهرس PSI ذي السجلات الـ24 وبيانات الملفات المتاحة. أرفقنا 16 جدولاً أصلياً وربطناها بسجلات NASA؛ لا نعرض DOI أو حقوقاً إلا عند توفرها. لم تُرجع ثمانية استعلامات عن الفهارس قائمة ملفات في هذه اللقطة. لا يقدم PSI جدولاً موحداً صالحاً لدمج كل الدراسات.')}</p>
+    <div class="table-wrap"><table><thead><tr><th>${t('Investigation', 'الدراسة')}</th><th>${t('Rows', 'الصفوف')}</th><th>DOI</th><th>${t('License', 'الترخيص')}</th><th>${t('Integrity', 'سلامة الملف')}</th><th>${t('Source record', 'سجل المصدر')}</th></tr></thead><tbody>${evidence.investigations.map((s) => `<tr><td><b>${esc(s.id)} · ${esc(s.title)}</b></td><td>${s.rowCount}</td><td class="mono">${esc(s.doi || '—')}</td><td>${esc(s.license)}</td><td>${esc(s.sourceIntegrity)}</td><td><a href="${esc(s.sourceUrl)}" target="_blank" rel="noreferrer">NASA PSI ↗</a></td></tr>`).join('')}</tbody></table></div></article>
+    <div class="grid two" style="margin-top:15px"><article class="card"><h3>${t('Challenge-provided resources', 'المصادر المرفقة بالتحدي')}</h3><p class="sub">${t('PSI is the measurement source. The other resources provide context, incident history, or technology-transfer examples; they are not additional experiment datasets.', 'PSI هو مصدر القياسات. أما بقية المصادر فتقدم سياقاً علمياً أو تاريخ الحوادث أو أمثلة لنقل التقنية؛ وليست مجموعات إضافية لبيانات التجارب.')}</p>
+    ${challengeResources.map(([label, url, kind]) => `<div class="list-row"><span>${esc(label)} <small class="tag">${esc(ar ? categoryArabic[kind] || kind : kind)}</small></span><a href="${esc(url)}" target="_blank" rel="noreferrer">${t('Open ↗', 'فتح ↗')}</a></div>`).join('')}
+    <div class="list-row"><span>${t('Official challenge · Flame in Freefall', 'صفحة تحدي Flame in Freefall الرسمية')}</span><a href="https://www.spaceappschallenge.org/2026/challenges/flame-in-freefall/?tab=resources" target="_blank" rel="noreferrer">${t('Open ↗', 'فتح ↗')}</a></div>
+    <div class="list-row"><span>${t('PSI filtered API · investigation metadata refresh', 'واجهة PSI المفلترة · تحديث بيانات التحقيقات')} <small class="tag">${t('METADATA API', 'واجهة بيانات وصفية')}</small></span><a href="https://psi.nasa.gov/geode-py/ws/repo/search?source=psi&type=investigation&size=100&sort=Accession&order=asc&ffield=Research+Area&fvalue=combustion+science" target="_blank" rel="noreferrer">${t('API ↗', 'واجهة API ↗')}</a></div>
+    <div class="list-row"><span>${t('NASA NTRS API docs · references only; no dataset ingested', 'توثيق NASA NTRS API · للمراجع فقط؛ لم تُستورد منه بيانات')}</span><a href="https://ntrs.nasa.gov/api/openapi/" target="_blank" rel="noreferrer">${t('API docs ↗', 'توثيق API ↗')}</a></div>
+    <div class="list-row"><span>NASA OCHMO-TB-003 · Habitable Atmosphere</span><a href="https://www.nasa.gov/wp-content/uploads/2023/12/ochmo-tb-003-habitable-atmosphere.pdf" target="_blank" rel="noreferrer">${t('Open ↗', 'فتح ↗')}</a></div><div class="list-row"><span>NASA OCHMO-TB-008 · Fire Protection</span><a href="https://www.nasa.gov/wp-content/uploads/2023/12/ochmo-tb-008-fire-protection.pdf" target="_blank" rel="noreferrer">${t('Open ↗', 'فتح ↗')}</a></div><div class="list-row"><span>NASA-STD-3001 Volume 2 · crew atmosphere constraints</span><a href="https://www.nasa.gov/wp-content/uploads/2025/05/nasa-std-3001-vol-2.pdf" target="_blank" rel="noreferrer">${t('Open ↗', 'فتح ↗')}</a></div><div class="list-row"><span>NASA 2026 · exploration atmosphere concept</span><a href="https://ntrs.nasa.gov/citations/20260001966" target="_blank" rel="noreferrer">NASA NTRS ↗</a></div></article>
+    <article class="card"><h3>${t('Services, provenance, and boundaries', 'الخدمات والمصدر وحدود البيانات')}</h3><p class="sub">${t('The PSI investigation-search and file-manifest endpoints refresh metadata; listing files does not download the multi-terabyte archive. The app serves a local inventory snapshot and checksummed files. NASA NTRS is linked for selected references, not harvested as an experiment dataset. Gemini is optional generated explanation, never experimental evidence.', 'تُستخدم واجهتا البحث والفهرسة لدى PSI لتحديث البيانات الوصفية؛ فهرسة الملفات لا تعني تنزيل الأرشيف الذي يتجاوز عدة تيرابايت. يعرض التطبيق لقطة محلية وملفات متحققاً من بصمتها. أُدرج NASA NTRS كمصدر لمراجع مختارة ولم يُستورد كبيانات تجارب. Gemini اختياري لشرح مولّد ولا يعد دليلاً تجريبياً.')}</p><div class="list-row"><span>OBSERVED</span><b>${t('Values directly reported by NASA PSI.', 'قيم مذكورة مباشرة في NASA PSI.')}</b></div><div class="list-row"><span>COMPUTED</span><b>${t('Deterministic arithmetic or summaries with stated inputs.', 'حسابات أو ملخصات حتمية بمدخلات معلنة.')}</b></div><div class="list-row"><span>INTERPRETATION</span><b>${t('Scientific explanation linked to references.', 'تفسير علمي مرتبط بمراجع.')}</b></div><div class="list-row"><span>HYPOTHESIS</span><b>${t('A question that needs experiments or validation.', 'سؤال يحتاج تجارب أو تحققاً.')}</b></div><div class="callout warn">${t('Earth-fire hotspots, NOAA space weather, solar-event feeds, and unrelated challenge data from the earlier prototype are excluded from active research.', 'استُبعدت حرائق الأرض وبيانات طقس الفضاء والأحداث الشمسية وبيانات التحديات الأخرى من البحث الحالي.')}</div><a href="../docs/CHALLENGE_BRIEF_AND_VIDEO.md">${t('Read the challenge and video review ↗', 'اقرأ مراجعة التحدي والفيديو ↗')}</a></article></div>`;
+}
+function reports() {
+  return `${pageHead(t('Scientific Reports Center', 'مركز التقارير العلمية'), t('Export reproducible source rows, analysis results, or a printable report.', 'صدّر صفوف المصدر ونتائج التحليل أو تقريراً قابلاً للطباعة.'))}<div class="grid three"><article class="card"><div class="eyebrow">${t('DATA', 'البيانات')}</div><h3 style="margin:10px 0">${t('Source table', 'جدول المصدر')}</h3><p class="sub">${t('Observed rows and field names from NASA PSI-69.', 'صفوف مرصودة وأسماء حقول من NASA PSI-69.')}</p><button class="outline-btn" id="downloadCsv">${t('Download CSV', 'تنزيل CSV')}</button></article><article class="card"><div class="eyebrow">${t('REPRODUCIBILITY', 'قابلية الإعادة')}</div><h3 style="margin:10px 0">${t('Analysis package', 'حزمة التحليل')}</h3><p class="sub">${t('JSON with source metadata, summary statistics, validation, and limitations.', 'ملف JSON يحوي بيانات المصدر والإحصاءات والتحقق والقيود.')}</p><button class="outline-btn" id="downloadJson">${t('Download JSON', 'تنزيل JSON')}</button></article><article class="card"><div class="eyebrow">${t('PRESENTATION', 'العرض')}</div><h3 style="margin:10px 0">${t('Scientific summary', 'ملخص علمي')}</h3><p class="sub">${t('Open a printable report and use Save as PDF in your browser.', 'افتح تقريراً قابلاً للطباعة واختر الحفظ بصيغة PDF من المتصفح.')}</p><button class="outline-btn" id="printReport">${t('Print / Save PDF', 'طباعة / حفظ PDF')}</button></article></div><div class="callout" style="margin-top:15px">${t('Exports preserve evidence labels and include DOI, units, methods, and limitations. AI interpretation is not an experimentally verified result.', 'تحافظ الملفات المصدّرة على تصنيفات الأدلة وتشمل DOI والوحدات والطرق والقيود. تفسير الذكاء الاصطناعي ليس نتيجة تجريبية متحققاً منها.')}</div>`;
+}
+async function health() {
+  const h = await get('/api/health');
+  $('#dataMode').textContent = t('NASA PSI challenge evidence · offline-ready', 'أدلة تحدي NASA PSI · متاحة دون اتصال');
+  return h;
+}
+function settings() {
+  return `${pageHead(t('Settings & Theme Manager', 'الإعدادات والمظهر'), t('Appearance and language preferences are saved in this browser.', 'تُحفظ إعدادات المظهر واللغة في هذا المتصفح.'))}<div class="grid two"><article class="card"><h3>${t('Visual theme', 'المظهر')}</h3><p class="sub">${t('Three MORS themes preserve the same evidence labels and reading order.', 'ثيمات MORS الثلاثة تحافظ على تصنيفات الأدلة وترتيب القراءة.')}</p>${[
+    ['arctic', 'MORS Arctic', 'Light research surfaces with blue accents'],
+    ['space', 'MORS Deep Space', 'Dark navy mission-control palette'],
+    ['observatory', 'MORS Observatory', 'Neutral lab surfaces with dark data panels'],
+  ]
+    .map(
+      ([v, n, d]) =>
+        `<div class="list-row"><span><b>${n}</b><br><small>${t(d, { 'Light research surfaces with blue accents': 'واجهة بحث فاتحة ولمسات زرقاء', 'Dark navy mission-control palette': 'لوحة داكنة بلون أزرق المهمات', 'Neutral lab surfaces with dark data panels': 'واجهة مختبر محايدة مع ألواح بيانات داكنة' }[d])}</small></span><button class="outline-btn" data-theme="${v}">${theme === v ? t('Active', 'مفعّل') : t('Apply', 'تطبيق')}</button></div>`,
+    )
+    .join(
+      '',
+    )}</article><article class="card"><h3>${t('Language', 'اللغة')}</h3><p class="sub">${t('The interface supports English and Arabic with right-to-left layout.', 'تدعم الواجهة الإنجليزية والعربية مع تخطيط من اليمين إلى اليسار.')}</p><div class="list-row"><span>English</span><button class="outline-btn" data-lang="en">${lang === 'en' ? t('Active', 'مفعّل') : t('Apply', 'تطبيق')}</button></div><div class="list-row"><span>العربية</span><button class="outline-btn" data-lang="ar">${lang === 'ar' ? 'نشط' : 'تطبيق'}</button></div><div class="callout" style="margin-top:15px">${t('Scientific field names and source values stay in their original form for traceability.', 'تبقى أسماء الحقول العلمية وقيم المصدر بصيغتها الأصلية لتسهيل التتبع.')}</div></article></div>`;
+}
+const pageMap = {
+  Overview: overview,
+  'Flame Physics': () => renderFlamePhysics(lang),
+  'Mission Atmospheres': () => renderMissionAtmospheres(lang),
+  'Safety Insights': () => renderSafetyInsights(lang),
+  'System Concepts': () => renderSystemConcepts(lang),
+  'Mission Lessons': missionLessons,
+  'Challenge Evidence': () => renderChallengeLibrary(lang),
+  'Investigation Lab': () => renderInvestigationLab(lang),
+  'Analysis Workbench': analysisPage,
+  'Comparison Studio': comparePage,
+  'AI Copilot': copilot,
+  Sources: sourcesPage,
+  Reports: reports,
+  Settings: settings,
+};
+async function go(name) {
+  const id = ++navigationId;
+  current = name;
+  renderNav();
+  $('#pageTitle').textContent = pageLabel(name);
+  $('#crumb').textContent = lang === 'ar' ? `MORS AEGIS / ${pageLabel(name)}` : 'MORS AEGIS / ' + name.toUpperCase();
+  $('.evidence-pill').innerHTML = `<i></i> ${t('EVIDENCE FIRST', 'الأدلة أولاً')}`;
+  $('#reportBtn').title = t('Export report', 'تصدير التقرير');
+  $('#reportBtn').innerHTML = `↗ <span>${t('Export', 'تصدير')}</span>`;
+  document.querySelector('footer').innerHTML =
+    `<span>${t('© 2026 MORS · NASA PSI COMBUSTION RESEARCH', '© 2026 MORS · أبحاث NASA PSI للاحتراق')}</span><span>${t('Source-linked · Reproducible · Research use only', 'موثّق المصدر · قابل لإعادة الإنتاج · للاستخدام البحثي')}</span>`;
+  const c = $('#content');
+  c.innerHTML = `<div class="empty">${t('Loading research view…', 'جارٍ تحميل صفحة البحث…')}</div>`;
+  try {
+    const html = await pageMap[name]();
+    if (id !== navigationId) return;
+    c.innerHTML = html;
+    bindPage();
+    if (name === 'Overview') bindFlexScatter(c);
+    if (name === 'Challenge Evidence') bindChallengeLibrary(c, lang);
+    if (name === 'Investigation Lab') bindInvestigationLab(c, lang);
+    if (name === 'Flame Physics') bindFlameScene3d(c, lang);
+    if (name === 'System Concepts') bindSystemConcepts(c, lang);
+    if (name === 'Comparison Studio') renderCompare();
+    if (name === 'AI Copilot') {
+      const provider = (await get('/api/health')).credentials.gemini;
+      if (id === navigationId)
+        $('#copilotMode').textContent = provider ? 'GEMINI CONFIGURED · CHECKED PER REPLY' : 'LOCAL EVIDENCE MODE';
+    }
+  } catch (e) {
+    if (id === navigationId)
+      c.innerHTML = `<div class="callout warn">View could not be loaded: ${esc(e.message)}</div>`;
+  }
+}
+function persistChat() {
+  try {
+    localStorage.setItem('mors-chat-v1', JSON.stringify(chatThread.slice(-60)));
+  } catch {
+    toast('Local chat history could not be saved in this browser.');
+  }
+}
+function addChatMessage(log, message) {
+  const bubble = document.createElement('div');
+  bubble.className = `bubble ${message.role}`;
+  const meta = document.createElement('div');
+  meta.className = 'bubble-meta';
+  meta.textContent =
+    message.role === 'user' ? (lang === 'ar' ? 'أنت' : 'YOU') : message.provider || 'AEGIS · LOCAL EVIDENCE';
+  const body = document.createElement('div');
+  body.className = 'bubble-body';
+  body.textContent = message.content;
+  bubble.append(meta, body);
+  if (message.role === 'assistant') {
+    if (Array.isArray(message.toolsExecuted) && message.toolsExecuted.length) {
+      const details = document.createElement('details'),
+        summary = document.createElement('summary'),
+        pre = document.createElement('pre');
+      summary.textContent = lang === 'ar' ? 'أدوات التحليل المنفذة' : 'Executed analysis tools';
+      pre.textContent = message.toolsExecuted
+        .map(
+          (item) =>
+            `${item.tool}: ${item.status} · ${item.evidence}${item.resultSha256 ? ` · SHA-256 ${item.resultSha256}` : ''}`,
+        )
+        .join('\n');
+      details.append(summary, pre);
+      bubble.append(details);
+    }
+    const cite = document.createElement('div');
+    cite.className = 'bubble-citation';
+    cite.textContent =
+      lang === 'ar'
+        ? 'المصدر: NASA PSI-69 · DOI 10.60555/mbq8-0451 · '
+        : 'Source: NASA PSI-69 · DOI 10.60555/mbq8-0451 · ';
+    const link = document.createElement('a');
+    link.href = 'https://psi.nasa.gov/physci/repo/data/investigations/PSI-69';
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = lang === 'ar' ? 'فتح سجل NASA' : 'Open NASA record';
+    cite.append(link);
+    bubble.append(cite);
+  }
+  log.append(bubble);
+}
+function renderChat() {
+  const log = $('#chatLog');
+  if (!log) return;
+  log.replaceChildren();
+  if (!chatThread.length) {
+    addChatMessage(log, {
+      role: 'assistant',
+      provider: lang === 'ar' ? 'مساعد الأبحاث' : 'AEGIS · RESEARCH ASSISTANT',
+      content:
+        lang === 'ar'
+          ? 'مرحبًا. اسأل عن قياسات FLEX أو طرق الحساب أو حدود الأدلة. سأوضح إن كانت الإجابة قياساً مرصوداً أم حساباً وصفياً، وسأذكر عندما لا تكفي البيانات للإجابة.'
+          : 'Hello. Ask about FLEX measurements, calculations, or evidence limits. I will distinguish observations from computed summaries and flag questions this table cannot answer.',
+    });
+  } else chatThread.forEach((message) => addChatMessage(log, message));
+  log.scrollTop = log.scrollHeight;
+}
+async function submitChat(event) {
+  event.preventDefault();
+  if (chatBusy) return;
+  const input = $('#question'),
+    question = input.value.trim();
+  if (!question) return;
+  const history = chatThread.slice(-8).map(({ role, content }) => ({ role, content }));
+  chatThread.push({ role: 'user', content: question });
+  persistChat();
+  renderChat();
+  input.value = '';
+  chatBusy = true;
+  $('#chatTyping').hidden = false;
+  $('#chatSend').disabled = true;
+  try {
+    const result = await post('/api/copilot', { question, history });
+    const provider =
+      result.status === 'live'
+        ? `AI INTERPRETATION · GEMINI ${result.model || ''}`
+        : (result.provider || 'DETERMINISTIC LOCAL SUMMARY').toUpperCase();
+    chatThread.push({
+      role: 'assistant',
+      content: result.answer || 'No text was returned. Please try again.',
+      provider,
+      citation: true,
+      toolsExecuted: result.toolsExecuted || [],
+    });
+  } catch {
+    const mean = analysis?.summary?.stats?.burning_rate_mm_s?.mean;
+    chatThread.push({
+      role: 'assistant',
+      provider: 'DETERMINISTIC LOCAL SUMMARY · REQUEST FAILED',
+      citation: true,
+      content: `The AI request could not be completed. Local evidence: ${dataset?.dataset?.records ?? 0} PSI-69 table rows; computed mean burning rate ${Number.isFinite(mean) ? mean.toFixed(3) + ' mm²/s' : 'not available'}. These pooled records cannot establish causality or represent every FLEX test. Source DOI: 10.60555/mbq8-0451.`,
+    });
+  } finally {
+    chatBusy = false;
+    persistChat();
+    if ($('#chatTyping')) $('#chatTyping').hidden = true;
+    if ($('#chatSend')) $('#chatSend').disabled = false;
+    if ($('#chatLog')) {
+      renderChat();
+      if ($('#question')) $('#question').focus();
+    }
+  }
+}
+function bindPage() {
+  document.querySelectorAll('[data-go]').forEach((b) => (b.onclick = () => go(b.dataset.go)));
+  if ($('#compareA')) {
+    $('#compareA').onchange = renderCompare;
+    $('#compareB').onchange = renderCompare;
+  }
+  if ($('#chatForm')) {
+    renderChat();
+    $('#chatForm').onsubmit = submitChat;
+    $('#question').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (!chatBusy) $('#chatForm').requestSubmit();
+      }
+    });
+    $('#newChat').onclick = () => {
+      if (
+        chatThread.length &&
+        !window.confirm(
+          lang === 'ar'
+            ? 'بدء محادثة جديدة؟ سيُمسح سجل هذه المحادثة من هذا المتصفح.'
+            : 'Start a new chat? This clears this conversation from this browser.',
+        )
+      )
+        return;
+      chatThread = [];
+      persistChat();
+      renderChat();
+    };
+    document.querySelectorAll('[data-question]').forEach(
+      (b) =>
+        (b.onclick = () => {
+          if (chatBusy) return;
+          $('#question').value = b.dataset.question;
+          $('#question').focus();
+        }),
+    );
+  }
+  for (const [id, key] of [
+    ['#wbFuel', 'fuel'],
+    ['#wbBand', 'pressureBand'],
+    ['#wbDiluent', 'diluent'],
+    ['#wbVariable', 'variable'],
+  ])
+    if ($(id))
+      $(id).onchange = (e) => {
+        wbFilter = { ...wbFilter, [key]: e.target.value };
+        go('Analysis Workbench');
+      };
+  if ($('#wbReset'))
+    $('#wbReset').onclick = () => {
+      wbFilter = { ...WB_DEFAULT };
+      go('Analysis Workbench');
+    };
+  if ($('#chatLog')) $('#chatLog').scrollTop = $('#chatLog').scrollHeight;
+  if ($('#downloadCsv'))
+    $('#downloadCsv').onclick = () => download('mors-aegis-psi69-flex.csv', awaitlessCSV(), 'text/csv');
+  if ($('#downloadJson'))
+    $('#downloadJson').onclick = () =>
+      download('mors-aegis-report.json', JSON.stringify(report(), null, 2), 'application/json');
+  if ($('#printReport')) $('#printReport').onclick = printSummary;
+  if ($('#saveProject'))
+    $('#saveProject').onclick = () => {
+      const p = {
+        name: $('#projectName').value,
+        question: $('#projectQuestion').value,
+        dataset: 'PSI-69',
+        savedAt: new Date().toISOString(),
+      };
+      localStorage.setItem('mors-project', JSON.stringify(p));
+      $('#savedProject').innerHTML =
+        `<div class="callout good">Saved locally in this browser: <b>${esc(p.name)}</b>. No server storage configured.</div>`;
+    };
+  document.querySelectorAll('[data-theme]').forEach(
+    (b) =>
+      (b.onclick = () => {
+        theme = b.dataset.theme;
+        localStorage.setItem('mors-theme', theme);
+        setTheme();
+        go(current);
+      }),
+  );
+  document.querySelectorAll('[data-lang]').forEach(
+    (b) =>
+      (b.onclick = () => {
+        lang = b.dataset.lang;
+        localStorage.setItem('mors-lang', lang);
+        setTheme();
+        $('#langBtn').textContent = lang === 'ar' ? 'English' : 'عربي';
+        renderNav();
+        go(current);
+      }),
+  );
+}
+function awaitlessCSV() {
+  const keys = Object.keys(dataset.rows[0]);
+  return (
+    [keys, ...dataset.rows.map((r) => keys.map((k) => r[k]))].map((row) => row.map(csvCell).join(',')).join('\r\n') +
+    '\r\n'
+  );
+}
+function report() {
+  return {
+    product: 'MORS AEGIS',
+    evidence_classification: 'OBSERVED source rows → COMPUTED summary',
+    dataset: dataset.dataset,
+    rows: dataset.rows,
+    analysis: analysis,
+    limitations: [
+      'Official PSI-69 experimental table; raw imagery and archive assets not included.',
+      'Descriptive analysis is not causal inference.',
+      'No imagery attached to current data extract.',
+    ],
+    generatedAt: new Date().toISOString(),
+  };
+}
+function printSummary() {
+  const d = report(),
+    w = window.open('', '_blank'),
+    ar = lang === 'ar';
+  if (!w) {
+    toast(t('Allow a popup to print the report', 'اسمح بفتح نافذة منبثقة لطباعة التقرير'));
+    return;
+  }
+  w.document.write(
+    `<html lang="${ar ? 'ar' : 'en'}" dir="${ar ? 'rtl' : 'ltr'}"><head><meta charset="utf-8"><title>${t('MORS AEGIS Scientific Summary', 'MORS AEGIS · ملخص علمي')}</title><style>body{font:14px Arial;margin:40px;color:#123}h1{color:#123}table{border-collapse:collapse}td,th{padding:8px;border:1px solid #abc}small{color:#567}pre{white-space:pre-wrap;direction:ltr;text-align:left}</style></head><body><h1>MORS AEGIS · ${t('FLEX Evidence Summary', 'ملخص أدلة FLEX')}</h1><p>NASA PSI-69 · DOI 10.60555/mbq8-0451 · ${new Date().toISOString()}</p><p>${t('Evidence: observed source-table values and computed descriptive statistics.', 'الأدلة: قيم مرصودة في جدول المصدر وإحصاءات وصفية محسوبة.')}</p><p><b>${t('Scope:', 'النطاق:')}</b> ${t('all tests in the official PSI-69 experimental table; raw imagery and other archive assets are not included.', 'كل الاختبارات في جدول NASA PSI-69 الرسمي؛ الصور الخام وبقية ملفات الأرشيف غير مضمّنة.')}</p>${rowsTable(dataset.rows)}<h2>${t('Computed summary', 'الملخص المحسوب')}</h2><pre>${esc(JSON.stringify(analysis.summary, null, 2))}</pre><h2>${t('Limitations', 'القيود')}</h2><ul>${d.limitations.map((x) => `<li>${esc(x)}</li>`).join('')}</ul><p>${t('Source:', 'المصدر:')} https://psi.nasa.gov/physci/repo/data/investigations/PSI-69</p></body></html>`,
+  );
+  w.document.close();
+  setTimeout(() => {
+    w.focus();
+    w.print();
+  }, 400);
+}
+$('#reportBtn').onclick = () => go('Reports');
+$('#langBtn').textContent = lang === 'ar' ? 'English' : 'عربي';
+$('#langBtn').onclick = () => {
+  lang = lang === 'en' ? 'ar' : 'en';
+  localStorage.setItem('mors-lang', lang);
+  setTheme();
+  renderNav();
+  go(current);
+};
+$('#themeBtn').onclick = () => {
+  theme = { arctic: 'space', space: 'observatory', observatory: 'arctic' }[theme];
+  localStorage.setItem('mors-theme', theme);
+  setTheme();
+  go(current);
+};
+setTheme();
+renderNav();
+(async () => {
+  try {
+    dataset = await get('/api/datasets/flex');
+    analysis = await get('/api/analysis');
+    await health();
+    go(current);
+  } catch (e) {
+    $('#content').innerHTML =
+      `<div class="callout warn">Backend not ready. Start this application with <code>npm start</code> in its folder. ${esc(e.message)}</div>`;
+  }
+})();

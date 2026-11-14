@@ -1,0 +1,4 @@
+# Raw upstream files must stay byte-identical to the NASA download (checksummed in tests).
+ms02-connectors/raw/** -text
+ms02-connectors/challenge-data/raw/** -text
+ms02-connectors/flex-psi69-full.csv text eol=lf
