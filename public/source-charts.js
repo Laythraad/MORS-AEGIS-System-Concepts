@@ -145,6 +145,11 @@ function renderChartCard(config, plotData, lang, sourceUrl, sourceRowCount) {
   const sourceLink = sourceUrl
     ? '<a href="' + esc(sourceUrl) + '" target="_blank" rel="noreferrer">NASA PSI ↗</a>'
     : '';
+  const reportLink = config.reportUrl
+    ? '<a href="' + esc(config.reportUrl) + '" target="_blank" rel="noreferrer">' +
+      (ar ? 'تقرير NASA BASS-II ↗' : 'NASA BASS-II report ↗') +
+      '</a>'
+    : '';
   return [
     '<article class="card source-chart-card" data-source-chart="', esc(config.id), '">',
     '<h3>', esc(title), '</h3>',
@@ -154,7 +159,7 @@ function renderChartCard(config, plotData, lang, sourceUrl, sourceRowCount) {
     '<p class="sub"><b>', ar ? 'حدود التفسير' : 'Interpretation limit', '</b><br>', esc(limit), '</p>',
     '</div>',
     '<p class="sub source-chart-fields">', ar ? 'حقول NASA PSI الأصلية: ' : 'Original NASA PSI fields: ',
-    esc(config.xField), ' → ', esc(config.yField), config.yDeltaFrom ? (ar ? ' · فرق محسوب: النهائي − الابتدائي' : ' · derived difference: final − initial') : '', sourceLink ? ' · ' + sourceLink : '', '</p>',
+    esc(config.xField), ' → ', esc(config.yField), config.yDeltaFrom ? (ar ? ' · فرق محسوب: النهائي − الابتدائي' : ' · derived difference: final − initial') : '', sourceLink ? ' · ' + sourceLink : '', reportLink ? ' · ' + reportLink : '', '</p>',
     chart,
     '</article>',
   ].join('');

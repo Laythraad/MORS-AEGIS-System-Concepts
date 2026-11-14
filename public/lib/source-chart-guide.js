@@ -357,14 +357,15 @@ export const SOURCE_STUDY_CHARTS = [
       'يمثل الخط المتقطع 1:1 تساوي القراءتين؛ وتُحفظ القيم السالبة كما نُشرت.',
     ),
     bilingual(
-      'This describes paired readings across varied materials and conditions; it does not estimate a material effect. Missing cells remain missing.',
-      'هذا وصف لقراءات مزدوجة عبر مواد وظروف مختلفة؛ ولا يقدّر أثر المادة. تبقى الخلايا المفقودة مفقودة.',
+      'NASA reports initial and final CO readings from a 0–1,000 ppm sensor in the 250-L MSG working volume; these are endpoints, not time-resolved peaks or cabin-wide concentrations. One test exceeded the sensor range. NASA’s ~1.5 ppm U.S. Lab value is a dilution estimate, not an in-situ reading. This plot does not estimate a material effect; missing cells remain missing.',
+      'هذه قراءات ابتدائية ونهائية بحساس CO مداه 0–1,000 ppm داخل حجرة MSG حجمها 250 لتر، وليست قياساً زمنياً لاستخراج الذروة أو تركيزاً للمحطة كلها. تجاوز اختبار واحد مدى الحساس؛ وتقدير NASA بنحو 1.5 ppm بعد التخفيف في مختبر ISS الأميركي حسابٌ لا قراءة مباشرة للمقصورة. لا يقدّر الرسم أثر المادة، وتبقى الخلايا المفقودة مفقودة.',
     ),
     {
       rowIdField: 'Test #',
       detailFields: ['Date', 'Fuel Sample Material'],
       aggregateDuplicates: true,
       identityReference: true,
+      reportUrl: 'https://ntrs.nasa.gov/citations/20210011385',
     },
   ),
   plot(
@@ -384,8 +385,8 @@ export const SOURCE_STUDY_CHARTS = [
       'قارن مقدار التغير وإشارته مباشرة؛ وتحتفظ تفاصيل النقطة بقراءات المصدر.',
     ),
     bilingual(
-      'This describes paired sensor readings across different tests and materials; negative values stay as published and are not clipped.',
-      'هذا وصف لقراءات حساسات مزدوجة عبر اختبارات ومواد مختلفة؛ وتبقى القيم السالبة كما نُشرت ولا تُقص.',
+      'The change is computed from initial and final CO readings from a 0–1,000 ppm sensor in the 250-L MSG working volume, not a time series or cabin-wide peak. One test exceeded the sensor range. NASA’s ~1.5 ppm U.S. Lab value is a dilution estimate, not an in-situ reading. Negative values stay as published; this does not isolate a material effect.',
+      'يحسب الفرق من قراءتين ابتدائية ونهائية بحساس CO مداه 0–1,000 ppm داخل حجرة MSG حجمها 250 لتر، وليس من سجل زمني للذروة أو تركيز المحطة كلها. تجاوز اختبار واحد مدى الحساس؛ وتقدير NASA بنحو 1.5 ppm بعد التخفيف في مختبر ISS الأميركي حسابٌ لا قراءة مباشرة للمقصورة. تبقى القيم السالبة كما نُشرت ولا تُقص، ولا يثبت الفرق أثر المادة.',
     ),
     {
       yDeltaFrom: 'Initial CO (ppm)',
@@ -395,6 +396,7 @@ export const SOURCE_STUDY_CHARTS = [
       rowIdField: 'Test #',
       detailFields: ['Date', 'Fuel Sample Material', 'Initial CO (ppm)', 'Final CO (ppm)'],
       aggregateDuplicates: true,
+      reportUrl: 'https://ntrs.nasa.gov/citations/20210011385',
     },
   ),
   plot(
