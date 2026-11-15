@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.0.0-alpha.7 — 2026-11-15
+
+- Added a subtle animated starfield and orbiting planets that preserve the MORS navy, cyan, and gold identity.
+- Respected reduced-motion preferences and added visual previews to the first-visit theme chooser.
+- Synchronized the visible application version with the release.
+
 ## 3.0.0-alpha.6 — 2026-11-15
 
 - Removed the login gate from public read-only deployments so judges can open research pages directly.

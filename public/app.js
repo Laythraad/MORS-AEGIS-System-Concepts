@@ -209,7 +209,12 @@ function hero() {
 }
 function themeWelcome() {
   if (storageGet('mors-welcome-theme-picked') === '1') return '';
-  return `<section class="card welcome-theme" id="theme-welcome"><div><h3>${t('Welcome · choose your research workspace look', 'أهلاً بك · اختر مظهر مساحة البحث')}</h3><p class="sub">${t('You can change it later in Settings.', 'يمكنك تغييره لاحقاً من الإعدادات.')}</p></div><div class="welcome-theme-options"><button class="outline-btn" data-theme="arctic">${t('Light · Arctic', 'فاتح · قطبي')}</button><button class="outline-btn" data-theme="space">${t('Dark · Deep Space', 'داكن · فضاء عميق')}</button><button class="outline-btn" data-theme="observatory">${t('Neutral · Observatory', 'محايد · مرصد')}</button></div></section>`;
+  const choices = [
+    ['arctic', t('Light · Arctic', 'فاتح · قطبي'), 'theme-preview-arctic'],
+    ['space', t('Dark · Deep Space', 'داكن · فضاء عميق'), 'theme-preview-space'],
+    ['observatory', t('Neutral · Observatory', 'محايد · مرصد'), 'theme-preview-observatory'],
+  ];
+  return `<section class="card welcome-theme" id="theme-welcome"><div><span class="eyebrow">${t('FIRST VISIT · PERSONALIZE', 'الزيارة الأولى · خصّص المظهر')}</span><h3>${t('Choose your research workspace look', 'اختر مظهر مساحة البحث')}</h3><p class="sub">${t('All three keep the MORS navy, sky-blue and scientific palette. Change it any time from the sidebar.', 'تحافظ الأنماط الثلاثة على هوية MORS الكحلية والسماوية والعلمية. يمكنك تغييره لاحقاً من الشريط الجانبي.')}</p></div><div class="welcome-theme-options" role="group" aria-label="${t('Choose a visual theme', 'اختر نمط العرض')}">${choices.map(([value, label, preview]) => `<button type="button" class="theme-choice ${preview}" data-theme="${value}" aria-pressed="${theme === value}"><span class="theme-preview" aria-hidden="true"><i></i><b></b><em></em></span><span>${label}</span></button>`).join('')}</div></section>`;
 }
 function flexScatterPanel() {
   const fuels = [...new Set(dataset.rows.map((row) => row.fuel).filter(Boolean))].sort();

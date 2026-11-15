@@ -29,4 +29,6 @@ Use prerelease increments such as `3.0.0-alpha.3`, `3.0.0-alpha.4`, and so on un
 - `v3.0.0-alpha.5`: exact trusted-origin handling when Coolify's internal Host differs from the public origin.
 - `backup/pre-v3.0.0-alpha.5-20261115-043600`: ZIP and tag snapshot before removing login from the public judges' deployment.
 - `v3.0.0-alpha.6`: anonymous access for the intentionally public read-only deployment.
+- `backup/pre-v3.0.0-alpha.6-20261115-044730`: ZIP and tag snapshot before the cosmic motion and theme-preview update.
+- `v3.0.0-alpha.7`: restrained animated starfield, orbital planets, theme previews, and current version badge.
 
