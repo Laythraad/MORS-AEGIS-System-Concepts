@@ -33,4 +33,5 @@ Use prerelease increments such as `3.0.0-alpha.3`, `3.0.0-alpha.4`, and so on un
 - `v3.0.0-alpha.7`: restrained animated starfield, orbital planets, theme previews, and current version badge.
 - `backup/pre-v3.0.0-alpha.7-20261115-050129`: ZIP and tag snapshot before the flame/measurement-plot revision.
 - `v3.0.0-alpha.8`: oxygen-responsive qualitative flame, selectable 2D/3D source-row plots, and evidence interpretation tree.
-
+- `backup/pre-v3.0.0-alpha.8-20261115-073511`: ZIP and tag snapshot before the mobile 3D axis-label layout fix.
+- `v3.0.0-alpha.9`: responsive axis labels and ranges displayed outside the FLEX 3D measurement plot.

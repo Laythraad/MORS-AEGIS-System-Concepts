@@ -1,4 +1,8 @@
 # Changelog
+## 3.0.0-alpha.9 — 2026-11-15
+
+- Moved FLEX 3D axis names and measured ranges into a responsive readout above the chart so they remain readable on mobile without covering plotted observations.
+
 
 ## 3.0.0-alpha.8 — 2026-11-15
 
@@ -39,4 +43,3 @@
 ## 3.0.0-alpha.2 — 2026-11-14
 
 - Added the NASA PSI research interface improvements and evidence-linked visualizations present in the baseline commit.
-

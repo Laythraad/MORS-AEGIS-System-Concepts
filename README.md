@@ -2,7 +2,7 @@
 
 MORS AEGIS is a research dashboard for the NASA Space Apps challenge **[Flame in Freefall: SI-Powered Fire Safety Insights from Microgravity Combustion Data](https://www.spaceappschallenge.org/2026/challenges/flame-in-freefall/?tab=resources)**. It presents source-linked NASA Physical Sciences Informatics (PSI) combustion records, explains the transport physics behind flames in reduced gravity, and makes the limits of the available evidence visible.
 
-**Current application version: `3.0.0-alpha.8`.** See [CHANGELOG.md](CHANGELOG.md) for changes and [versioning and backups](docs/VERSIONING_AND_BACKUPS.md) for restoring earlier snapshots.
+**Current application version: `3.0.0-alpha.9`.** See [CHANGELOG.md](CHANGELOG.md) for changes and [versioning and backups](docs/VERSIONING_AND_BACKUPS.md) for restoring earlier snapshots.
 
 ## Run locally
 
