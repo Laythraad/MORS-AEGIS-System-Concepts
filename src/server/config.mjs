@@ -28,7 +28,7 @@ export const NETWORK_MODE = !LOOPBACK.includes(HOST);
 export const PUBLIC_READONLY = process.env.MORS_PUBLIC_READONLY === '1';
 if (NETWORK_MODE && process.env.MORS_ALLOW_NETWORK_BIND !== '1') throw new Error('Non-loopback binding requires explicit MORS_ALLOW_NETWORK_BIND=1 and protected network configuration.');
 export const ACCESS_TOKEN = process.env.MORS_ACCESS_TOKEN || '';
-if (NETWORK_MODE && ACCESS_TOKEN.length < 12) throw new Error('Network binding requires MORS_ACCESS_TOKEN with at least 12 characters.');
+if (NETWORK_MODE && !PUBLIC_READONLY && ACCESS_TOKEN.length < 12) throw new Error('Network binding requires MORS_ACCESS_TOKEN with at least 12 characters.');
 if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) throw new Error('PORT must be an integer between 1 and 65535.');
 function parseTrustedOrigins(value) {
   return new Set((value || '').split(',').map(item => item.trim()).filter(Boolean).map(item => {

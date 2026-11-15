@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.0.0-alpha.6 — 2026-11-15
+
+- Removed the login gate from public read-only deployments so judges can open research pages directly.
+- Kept all application-changing API requests disabled in public read-only mode.
+
 ## 3.0.0-alpha.5 — 2026-11-15
 
 - Fixed trusted-origin checks behind Coolify and Cloudflare Tunnel when the proxy's internal Host differs from the public browser origin.

@@ -27,4 +27,6 @@ Use prerelease increments such as `3.0.0-alpha.3`, `3.0.0-alpha.4`, and so on un
 - `v3.0.0-alpha.4`: minimal Coolify health endpoint that does not bypass workspace authentication.
 - `backup/pre-v3.0.0-alpha.4-20261115-042953`: ZIP and tag snapshot before the reverse-proxy origin check change.
 - `v3.0.0-alpha.5`: exact trusted-origin handling when Coolify's internal Host differs from the public origin.
+- `backup/pre-v3.0.0-alpha.5-20261115-043600`: ZIP and tag snapshot before removing login from the public judges' deployment.
+- `v3.0.0-alpha.6`: anonymous access for the intentionally public read-only deployment.
 

@@ -44,7 +44,7 @@ async function handle(req, res) {
   // response free of configuration, credential, and runtime details.
   if (req.method === 'GET' && url.pathname === '/healthz') return send(res, 200, { status: 'ok' });
   if (url.pathname === '/api/logout') return req.method === 'POST' ? logout(req, res) : send(res, 405, { error: 'Method not allowed.' });
-  if (NETWORK_MODE && !hasSession(req)) {
+  if (NETWORK_MODE && !PUBLIC_READONLY && !hasSession(req)) {
     if (url.pathname === '/api/auth' && req.method === 'POST') return authenticate(req, res);
     if (url.pathname.startsWith('/api/')) return send(res, 401, { error: 'Access token required.' });
     return send(res, 401, loginPage(), 'text/html; charset=utf-8');

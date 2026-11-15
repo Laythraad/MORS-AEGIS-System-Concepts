@@ -21,7 +21,7 @@ Set these values in Coolify's private environment settings, never in GitHub:
 | Variable | Value |
 | --- | --- |
 | `MORS_PUBLIC_READONLY` | `1` |
-| `MORS_ACCESS_TOKEN` | Keep the existing private deployment value or replace it with a unique random value of 32+ characters. The server minimum is 12 characters. Network access still requires token login before any page or API is served, including in read-only mode. Never put the value in GitHub, slides, URLs, or logs. |
+| `MORS_ACCESS_TOKEN` | Leave unset for this public judges' copy. With read-only mode enabled, pages and GET APIs are public and application-changing POST APIs remain blocked. |
 | `MORS_TRUSTED_ORIGINS` | Comma-separated exact HTTPS origins for the Coolify app host and the public Cloudflare hostname, with no paths or wildcards. |
 | `MORS_COOKIE_SECURE` | `1` when the app is accessed through HTTPS. |
 
@@ -36,9 +36,9 @@ Leave Gemini credentials unset for this public copy. The public-only server reje
 5. Confirm the deployed commit is the intended GitHub commit.
 6. Check the public read-only behavior:
 
-   - `/` returns the MORS AEGIS page.
+   - `/` returns the MORS AEGIS page without a login prompt.
    - `/healthz` returns `200` with only `{"status":"ok"}`.
-   - After entering the access code, `/api/health` returns `200`.
+   - `/api/health` returns `200` without authentication.
    - `/models/catalog.json` lists 41 GLB models.
    - `/vendor/model-viewer.min.js` and a selected `.glb` return `200`.
    - Application-changing `POST` routes return `405`.
