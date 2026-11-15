@@ -3,6 +3,7 @@
 !.env.example
 node_modules/
 var/
+/backups/versions/
 dist/
 *.log
 .DS_Store
