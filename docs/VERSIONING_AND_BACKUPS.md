@@ -20,6 +20,7 @@ Use prerelease increments such as `3.0.0-alpha.3`, `3.0.0-alpha.4`, and so on un
 ## Current release trail
 
 - `v3.0.0-alpha.2`: baseline before the supplemental NASA plots.
-- `backup/pre-v3.0.0-alpha.3-20261115-034254`: exact pre-versioning working release snapshot.
+- `backup/pre-v3.0.0-alpha.2-20261115-034254`: exact source snapshot immediately before versioning was added; its source commit is `9b1ab1f`.
+- `backup/pre-v3.0.0-alpha.3-20261115-034454`: exact snapshot before this documentation correction.
 - `v3.0.0-alpha.3`: source-linked supplemental NASA plots and versioning workflow.
 
