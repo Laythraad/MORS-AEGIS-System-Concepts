@@ -217,6 +217,17 @@
 .flex-3d-legend { display:flex; gap:12px; flex-wrap:wrap; padding:8px 0; }
 .insight-chart-block { margin:18px 0; }
 .insight-chart-block > h3 { margin:0 0 10px; }
+.external-nasa-evidence > .grid { align-items:stretch; }
+.external-chart-card { min-width:0; }
+.external-chart-card h4 { margin:8px 0 4px; }
+.external-chart-card .sub { line-height:1.65; }
+.external-nasa-svg { display:block; width:100%; height:auto; overflow:visible; color:var(--ink); }
+.external-nasa-svg .ext-grid { stroke:var(--line); stroke-width:1; opacity:.65; }
+.external-nasa-svg .ext-axis { stroke:var(--muted); stroke-width:1.2; }
+.external-nasa-svg .ext-tick { fill:var(--muted); font:11px "DM Mono",monospace; }
+.external-nasa-svg .ext-label { fill:var(--ink); font:12px Manrope,"Noto Sans Arabic",sans-serif; }
+.external-nasa-svg .ext-note,.external-nasa-svg .ext-legend { fill:var(--muted); font:10px Manrope,"Noto Sans Arabic",sans-serif; }
+.external-nasa-svg .ext-note { font-weight:600; }
 .evidence-gaps { margin:16px 0; }
 .evidence-gaps .callout p { margin:6px 0 0; }
 .source-count-row { display:grid; grid-template-columns:minmax(150px,1.1fr) minmax(120px,2fr) 48px; gap:12px; align-items:center; padding:7px 0; border-bottom:1px solid var(--line); }
