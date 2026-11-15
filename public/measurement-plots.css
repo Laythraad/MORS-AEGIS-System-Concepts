@@ -1,0 +1,29 @@
+.plot-studio-controls{display:flex;align-items:end;gap:10px;flex-wrap:wrap;margin:14px 0}
+.plot-studio-controls label{display:grid;gap:6px;min-width:min(220px,100%);font-size:11px;color:var(--muted);font-weight:700}
+.plot-studio-controls select{min-height:38px;padding:7px 10px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);font:inherit}
+.plot-studio-controls .plot-fit-toggle{display:flex;align-items:center;min-height:38px;min-width:unset}
+.plot-fit-toggle input{accent-color:var(--accent)}
+.measurement-plot{min-height:300px;overflow:hidden;border:1px solid var(--line);border-radius:12px;background:color-mix(in srgb,var(--surface) 88%,transparent)}
+.measurement-svg{display:block;width:100%;height:auto;min-height:300px}
+.measurement-plot .chart-legend{padding:10px 12px 0}
+.flex-3d-controls label{min-width:min(185px,100%)}
+.flex-3d-canvas{display:block;width:100%;height:430px;touch-action:none;border:1px solid var(--line);border-radius:12px;background:radial-gradient(ellipse at 50% 42%,color-mix(in srgb,var(--accent) 12%,var(--surface)),var(--surface) 72%);cursor:grab}
+.flex-3d-canvas:active{cursor:grabbing}
+.flex-3d-tools{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-top:9px}
+.flex-3d-legend{display:flex;gap:16px;flex-wrap:wrap}
+.evidence-tree{margin-top:16px}
+.evidence-tree-root{position:relative;width:max-content;max-width:100%;margin:14px auto 32px;padding:12px 18px;border:1px solid var(--accent);border-radius:12px;background:color-mix(in srgb,var(--accent) 9%,var(--surface));text-align:center;font-weight:800}
+.evidence-tree-root::after{position:absolute;content:"";height:23px;width:1px;top:100%;left:50%;background:var(--accent)}
+.evidence-tree-branches,.evidence-tree-leaves{position:relative;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.evidence-tree-branches::before{position:absolute;content:"";height:1px;top:-10px;left:25%;right:25%;background:var(--accent)}
+.evidence-tree-branches article,.evidence-tree-leaves article{position:relative;display:grid;gap:7px;padding:14px;border:1px solid var(--line);border-radius:11px;background:var(--surface)}
+.evidence-tree-branches article::before{position:absolute;content:"";height:11px;width:1px;bottom:100%;left:50%;background:var(--accent)}
+.evidence-tree-branches span,.evidence-tree-leaves span{font-size:12px;color:var(--muted);line-height:1.6}
+.evidence-tree-leaves{margin-top:13px}
+.evidence-tree-leaves article::before{position:absolute;content:"";height:13px;width:1px;bottom:100%;left:50%;background:var(--line)}
+.evidence-tree .warn-leaf{border-color:color-mix(in srgb,#d59a3d 55%,var(--line))}
+.scene3d-room .scene-flame{scale:var(--oxygen-scale,1)}
+.scenario-controls output{display:block;margin-top:5px;font-size:13px;font-weight:800;color:var(--accent)}
+.scenario-controls label small{display:block;max-width:260px;margin-top:4px}
+@media(max-width:640px){.flex-3d-canvas{height:360px}.measurement-svg{min-height:250px}.evidence-tree-branches,.evidence-tree-leaves{grid-template-columns:minmax(0,1fr)}.evidence-tree-branches::before{display:none}.evidence-tree-root{margin-bottom:20px}}
+@media(prefers-reduced-motion:reduce){.scene3d-room .scene-flame i,.scene3d-room .scene-streams i,.scene3d-room .scene-fan-rotor,.scene3d-room .scene-droplets i{animation:none!important}}

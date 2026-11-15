@@ -183,6 +183,7 @@ uniform float u_gravity;
 uniform float u_air;
 uniform float u_mist;
 uniform float u_fire;
+uniform float u_oxygen;
 uniform float u_yaw;
 uniform float u_pitch;
 
@@ -220,23 +221,34 @@ void main() {
       float height01 = clamp(heightFromBase / 1.52, 0.0, 1.0);
       float heightMask = smoothstep(-0.08, 0.06, heightFromBase)
         * (1.0 - smoothstep(1.30, 1.54, heightFromBase));
-      float width = mix(0.29, 0.018, height01) * (1.0 + noise * 1.5);
+      float width = mix(0.29, 0.018, height01) * mix(0.72, 1.0, u_oxygen) * (1.0 + noise * 1.5);
+      heightMask *= mix(0.48, 1.0, u_oxygen);
       float centreShift = u_air * 0.38 * height01 * height01;
       radial = length(vec2((p.x - centreShift) / max(width, 0.025), p.z / max(width * 0.78, 0.02)));
       density = heightMask * (1.0 - smoothstep(0.64, 1.18, radial + noise));
     } else {
-      vec3 ellipsoid = vec3(p.x / 0.58, p.y / 0.49, p.z / 0.58);
+      float envelopeScale = mix(0.72, 1.0, u_oxygen);
+      vec3 ellipsoid = vec3(p.x / (0.58 * envelopeScale), p.y / (0.49 * envelopeScale), p.z / (0.58 * envelopeScale));
       ellipsoid.x -= u_air * p.y * 0.34;
       radial = length(ellipsoid);
-      density = 1.0 - smoothstep(0.70, 1.12, radial + noise);
+      // A diffusion-flame shell around a fuel source; the hollow center is intentional.
+      density = (1.0 - smoothstep(0.12, 0.34, abs(radial - 0.92))) * (1.0 + noise * 1.7);
     }
 
     density *= u_fire * (1.0 - 0.12 * u_mist);
+    density *= mix(0.35, 1.0, u_oxygen);
     float core = 1.0 - smoothstep(0.02, 0.86, radial);
-    vec3 edgeColor = mix(vec3(1.0, 0.25, 0.035), vec3(0.91, 0.22, 0.48), u_gravity * 0.62);
-    vec3 sampleColor = mix(edgeColor, vec3(1.0, 0.84, 0.40), core);
+    vec3 edgeColor = mix(vec3(1.0, 0.25, 0.035), vec3(0.20, 0.64, 1.0), u_gravity);
+    vec3 hotColor = mix(vec3(1.0, 0.84, 0.40), vec3(0.78, 0.91, 1.0), u_gravity);
+    vec3 sampleColor = mix(edgeColor, hotColor, core);
     sampleColor = mix(sampleColor, vec3(0.58, 0.83, 1.0), u_mist * 0.16);
-    float alpha = density * 0.12;
+    float alpha = density * (u_gravity > 0.5 ? 0.24 : 0.16);
+    float dropletRadius = length(p);
+    if (u_gravity > 0.5 && dropletRadius < 0.105) {
+      float light = 0.35 + 0.65 * max(dot(normalize(p + vec3(0.0001)), normalize(vec3(-0.45, 0.5, 0.75))), 0.0);
+      sampleColor = mix(vec3(0.035, 0.055, 0.075), vec3(0.46, 0.34, 0.19), light);
+      alpha = 0.98;
+    }
     accumulated.rgb += (1.0 - accumulated.a) * sampleColor * alpha;
     accumulated.a += (1.0 - accumulated.a) * alpha;
     if (accumulated.a > 0.96) break;
@@ -247,12 +259,14 @@ void main() {
   gl_FragColor = vec4(accumulated.rgb / max(accumulated.a, 0.0001), accumulated.a);
 }`;
   function flameVolumeParameters(scene, { time = 0, rx = 0, ry = 0 } = {}) {
+    const oxygenPercent = Number(scene.dataset.oxygen || 21);
     return {
       time,
       gravity: scene.dataset.gravity === "micro" ? 1 : 0,
       air: scene.dataset.air === "on" ? 1 : 0,
       mist: scene.dataset.mist === "on" ? 1 : 0,
       fire: scene.dataset.fire === "on" ? 1 : 0,
+      oxygen: Math.max(0, Math.min(1, (oxygenPercent - 12) / 22)),
       yaw: ry * Math.PI / 180,
       pitch: rx * Math.PI / 180
     };
@@ -303,7 +317,7 @@ void main() {
     gl.enableVertexAttribArray(position);
     gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
     const uniforms = Object.fromEntries(
-      ["u_resolution", "u_time", "u_gravity", "u_air", "u_mist", "u_fire", "u_yaw", "u_pitch"].map((name) => [
+      ["u_resolution", "u_time", "u_gravity", "u_air", "u_mist", "u_fire", "u_oxygen", "u_yaw", "u_pitch"].map((name) => [
         name,
         gl.getUniformLocation(program, name)
       ])
@@ -337,6 +351,7 @@ void main() {
       gl.uniform1f(uniforms.u_air, state.air);
       gl.uniform1f(uniforms.u_mist, state.mist);
       gl.uniform1f(uniforms.u_fire, state.fire);
+      gl.uniform1f(uniforms.u_oxygen, state.oxygen);
       gl.uniform1f(uniforms.u_yaw, state.yaw);
       gl.uniform1f(uniforms.u_pitch, state.pitch);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
@@ -402,7 +417,7 @@ void main() {
       stage: "\u0645\u0634\u0647\u062F \u062A\u0641\u0633\u064A\u0631\u064A \u062B\u0644\u0627\u062B\u064A \u0627\u0644\u0623\u0628\u0639\u0627\u062F\u060C \u0627\u0633\u062D\u0628 \u0644\u062A\u062F\u0648\u064A\u0631\u0647",
       earthLabel: "\u0637\u0641\u0648 \xB7 \u062D\u0645\u0644 \u0637\u0628\u064A\u0639\u064A \u0635\u0627\u0639\u062F",
       microLabel: "\u0627\u0646\u062A\u0634\u0627\u0631 \xB7 \u062D\u0645\u0644 \u0637\u0628\u064A\u0639\u064A \u0623\u0636\u0639\u0641",
-      note: "\u064A\u062A\u063A\u064A\u0631 \u0634\u0643\u0644 \u0627\u0644\u0644\u0647\u0628 \u0625\u064A\u0636\u0627\u062D\u064A\u0627\u064B \u0628\u062D\u0633\u0628 \u0627\u0644\u062D\u0627\u0644\u0629 \u0627\u0644\u0645\u062E\u062A\u0627\u0631\u0629. \u0627\u0644\u0631\u0630\u0627\u0630 \u0644\u0627 \u064A\u0637\u0641\u0626 \u0627\u0644\u0644\u0647\u0628 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0641\u064A \u0647\u0630\u0627 \u0627\u0644\u0646\u0645\u0648\u0630\u062C.",
+      note: "\u0645\u0634\u0647\u062F \u0627\u0644\u062C\u0627\u0630\u0628\u064A\u0629 \u0627\u0644\u0635\u063A\u0631\u0649 \u064A\u0639\u0631\u0636 \u063A\u0644\u0627\u0641 \u0644\u0647\u0628 \u0627\u0646\u062A\u0634\u0627\u0631\u064A \u0623\u0632\u0631\u0642 \u062D\u0648\u0644 \u0642\u0637\u0631\u0629 \u0648\u0642\u0648\u062F\u061B \u064A\u0628\u062F\u0644 O\u2082 \u0627\u0644\u062D\u062C\u0645 \u0627\u0644\u0628\u0635\u0631\u064A \u0641\u0642\u0637. \u0644\u0627 \u064A\u062D\u0633\u0628 \u0642\u0637\u0631 \u0627\u0644\u0644\u0647\u0628 \u0623\u0648 \u0627\u0644\u0625\u062E\u0645\u0627\u062F.",
       boundary: "\u0631\u0633\u0645 \u0645\u0641\u0627\u0647\u064A\u0645\u064A \u0645\u062A\u0639\u062F\u062F \u0627\u0644\u0637\u0628\u0642\u0627\u062A\u060C \u0628\u0644\u0627 \u0645\u0642\u064A\u0627\u0633 \u0643\u0645\u064A. \u0644\u064A\u0633 \u0645\u062D\u0627\u0643\u0627\u0629 CFD \u0648\u0644\u0627 \u0635\u0648\u0631\u0629 \u0645\u0646 NASA \u0648\u0644\u0627 \u0646\u062A\u064A\u062C\u0629 \u062A\u062C\u0631\u0628\u0629. \u0644\u0627 \u064A\u0633\u062A\u0646\u062A\u062C \u0625\u062E\u0645\u0627\u062F \u0627\u0644\u062D\u0631\u064A\u0642 \u0623\u0648 \u0623\u062F\u0627\u0621 \u0623\u064A \u062C\u0647\u0627\u0632.",
       rendererReady: "\u0644\u0647\u0628 \u062D\u062C\u0645\u064A \u062A\u0641\u0627\u0639\u0644\u064A \xB7 \u062A\u0645\u062B\u064A\u0644 \u0646\u0648\u0639\u064A",
       rendererFallback: "\u0639\u0627\u0631\u0636 WebGL \u063A\u064A\u0631 \u0645\u062A\u0627\u062D \xB7 \u0639\u0631\u0636 \u0637\u0628\u0642\u064A \u0627\u062D\u062A\u064A\u0627\u0637\u064A",
@@ -425,7 +440,7 @@ void main() {
       stage: "Interactive 3D explanatory scene; drag to rotate",
       earthLabel: "BUOYANCY \xB7 UPWARD NATURAL CONVECTION",
       microLabel: "DIFFUSION \xB7 WEAKER NATURAL CONVECTION",
-      note: "Flame shape changes illustratively with the selected state. Mist does not extinguish the flame in this model.",
+      note: "The microgravity view shows a blue diffusion-flame shell around a fuel droplet. O\u2082 changes only the illustrative envelope; flame diameter and extinction are not calculated.",
       boundary: "Layered conceptual rendering with no quantitative scale. It is not CFD, NASA imagery, or an experiment result. It does not predict extinction or device performance.",
       rendererReady: "Interactive volumetric flame \xB7 qualitative rendering",
       rendererFallback: "WebGL viewer unavailable \xB7 layered fallback rendering",
@@ -549,6 +564,7 @@ void main() {
     applyRotation();
     applyMotion();
     updateState();
+    room.addEventListener("flame-input", updateState);
     scene.querySelectorAll("[data-scene-key]").forEach((button) => {
       button.addEventListener("click", () => {
         room.dataset[button.dataset.sceneKey] = button.dataset.sceneValue;
@@ -2384,10 +2400,22 @@ void main() {
   }
 
   // public/lib/flex-3d.js
-  var outcomeColor = (row) => row.test_end === "Extinction" ? "#42b883" : row.test_end === "Disruption" ? "#e4a84c" : "#8c79d8";
+  var VARIABLES = [
+    { key: "oxygen_mole_fraction", en: "O\u2082 mole fraction", ar: "\u0627\u0644\u0643\u0633\u0631 \u0627\u0644\u0645\u0648\u0644\u064A O\u2082", unit: "%", factor: 100 },
+    { key: "pressure_mmHg", en: "Ambient pressure", ar: "\u0627\u0644\u0636\u063A\u0637 \u0627\u0644\u0645\u062D\u064A\u0637", unit: "mmHg" },
+    { key: "initial_droplet_diameter_mm", en: "Initial droplet diameter", ar: "\u0642\u0637\u0631 \u0627\u0644\u0642\u0637\u0631\u0629 \u0627\u0644\u0627\u0628\u062A\u062F\u0627\u0626\u064A", unit: "mm" },
+    { key: "visible_flame_extinction_diameter_mm", en: "Visible flame extinction diameter", ar: "\u0642\u0637\u0631 \u0627\u0646\u0637\u0641\u0627\u0621 \u0627\u0644\u0644\u0647\u0628 \u0627\u0644\u0645\u0631\u0626\u064A", unit: "mm" },
+    { key: "burning_rate_mm_s", en: "Droplet burning-rate constant", ar: "\u062B\u0627\u0628\u062A \u0645\u0639\u062F\u0644 \u0627\u062D\u062A\u0631\u0627\u0642 \u0627\u0644\u0642\u0637\u0631\u0629", unit: "mm\xB2/s" },
+    { key: "burn_time_s", en: "Burn time", ar: "\u0632\u0645\u0646 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642", unit: "s" }
+  ];
+  var colorFor = (row) => row.test_end === "Extinction" ? "#42b883" : row.test_end === "Disruption" ? "#e4a84c" : "#8c79d8";
+  var labelFor = (item, ar) => `${ar ? item.ar : item.en} \xB7 ${item.unit}`;
+  var choices = (ar, selected) => VARIABLES.map((item) => `<option value="${item.key}"${item.key === selected ? " selected" : ""}>${esc(labelFor(item, ar))}</option>`).join("");
   function flex3DMarkup(lang2 = "en") {
     const ar = lang2 === "ar";
-    return `<article class="card flex-3d-card"><div class="card-head"><div><h3>${ar ? "\u0641\u0636\u0627\u0621 \u0642\u064A\u0627\u0633\u0627\u062A FLEX \u062B\u0644\u0627\u062B\u064A \u0627\u0644\u0623\u0628\u0639\u0627\u062F" : "FLEX measured-data 3D space"}</h3><p class="sub">${ar ? "\u0627\u0644\u0623\u0643\u0633\u062C\u064A\u0646 \xD7 \u0642\u0637\u0631 \u0627\u0644\u0642\u0637\u0631\u0629 \u0627\u0644\u0627\u0628\u062A\u062F\u0627\u0626\u064A \xD7 \u062B\u0627\u0628\u062A \u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642" : "Oxygen \xD7 initial droplet diameter \xD7 burning-rate constant"}</p></div><span class="tag obs">NASA PSI-69 \xB7 OBSERVED</span></div><canvas class="flex-3d-canvas" tabindex="0" role="img" aria-label="${ar ? "\u0645\u062E\u0637\u0637 \u062B\u0644\u0627\u062B\u064A \u0627\u0644\u0623\u0628\u0639\u0627\u062F \u062A\u0641\u0627\u0639\u0644\u064A \u0644\u0642\u064A\u0627\u0633\u0627\u062A NASA FLEX" : "Interactive 3D plot of NASA FLEX measurements"}"></canvas><div class="flex-3d-tools"><button type="button" class="outline-btn" data-flex3d-reset>${ar ? "\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0639\u0631\u0636" : "Reset view"}</button><span class="sub" data-flex3d-selection role="status" aria-live="polite">${ar ? "\u0627\u0633\u062D\u0628 \u0644\u0644\u062A\u062F\u0648\u064A\u0631 \xB7 \u0627\u062E\u062A\u0631 \u0646\u0642\u0637\u0629 \u0644\u0644\u062A\u0641\u0627\u0635\u064A\u0644" : "Drag to rotate \xB7 select a point for details"}</span></div><p class="sub">${ar ? "\u0643\u0644 \u0646\u0642\u0637\u0629 \u0635\u0641 \u062A\u062C\u0631\u064A\u0628\u064A \u0623\u0635\u0644\u064A\u061B \u0627\u0644\u0644\u0648\u0646 \u064A\u0645\u064A\u0632 \u0646\u062A\u064A\u062C\u0629 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631. \u0627\u0644\u0645\u0646\u0638\u0648\u0631 \u062B\u0644\u0627\u062B\u064A \u0627\u0644\u0623\u0628\u0639\u0627\u062F \u0644\u0644\u062A\u0646\u0638\u064A\u0645 \u0627\u0644\u0628\u0635\u0631\u064A \u0641\u0642\u0637. \u0644\u0627 \u064A\u062B\u0628\u062A \u0627\u0644\u0627\u0631\u062A\u0628\u0627\u0637 \u0627\u0644\u0633\u0628\u0628\u064A\u0629 \u0648\u0644\u0627 \u064A\u062C\u0645\u0639 \u0646\u062A\u0627\u0626\u062C \u0648\u0642\u0648\u062F \u0623\u0648 \u0645\u062E\u0641\u0641\u0627\u062A \u0645\u062E\u062A\u0644\u0641\u0629 \u0643\u0646\u0638\u0627\u0645 \u0648\u0627\u062D\u062F." : "Each point is an original test row; color marks reported test outcome. 3D perspective is a viewing aid only. Association is not causation, and different fuels/diluents are not one interchangeable system."}</p></article>`;
+    return `<article class="card flex-3d-card"><div class="card-head"><div><h3>${ar ? "\u0641\u0636\u0627\u0621 \u0642\u064A\u0627\u0633\u0627\u062A FLEX \u062B\u0644\u0627\u062B\u064A \u0627\u0644\u0623\u0628\u0639\u0627\u062F" : "FLEX measured-data 3D space"}</h3><p class="sub">${ar ? "\u0627\u062E\u062A\u0631 \u0623\u064A \u062B\u0644\u0627\u062B\u0629 \u062D\u0642\u0648\u0644 \u0631\u0642\u0645\u064A\u0629\u061B \u0645\u0648\u0627\u0636\u0639 \u0627\u0644\u0646\u0642\u0627\u0637 \u062A\u0639\u0643\u0633 \u0627\u0644\u0642\u064A\u0645 \u0627\u0644\u0641\u0639\u0644\u064A\u0629 \u0628\u0639\u062F \u062A\u0637\u0628\u064A\u0639 \u0627\u0644\u0639\u0631\u0636 \u0641\u0642\u0637." : "Choose any three numeric fields. Point positions use the measured values; only display coordinates are normalized."}</p></div><span class="tag obs">NASA PSI-69 \xB7 OBSERVED</span></div>
+  <div class="toolbar plot-studio-controls flex-3d-controls"><label>${ar ? "\u0645\u062D\u0648\u0631 X" : "X axis"}<select data-flex3d-axis="x">${choices(ar, "oxygen_mole_fraction")}</select></label><label>${ar ? "\u0645\u062D\u0648\u0631 Y" : "Y axis"}<select data-flex3d-axis="y">${choices(ar, "initial_droplet_diameter_mm")}</select></label><label>${ar ? "\u0645\u062D\u0648\u0631 Z" : "Z axis"}<select data-flex3d-axis="z">${choices(ar, "burning_rate_mm_s")}</select></label><label>${ar ? "\u0627\u0644\u0648\u0642\u0648\u062F" : "Fuel"}<select data-flex3d-fuel><option value="">${ar ? "\u0643\u0644 \u0627\u0644\u0623\u0646\u0648\u0627\u0639" : "All fuels"}</option></select></label><label>${ar ? "\u0627\u0644\u0646\u062A\u064A\u062C\u0629" : "Outcome"}<select data-flex3d-outcome><option value="">${ar ? "\u0643\u0644 \u0627\u0644\u0646\u062A\u0627\u0626\u062C" : "All outcomes"}</option></select></label></div>
+  <canvas class="flex-3d-canvas" tabindex="0" role="img" aria-label="${ar ? "\u0645\u062E\u0637\u0637 \u062B\u0644\u0627\u062B\u064A \u0627\u0644\u0623\u0628\u0639\u0627\u062F \u062A\u0641\u0627\u0639\u0644\u064A \u0644\u0642\u064A\u0627\u0633\u0627\u062A NASA FLEX" : "Interactive 3D plot of NASA FLEX measurements"}"></canvas><div class="flex-3d-tools"><button type="button" class="outline-btn" data-flex3d-zoom="in" aria-label="${ar ? "\u062A\u0643\u0628\u064A\u0631 \u0627\u0644\u0645\u062E\u0637\u0637 \u062B\u0644\u0627\u062B\u064A \u0627\u0644\u0623\u0628\u0639\u0627\u062F" : "Zoom 3D plot in"}">\uFF0B</button><button type="button" class="outline-btn" data-flex3d-zoom="out" aria-label="${ar ? "\u062A\u0635\u063A\u064A\u0631 \u0627\u0644\u0645\u062E\u0637\u0637 \u062B\u0644\u0627\u062B\u064A \u0627\u0644\u0623\u0628\u0639\u0627\u062F" : "Zoom 3D plot out"}">\u2212</button><button type="button" class="outline-btn" data-flex3d-reset>${ar ? "\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0639\u0631\u0636" : "Reset view"}</button><span class="sub" data-flex3d-selection role="status" aria-live="polite">${ar ? "\u0627\u0633\u062D\u0628 \u0644\u0644\u062A\u062F\u0648\u064A\u0631 \xB7 \u0627\u0633\u062A\u062E\u062F\u0645 \u0623\u0632\u0631\u0627\u0631 \u0627\u0644\u062A\u0643\u0628\u064A\u0631 \xB7 \u0627\u062E\u062A\u0631 \u0646\u0642\u0637\u0629 \u0644\u0642\u0631\u0627\u0621\u0629 \u0642\u064A\u0645 \u0627\u0644\u0645\u0635\u062F\u0631" : "Drag to rotate \xB7 use zoom controls \xB7 select a point to read source values"}</span></div><p class="sub" data-flex3d-count></p><p class="sub">${ar ? "\u062A\u063A\u064A\u064A\u0631 \u0627\u0644\u0645\u062D\u0627\u0648\u0631 \u064A\u0628\u062F\u0644 \u0627\u0644\u0639\u0631\u0636 \u0641\u0642\u0637 \u0648\u0644\u0627 \u064A\u063A\u064A\u0651\u0631 \u0627\u0644\u062A\u062C\u0631\u0628\u0629. \u0643\u0644 \u0646\u0642\u0637\u0629 \u0635\u0641 NASA PSI-69\u061B \u0627\u0644\u0623\u0644\u0648\u0627\u0646 \u062A\u0645\u062B\u0644 \u062D\u0627\u0644\u0629 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631. \u0644\u064A\u0633\u062A \u0647\u0630\u0647 \u0645\u062D\u0627\u0643\u0627\u0629 \u0644\u0647\u0628 \u0648\u0644\u0627 \u062A\u0645\u062B\u064A\u0644\u0627\u064B \u0633\u0628\u0628\u064A\u0627\u064B." : "Changing axes changes only the view, not the experiment. Each point is a NASA PSI-69 row; colors show reported test outcome. This is neither a flame simulation nor a causal model."}</p></article>`;
   }
   function bindFlex3DPlot(root, rows, lang2 = "en") {
     var _a;
@@ -2395,20 +2423,23 @@ void main() {
     if (!canvas || !Array.isArray(rows)) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    const data = rows.filter((r) => Number.isFinite(r.oxygen_mole_fraction) && Number.isFinite(r.initial_droplet_diameter_mm) && Number.isFinite(r.burning_rate_mm_s));
-    if (!data.length) return;
-    const ranges = ["oxygen_mole_fraction", "initial_droplet_diameter_mm", "burning_rate_mm_s"].map((k) => [Math.min(...data.map((r) => r[k])), Math.max(...data.map((r) => r[k]))]);
-    let yaw = -0.62, pitch = 0.35, points = [], drag = null;
-    const labels2 = lang2 === "ar" ? ["O\u2082 \u0627\u0644\u0643\u0633\u0631 \u0627\u0644\u0645\u0648\u0644\u064A", "\u0642\u0637\u0631 \u0627\u0628\u062A\u062F\u0627\u0626\u064A \xB7 mm", "\u062B\u0627\u0628\u062A \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642 \xB7 mm\xB2/s"] : ["O\u2082 mole fraction", "Initial diameter \xB7 mm", "Burning rate \xB7 mm\xB2/s"];
-    function project(row, width, height) {
-      const values = [row.oxygen_mole_fraction, row.initial_droplet_diameter_mm, row.burning_rate_mm_s];
+    const ar = lang2 === "ar";
+    const selectors = Object.fromEntries(["x", "y", "z"].map((axis) => [axis, root.querySelector(`[data-flex3d-axis="${axis}"]`)]));
+    const fuel = root.querySelector("[data-flex3d-fuel]"), outcome = root.querySelector("[data-flex3d-outcome]");
+    const count = root.querySelector("[data-flex3d-count]"), selection = root.querySelector("[data-flex3d-selection]");
+    [...new Set(rows.map((row) => row.fuel).filter(Boolean))].sort().forEach((item) => fuel.add(new Option(item, item)));
+    [...new Set(rows.map((row) => row.test_end).filter(Boolean))].sort().forEach((item) => outcome.add(new Option(item, item)));
+    let yaw = -0.62, pitch = 0.35, zoom = 1, points = [], drag = null, filteredRows = [];
+    const valuesFor = (row, axes) => axes.map((item) => row[item.key] * (item.factor || 1));
+    const project = (values, ranges, width, height) => {
       const v = values.map((x, i) => ((x - ranges[i][0]) / (ranges[i][1] - ranges[i][0] || 1) - 0.5) * 2);
       const x1 = v[0] * Math.cos(yaw) - v[1] * Math.sin(yaw), y1 = v[0] * Math.sin(yaw) + v[1] * Math.cos(yaw);
       const z1 = v[2] * Math.cos(pitch) - y1 * Math.sin(pitch), y2 = v[2] * Math.sin(pitch) + y1 * Math.cos(pitch);
-      const scale = Math.min(width, height) * 0.27 / (2.8 - z1 * 0.28);
-      return { x: width * 0.5 + x1 * scale, y: height * 0.51 - y2 * scale, depth: z1, row };
-    }
-    function draw() {
+      const scale = Math.min(width, height) * 0.31 * zoom / (2.8 - z1 * 0.28);
+      return { x: width * 0.5 + x1 * scale, y: height * 0.52 - y2 * scale, depth: z1 };
+    };
+    const render = () => {
+      const axes = ["x", "y", "z"].map((axis) => VARIABLES.find((item) => item.key === selectors[axis].value));
       const rect = canvas.getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio || 1, 2);
       if (!rect.width || !rect.height) return;
       canvas.width = Math.round(rect.width * dpr);
@@ -2417,82 +2448,118 @@ void main() {
       const w = rect.width, h = rect.height;
       ctx.clearRect(0, 0, w, h);
       ctx.font = "11px system-ui";
+      filteredRows = rows.filter((row) => (!fuel.value || row.fuel === fuel.value) && (!outcome.value || row.test_end === outcome.value));
+      const data = filteredRows.filter((row) => axes.every((axis) => Number.isFinite(row[axis.key])));
+      if (!data.length) {
+        points = [];
+        ctx.fillStyle = "#a9c3d2";
+        ctx.textAlign = "center";
+        ctx.fillText(ar ? "\u0644\u0627 \u062A\u0648\u062C\u062F \u0635\u0641\u0648\u0641 \u0645\u0643\u062A\u0645\u0644\u0629 \u0644\u0644\u0645\u062D\u0627\u0648\u0631 \u0627\u0644\u0645\u062E\u062A\u0627\u0631\u0629" : "No complete rows for the selected axes", w / 2, h / 2);
+        count.textContent = ar ? "\u0644\u0627 \u062A\u0648\u062C\u062F \u0635\u0641\u0648\u0641 \u0635\u0627\u0644\u062D\u0629 \u0628\u0639\u062F \u0627\u0644\u062A\u0635\u0641\u064A\u0629." : "No valid rows after filtering.";
+        return;
+      }
+      const ranges = axes.map((axis) => {
+        const v = data.map((row) => row[axis.key] * (axis.factor || 1));
+        return [Math.min(...v), Math.max(...v)];
+      });
       const corners = [[-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1], [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]];
-      const projectV = (v) => {
-        const x = v[0] * Math.cos(yaw) - v[1] * Math.sin(yaw), y = v[0] * Math.sin(yaw) + v[1] * Math.cos(yaw), z = v[2] * Math.cos(pitch) - y * Math.sin(pitch), y2 = v[2] * Math.sin(pitch) + y * Math.cos(pitch), s = Math.min(w, h) * 0.27 / (2.8 - z * 0.28);
-        return [w * 0.5 + x * s, h * 0.51 - y2 * s];
-      };
-      ctx.strokeStyle = "rgba(90,145,175,.42)";
+      ctx.strokeStyle = "rgba(90,145,175,.38)";
       ctx.lineWidth = 1;
       for (let i = 0; i < 8; i++) for (let j = i + 1; j < 8; j++) if (corners[i].filter((v, k) => v !== corners[j][k]).length === 1) {
-        const a = projectV(corners[i]), b = projectV(corners[j]);
+        const a = project(corners[i], corners.map(() => [-1, 1]), w, h), b = project(corners[j], corners.map(() => [-1, 1]), w, h);
         ctx.beginPath();
-        ctx.moveTo(...a);
-        ctx.lineTo(...b);
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
         ctx.stroke();
       }
-      const axis = [[[-1, -1, -1], [1, -1, -1], labels2[0]], [[-1, -1, -1], [-1, 1, -1], labels2[1]], [[-1, -1, -1], [-1, -1, 1], labels2[2]]];
-      ctx.fillStyle = "#a9c3d2";
-      axis.forEach(([a, b, label]) => {
-        const p = projectV(a), q = projectV(b);
-        ctx.fillText(label, q[0] - 45, q[1] + 18);
+      const axisEnds = [[[-1, -1, -1], [1, -1, -1], 0], [[-1, -1, -1], [-1, 1, -1], 1], [[-1, -1, -1], [-1, -1, 1], 2]];
+      ctx.fillStyle = "#b7d0df";
+      ctx.textAlign = "center";
+      axisEnds.forEach(([a, b, index]) => {
+        const end = project(b, corners.map(() => [-1, 1]), w, h);
+        ctx.fillText(labelFor(axes[index], ar), end.x, end.y + 17);
+        ctx.fillStyle = "#91acbc";
+        ctx.font = "10px system-ui";
+        ctx.fillText(`${ranges[index][0].toPrecision(3)} \u2026 ${ranges[index][1].toPrecision(3)} ${axes[index].unit}`, end.x, end.y + 31);
+        ctx.fillStyle = "#b7d0df";
+        ctx.font = "11px system-ui";
       });
-      points = data.map((r) => project(r, w, h)).sort((a, b) => a.depth - b.depth);
-      points.forEach((p) => {
+      points = data.map((row) => __spreadValues({ row }, project(valuesFor(row, axes), ranges, w, h))).sort((a, b) => a.depth - b.depth);
+      points.forEach((point) => {
         ctx.beginPath();
-        ctx.arc(p.x, p.y, 3.4, 0, Math.PI * 2);
-        ctx.fillStyle = outcomeColor(p.row);
-        ctx.globalAlpha = 0.78;
+        ctx.arc(point.x, point.y, 4, 0, Math.PI * 2);
+        ctx.fillStyle = colorFor(point.row);
+        ctx.globalAlpha = 0.82;
         ctx.fill();
         ctx.globalAlpha = 1;
       });
-    }
-    const show = (p) => {
-      var _a2;
-      const r = p.row, text = `${r.id || `Test ${r.test}`} \xB7 ${r.fuel || "Fuel unreported"} \xB7 O\u2082 ${(r.oxygen_mole_fraction * 100).toFixed(1)}% \xB7 d\u2080 ${r.initial_droplet_diameter_mm} mm \xB7 K ${r.burning_rate_mm_s} mm\xB2/s \xB7 ${r.test_end || "Outcome unreported"} \xB7 ${(_a2 = r.pressure_mmHg) != null ? _a2 : "\u2014"} mmHg`;
-      root.querySelector("[data-flex3d-selection]").textContent = text;
+      count.textContent = `${ar ? "\u0635\u0641\u0648\u0641 \u0645\u0639\u0631\u0648\u0636\u0629" : "Valid plotted rows"}: n=${points.length}/${filteredRows.length} \xB7 ${ar ? "\u062A\u064F\u0633\u062A\u0628\u0639\u062F \u0627\u0644\u0642\u064A\u0645 \u0627\u0644\u0645\u0641\u0642\u0648\u062F\u0629 \u0645\u0646 \u0627\u0644\u0645\u062D\u0627\u0648\u0631 \u0627\u0644\u0645\u062E\u062A\u0627\u0631\u0629 \u0641\u0642\u0637" : "Rows missing any selected axis are omitted only from this view"}`;
     };
-    canvas.addEventListener("pointerdown", (e) => {
-      drag = { x: e.clientX, y: e.clientY, moved: false };
-      canvas.setPointerCapture(e.pointerId);
+    const show = (point) => {
+      var _a2, _b, _c, _d, _e;
+      const r = point.row;
+      selection.textContent = `${r.id || `Test ${r.test}`} \xB7 ${r.fuel || "\u2014"} \xB7 O\u2082 ${Number.isFinite(r.oxygen_mole_fraction) ? (r.oxygen_mole_fraction * 100).toFixed(1) + "%" : "\u2014"} \xB7 P ${(_a2 = r.pressure_mmHg) != null ? _a2 : "\u2014"} mmHg \xB7 d\u2080 ${(_b = r.initial_droplet_diameter_mm) != null ? _b : "\u2014"} mm \xB7 d\u2091 ${(_c = r.visible_flame_extinction_diameter_mm) != null ? _c : "\u2014"} mm \xB7 K ${(_d = r.burning_rate_mm_s) != null ? _d : "\u2014"} mm\xB2/s \xB7 t ${(_e = r.burn_time_s) != null ? _e : "\u2014"} s \xB7 ${r.test_end || "\u2014"}`;
+    };
+    Object.values(selectors).forEach((control) => control.addEventListener("change", render));
+    fuel.addEventListener("change", render);
+    outcome.addEventListener("change", render);
+    canvas.addEventListener("pointerdown", (event) => {
+      drag = { x: event.clientX, y: event.clientY, moved: false };
+      canvas.setPointerCapture(event.pointerId);
     });
-    canvas.addEventListener("pointermove", (e) => {
+    canvas.addEventListener("pointermove", (event) => {
       if (!drag) return;
-      const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+      const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
       if (Math.abs(dx) + Math.abs(dy) > 2) drag.moved = true;
       yaw += dx * 8e-3;
       pitch = Math.max(-1.15, Math.min(1.15, pitch + dy * 8e-3));
-      drag.x = e.clientX;
-      drag.y = e.clientY;
-      draw();
+      drag.x = event.clientX;
+      drag.y = event.clientY;
+      render();
     });
-    canvas.addEventListener("pointerup", (e) => {
-      if (drag && !drag.moved) {
-        const x = e.clientX - canvas.getBoundingClientRect().left, y = e.clientY - canvas.getBoundingClientRect().top;
-        const nearest = points.reduce((best, p) => Math.hypot(p.x - x, p.y - y) < best.d ? { p, d: Math.hypot(p.x - x, p.y - y) } : best, { p: null, d: 16 });
+    const stop = (event) => {
+      if (!drag) return;
+      if (!drag.moved) {
+        const x = event.clientX - canvas.getBoundingClientRect().left, y = event.clientY - canvas.getBoundingClientRect().top;
+        const nearest = points.reduce((best, p) => Math.hypot(p.x - x, p.y - y) < best.d ? { p, d: Math.hypot(p.x - x, p.y - y) } : best, { p: null, d: 18 });
         if (nearest.p) show(nearest.p);
       }
       drag = null;
+    };
+    canvas.addEventListener("pointerup", stop);
+    canvas.addEventListener("pointercancel", () => {
+      drag = null;
     });
-    canvas.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowLeft") yaw -= 0.12;
-      else if (e.key === "ArrowRight") yaw += 0.12;
-      else if (e.key === "ArrowUp") pitch = Math.min(1.15, pitch + 0.12);
-      else if (e.key === "ArrowDown") pitch = Math.max(-1.15, pitch - 0.12);
+    canvas.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      zoom = Math.max(0.65, Math.min(1.75, zoom * (event.deltaY < 0 ? 1.08 : 0.92)));
+      render();
+    }, { passive: false });
+    root.querySelectorAll("[data-flex3d-zoom]").forEach((button) => button.addEventListener("click", () => {
+      zoom = Math.max(0.65, Math.min(1.75, zoom * (button.dataset.flex3dZoom === "in" ? 1.16 : 0.86)));
+      render();
+    }));
+    canvas.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowLeft") yaw -= 0.12;
+      else if (event.key === "ArrowRight") yaw += 0.12;
+      else if (event.key === "ArrowUp") pitch = Math.min(1.15, pitch + 0.12);
+      else if (event.key === "ArrowDown") pitch = Math.max(-1.15, pitch - 0.12);
       else return;
-      e.preventDefault();
-      draw();
+      event.preventDefault();
+      render();
     });
     (_a = root.querySelector("[data-flex3d-reset]")) == null ? void 0 : _a.addEventListener("click", () => {
       yaw = -0.62;
       pitch = 0.35;
-      draw();
+      zoom = 1;
+      selection.textContent = ar ? "\u0627\u0633\u062D\u0628 \u0644\u0644\u062A\u062F\u0648\u064A\u0631 \xB7 \u0639\u062C\u0644\u0629 \u0627\u0644\u0641\u0623\u0631\u0629 \u0644\u0644\u062A\u0643\u0628\u064A\u0631 \xB7 \u0627\u062E\u062A\u0631 \u0646\u0642\u0637\u0629 \u0644\u0642\u0631\u0627\u0621\u0629 \u0642\u064A\u0645 \u0627\u0644\u0645\u0635\u062F\u0631" : "Drag to rotate \xB7 wheel to zoom \xB7 select a point to read source values";
+      render();
     });
-    new ResizeObserver(draw).observe(canvas);
-    draw();
+    new ResizeObserver(render).observe(canvas);
+    render();
     const legend = document.createElement("p");
     legend.className = "sub flex-3d-legend";
-    legend.innerHTML = `<span style="color:#42b883">\u25CF ${esc(lang2 === "ar" ? "\u0627\u0646\u0637\u0641\u0627\u0621" : "Extinction")}</span> &nbsp; <span style="color:#e4a84c">\u25CF ${esc(lang2 === "ar" ? "\u0627\u0636\u0637\u0631\u0627\u0628" : "Disruption")}</span> &nbsp; <span style="color:#8c79d8">\u25CF ${esc(lang2 === "ar" ? "\u0627\u0633\u062A\u0645\u0631\u0627\u0631/\u0623\u062E\u0631\u0649" : "Sustained/other")}</span>`;
+    legend.innerHTML = `<span style="color:#42b883">\u25CF ${esc(ar ? "\u0627\u0646\u0637\u0641\u0627\u0621" : "Extinction")}</span> &nbsp; <span style="color:#e4a84c">\u25CF ${esc(ar ? "\u0627\u0636\u0637\u0631\u0627\u0628" : "Disruption")}</span> &nbsp; <span style="color:#8c79d8">\u25CF ${esc(ar ? "\u0627\u0633\u062A\u0645\u0631\u0627\u0631/\u0623\u062E\u0631\u0649" : "Sustained/other")}</span>`;
     canvas.after(legend);
   }
 
@@ -2883,18 +2950,29 @@ void main() {
   }
   function flameScenarioControlsMarkup(lang2 = "en") {
     const ar = lang2 === "ar";
-    return `<article class="card flame-scenario-builder" style="margin-top:15px"><div class="card-head"><div><h2>${ar ? "\u0645\u064F\u0646\u0634\u0626 \u0633\u064A\u0646\u0627\u0631\u064A\u0648 \u0627\u0644\u0644\u0647\u0628" : "Flame Scenario Builder"}</h2><p class="sub">${ar ? "\u063A\u064A\u0651\u0631 \u0645\u062F\u062E\u0644\u0627\u062A \u0627\u0641\u062A\u0631\u0627\u0636\u064A\u0629 \u0648\u0627\u0639\u0631\u0636 \u0627\u0644\u062D\u0633\u0627\u0628 \u0627\u0644\u0645\u0628\u0627\u0634\u0631\u061B \u0644\u0627 \u064A\u0646\u062A\u062C \u0627\u0644\u0645\u062E\u062A\u0628\u0631 \u062A\u0646\u0628\u0624\u0627\u064B \u0628\u0627\u0644\u0627\u0634\u062A\u0639\u0627\u0644 \u0623\u0648 \u0627\u0644\u0625\u062E\u0645\u0627\u062F." : "Change hypothetical inputs and inspect a direct calculation; this lab does not predict ignition or extinction."}</p></div><span class="tag inf">${ar ? "\u0633\u064A\u0646\u0627\u0631\u064A\u0648 \u0627\u0641\u062A\u0631\u0627\u0636\u064A" : "HYPOTHETICAL"}</span></div><div class="scenario-controls"><label>${ar ? "\u0627\u0644\u0623\u0643\u0633\u062C\u064A\u0646 \xB7 %" : "Oxygen \xB7 %"}<input type="range" min="10" max="100" step="0.5" value="21" data-flame-o2><output data-flame-o2-value>21%</output></label><label>${ar ? "\u0627\u0644\u0636\u063A\u0637 \u0627\u0644\u0643\u0644\u064A \xB7 kPa" : "Total pressure \xB7 kPa"}<input type="range" min="1" max="110" step="0.1" value="101.3" data-flame-pressure><output data-flame-pressure-value>101.3 kPa</output></label><label>${ar ? "\u062D\u0631\u0627\u0631\u0629 \u0627\u0644\u0628\u062F\u0627\u064A\u0629 \xB7 \xB0C" : "Initial temperature \xB7 \xB0C"}<input type="range" min="0" max="80" step="1" value="22" data-flame-temp><output data-flame-temp-value>22 \xB0C</output></label><label>${ar ? "\u0627\u0644\u0648\u0642\u0648\u062F \xB7 \u0633\u064A\u0627\u0642 \u0641\u0642\u0637" : "Fuel \xB7 context only"}<select class="field" data-flame-fuel><option>n-Heptane</option><option>Methanol</option><option>PMMA</option><option>${ar ? "\u0645\u062E\u0635\u0635" : "Custom"}</option></select></label></div><div class="scenario-readout" style="margin-top:14px"><span>${ar ? "\u0636\u063A\u0637 O\u2082 \u0627\u0644\u062C\u0632\u0626\u064A \u0627\u0644\u062C\u0627\u0641 \u0627\u0644\u0645\u062D\u0633\u0648\u0628" : "Computed dry-gas O\u2082 partial pressure"}<small class="sub"> pO\u2082 = (O\u2082 % \xF7 100) \xD7 Ptotal</small></span><strong data-flame-po2>21.27 kPa</strong></div><div class="callout warn" style="margin-top:12px">${ar ? "\u0636\u063A\u0637 O\u2082 \u0627\u0644\u062C\u0632\u0626\u064A \u0647\u0648 \u0627\u0644\u0646\u0627\u062A\u062C \u0627\u0644\u0639\u062F\u062F\u064A \u0627\u0644\u0648\u062D\u064A\u062F. \u0627\u0644\u0648\u0642\u0648\u062F \u0648\u0627\u0644\u062D\u0631\u0627\u0631\u0629 \u0648\u0627\u0644\u062A\u062F\u0641\u0642 \u0644\u0627 \u064A\u0646\u062A\u062C \u0639\u0646\u0647\u0627 \u062F\u0631\u062C\u0629 \u062E\u0637\u0631 \u0623\u0648 \u0627\u062D\u062A\u0645\u0627\u0644 \u0627\u0646\u0637\u0641\u0627\u0621\u061B \u064A\u062A\u0637\u0644\u0628 \u0630\u0644\u0643 \u0646\u0645\u0648\u0630\u062C\u0627\u064B \u0645\u0648\u062B\u0642\u0627\u064B \u0648\u0628\u064A\u0627\u0646\u0627\u062A \u0645\u0639\u0627\u064A\u0631\u0629." : "O\u2082 partial pressure is the only numeric output. Fuel, temperature, and flow do not produce a hazard score or extinction probability; that requires a validated model and calibrated data."}</div></article>`;
+    return `<article class="card flame-scenario-builder" style="margin-top:15px"><div class="card-head"><div><h2>${ar ? "\u0645\u064F\u0646\u0634\u0626 \u0633\u064A\u0646\u0627\u0631\u064A\u0648 \u0627\u0644\u0644\u0647\u0628" : "Flame Scenario Builder"}</h2><p class="sub">${ar ? "\u064A\u064F\u062D\u0633\u0628 \u0636\u063A\u0637 \u0627\u0644\u0623\u0643\u0633\u062C\u064A\u0646 \u0627\u0644\u062C\u0632\u0626\u064A. \u064A\u062A\u063A\u064A\u0631 \u0627\u0644\u0645\u062C\u0633\u0645 \u0648\u0641\u0642 \u062E\u0631\u064A\u0637\u0629 \u0628\u0635\u0631\u064A\u0629 \u0646\u0648\u0639\u064A\u0629 \u0645\u0639\u0644\u0646\u0629\u060C \u0644\u0627 \u0648\u0641\u0642 \u062D\u0644 \u0643\u064A\u0645\u064A\u0627\u0626\u064A." : "Oxygen partial pressure is calculated. The flame responds through a disclosed visual mapping, not a chemical-kinetics solver."}</p></div><span class="tag inf">${ar ? "\u0633\u064A\u0646\u0627\u0631\u064A\u0648 + \u062A\u0635\u0648\u0631 \u062A\u0648\u0636\u064A\u062D\u064A" : "SCENARIO + ILLUSTRATION"}</span></div><div class="scenario-controls"><label>${ar ? "\u0627\u0644\u0623\u0643\u0633\u062C\u064A\u0646 \xB7 % \u062D\u062C\u0645\u064A" : "Oxygen \xB7 vol %"}<input type="range" min="12" max="34" step="0.5" value="21" data-flame-o2><output data-flame-o2-value>21%</output><small class="sub">${ar ? "\u0646\u0637\u0627\u0642 \u0633\u062C\u0644\u0627\u062A PSI-69 \u0627\u0644\u0645\u0631\u0641\u0642\u0629: 12\u201334%." : "Range in bundled PSI-69 rows: 12\u201334%."}</small></label><label>${ar ? "\u0627\u0644\u0636\u063A\u0637 \u0627\u0644\u0643\u0644\u064A \xB7 kPa" : "Total pressure \xB7 kPa"}<input type="range" min="1" max="110" step="0.1" value="101.3" data-flame-pressure><output data-flame-pressure-value>101.3 kPa</output></label><label>${ar ? "\u062D\u0631\u0627\u0631\u0629 \u0627\u0644\u0645\u062D\u064A\u0637 \xB7 \u0633\u064A\u0627\u0642 \u0641\u0642\u0637 \xB0C" : "Ambient temperature \xB7 context only \xB0C"}<input type="range" min="0" max="80" step="1" value="22" data-flame-temp><output data-flame-temp-value>22 \xB0C</output></label><label>${ar ? "\u0627\u0644\u0648\u0642\u0648\u062F \xB7 \u0633\u064A\u0627\u0642 \u0641\u0642\u0637" : "Fuel \xB7 context only"}<select class="field" data-flame-fuel><option>n-Heptane</option><option>Methanol</option><option>PMMA</option><option>${ar ? "\u0645\u062E\u0635\u0635" : "Custom"}</option></select></label></div><div class="scenario-readout" style="margin-top:14px"><span>${ar ? "\u0636\u063A\u0637 O\u2082 \u0627\u0644\u062C\u0632\u0626\u064A \u0627\u0644\u062C\u0627\u0641 \u0627\u0644\u0645\u062D\u0633\u0648\u0628" : "Computed dry-gas O\u2082 partial pressure"}<small class="sub"> pO\u2082 = xO\u2082 \xD7 Ptotal</small></span><strong data-flame-po2>21.27 kPa</strong></div><p class="sub" data-flame-shape-readout aria-live="polite"></p><div class="callout warn" style="margin-top:12px">${ar ? "\u0644\u0627 \u064A\u062D\u0633\u0628 \u0647\u0630\u0627 \u0627\u0644\u0645\u062E\u062A\u0628\u0631 \u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642 \u0623\u0648 \u0627\u062D\u062A\u0645\u0627\u0644 \u0627\u0644\u0625\u062E\u0645\u0627\u062F \u0645\u0646 O\u2082/\u0627\u0644\u0636\u063A\u0637 \u0648\u062D\u062F\u0647\u0645\u0627. \u064A\u063A\u064A\u0651\u0631 \u0636\u063A\u0637 O\u2082 \u062D\u062C\u0645 \u0627\u0644\u063A\u0644\u0627\u0641 \u0641\u064A \u0627\u0644\u062A\u0635\u0648\u0631\u060C \u0644\u0643\u0646 \u0647\u0630\u0627 \u0627\u0644\u062A\u062D\u0648\u064A\u0644 \u0627\u0644\u0628\u0635\u0631\u064A \u0628\u0644\u0627 \u0645\u0639\u0627\u064A\u0631\u0629 \u0648\u0644\u064A\u0633 \u0642\u064A\u0627\u0633\u0627\u064B \u0623\u0648 \u062A\u0646\u0628\u0624\u0627\u064B. \u0627\u0644\u0648\u0642\u0648\u062F \u0648\u0627\u0644\u062D\u0631\u0627\u0631\u0629 \u0633\u064A\u0627\u0642 \u0641\u0642\u0637." : "This lab does not infer burn rate or extinction from O\u2082/pressure alone. pO\u2082 changes the envelope in the illustration, but the visual mapping is uncalibrated and is neither a measurement nor a prediction. Fuel and temperature are context only."} <a href="https://psi.nasa.gov/physci/repo/data/investigations/PSI-69" target="_blank" rel="noreferrer">NASA PSI-69 \u2197</a></div></article>`;
   }
-  function bindFlameScenarioControls(root) {
+  function bindFlameScenarioControls(root, lang2 = "en") {
     const o2 = root.querySelector("[data-flame-o2]");
     const pressure = root.querySelector("[data-flame-pressure]");
     const temperature = root.querySelector("[data-flame-temp]");
+    const room = root.querySelector(".scene3d-room");
     if (!o2 || !pressure || !temperature) return;
     const update = () => {
+      const oxygen = Number(o2.value);
+      const partialPressure = oxygen / 100 * Number(pressure.value);
+      const equivalentOxygen = partialPressure / 101.3 * 100;
+      const normalized = Math.max(0, Math.min(1, (equivalentOxygen - 12) / 22));
       root.querySelector("[data-flame-o2-value]").textContent = `${Number(o2.value).toFixed(1)}%`;
       root.querySelector("[data-flame-pressure-value]").textContent = `${Number(pressure.value).toFixed(1)} kPa`;
       root.querySelector("[data-flame-temp-value]").textContent = `${temperature.value} \xB0C`;
-      root.querySelector("[data-flame-po2]").textContent = `${(Number(o2.value) / 100 * Number(pressure.value)).toFixed(2)} kPa`;
+      root.querySelector("[data-flame-po2]").textContent = `${partialPressure.toFixed(2)} kPa`;
+      if (room) {
+        room.dataset.oxygen = equivalentOxygen.toFixed(2);
+        room.style.setProperty("--oxygen-scale", (0.72 + normalized * 0.28).toFixed(3));
+        room.dispatchEvent(new Event("flame-input"));
+      }
+      root.querySelector("[data-flame-shape-readout]").textContent = lang2 === "ar" ? `\u0645\u0624\u0634\u0631 \u0627\u0644\u063A\u0644\u0627\u0641 \u0627\u0644\u0628\u0635\u0631\u064A: ${(0.72 + normalized * 0.28).toFixed(2)}\xD7 \xB7 \u0645\u0633\u062A\u0646\u062F \u0625\u0644\u0649 pO\u2082 \u0645\u0642\u0627\u0631\u0646\u0629\u064B \u0628\u0647\u0648\u0627\u0621 101.3 kPa\u061B \u0628\u0644\u0627 \u0648\u062D\u062F\u0629 \u0648\u0644\u064A\u0633 \u0642\u0637\u0631 \u0627\u0644\u0644\u0647\u0628.` : `Illustrative envelope scale: ${(0.72 + normalized * 0.28).toFixed(2)}\xD7 \xB7 mapped from pO\u2082 relative to 101.3 kPa air; dimensionless, not flame diameter.`;
     };
     [o2, pressure, temperature, root.querySelector("[data-flame-fuel]")].forEach((control) => control == null ? void 0 : control.addEventListener("input", update));
     update();
@@ -3188,6 +3266,115 @@ void main() {
     return entries.filter(
       ([name, label]) => [name, label, aliases[name] || ""].some((value) => String(value).toLowerCase().includes(needle))
     );
+  }
+
+  // public/lib/measurement-plots.js
+  var FIELDS = [
+    { key: "oxygen_mole_fraction", en: "Oxygen mole fraction", ar: "\u0627\u0644\u0643\u0633\u0631 \u0627\u0644\u0645\u0648\u0644\u064A \u0644\u0644\u0623\u0643\u0633\u062C\u064A\u0646", unit: "%", scale: 100 },
+    { key: "pressure_mmHg", en: "Ambient pressure", ar: "\u0627\u0644\u0636\u063A\u0637 \u0627\u0644\u0645\u062D\u064A\u0637", unit: "mmHg", scale: 1 },
+    { key: "initial_droplet_diameter_mm", en: "Initial droplet diameter", ar: "\u0642\u0637\u0631 \u0627\u0644\u0642\u0637\u0631\u0629 \u0627\u0644\u0627\u0628\u062A\u062F\u0627\u0626\u064A", unit: "mm", scale: 1 },
+    { key: "visible_flame_extinction_diameter_mm", en: "Visible flame extinction diameter", ar: "\u0642\u0637\u0631 \u0627\u0646\u0637\u0641\u0627\u0621 \u0627\u0644\u0644\u0647\u0628 \u0627\u0644\u0645\u0631\u0626\u064A", unit: "mm", scale: 1 },
+    { key: "burning_rate_mm_s", en: "Droplet burning-rate constant", ar: "\u062B\u0627\u0628\u062A \u0645\u0639\u062F\u0644 \u0627\u062D\u062A\u0631\u0627\u0642 \u0627\u0644\u0642\u0637\u0631\u0629", unit: "mm\xB2/s", scale: 1 },
+    { key: "burn_time_s", en: "Burn duration", ar: "\u0645\u062F\u0629 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642", unit: "s", scale: 1 }
+  ];
+  var fieldLabel = (field, ar) => `${ar ? field.ar : field.en} \xB7 ${field.unit}`;
+  var optionMarkup = (ar, selected) => FIELDS.map((field) => `<option value="${field.key}"${field.key === selected ? " selected" : ""}>${esc(fieldLabel(field, ar))}</option>`).join("");
+  function measurementPlotStudioMarkup(lang2 = "en") {
+    const ar = lang2 === "ar";
+    return `<section class="measurement-plot-studio card" data-measurement-plot-studio>
+    <div class="card-head"><div><span class="eyebrow">NASA PSI-69 \xB7 FLEX</span><h2>${ar ? "\u0627\u0633\u062A\u0648\u062F\u064A\u0648 \u0631\u0633\u0645 \u0627\u0644\u0642\u064A\u0627\u0633\u0627\u062A" : "Measurement Plot Studio"}</h2><p class="sub">${ar ? "\u0627\u0631\u0633\u0645 \u0627\u0644\u0642\u064A\u0627\u0633\u0627\u062A \u0627\u0644\u062E\u0627\u0645 \u0628\u0645\u062D\u0627\u0648\u0631 \u062A\u062E\u062A\u0627\u0631\u0647\u0627\u060C \u0648\u0627\u0641\u062D\u0635 \u0643\u0644 \u0646\u0642\u0637\u0629. \u0644\u0627 \u0646\u062F\u0645\u062C \u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u0648\u0642\u0648\u062F \u0623\u0648 \u0638\u0631\u0648\u0641 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631 \u0628\u0635\u0645\u062A." : "Plot measured source rows on axes you choose and inspect every point. Fuel and test conditions are never silently pooled."}</p></div><span class="tag obs">${ar ? "\u0642\u064A\u0627\u0633\u0627\u062A \u0645\u0631\u0635\u0648\u062F\u0629" : "OBSERVED MEASUREMENTS"}</span></div>
+    <div class="toolbar plot-studio-controls">
+      <label>${ar ? "\u0627\u0644\u0645\u062D\u0648\u0631 \u0627\u0644\u0623\u0641\u0642\u064A" : "X axis"}<select data-plot-x>${optionMarkup(ar, "oxygen_mole_fraction")}</select></label>
+      <label>${ar ? "\u0627\u0644\u0645\u062D\u0648\u0631 \u0627\u0644\u0639\u0645\u0648\u062F\u064A" : "Y axis"}<select data-plot-y>${optionMarkup(ar, "burning_rate_mm_s")}</select></label>
+      <label>${ar ? "\u0627\u0644\u0648\u0642\u0648\u062F" : "Fuel"}<select data-plot-fuel><option value="">${ar ? "\u0643\u0644 \u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u0648\u0642\u0648\u062F" : "All fuels"}</option></select></label>
+      <label>${ar ? "\u0627\u0644\u0646\u062A\u064A\u062C\u0629" : "Test outcome"}<select data-plot-outcome><option value="">${ar ? "\u0643\u0644 \u0627\u0644\u0646\u062A\u0627\u0626\u062C" : "All outcomes"}</option></select></label>
+      <label class="plot-fit-toggle"><input type="checkbox" data-plot-fit> ${ar ? "\u062E\u0637 \u0645\u0644\u0627\u0621\u0645\u0629 \u0648\u0635\u0641\u064A" : "Descriptive linear fit"}</label>
+      <div class="plot-zoom-controls"><button type="button" class="outline-btn" data-plot-action="zoom-in" aria-label="${ar ? "\u062A\u0643\u0628\u064A\u0631" : "Zoom in"}">\uFF0B</button><button type="button" class="outline-btn" data-plot-action="zoom-out" aria-label="${ar ? "\u062A\u0635\u063A\u064A\u0631" : "Zoom out"}">\u2212</button><button type="button" class="outline-btn" data-plot-action="reset">${ar ? "\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u0642\u064A\u0627\u0633" : "Reset scale"}</button></div>
+    </div>
+    <div class="measurement-plot" data-measurement-plot role="region" aria-label="${ar ? "\u0645\u062E\u0637\u0637 \u0642\u064A\u0627\u0633\u0627\u062A FLEX \u062A\u0641\u0627\u0639\u0644\u064A" : "Interactive FLEX measurements plot"}"></div>
+    <p class="sub" data-plot-summary aria-live="polite"></p>
+    <div class="callout warn">${ar ? "\u062A\u0633\u0645\u064A\u0627\u062A \u0627\u0644\u0645\u062D\u0627\u0648\u0631 \u0648\u0627\u0644\u0648\u062D\u062F\u0627\u062A \u0645\u0646 \u062C\u062F\u0648\u0644 NASA PSI-69. \u062E\u0637 \u0627\u0644\u0645\u0644\u0627\u0621\u0645\u0629 \u064A\u062D\u0633\u0628 \u0628\u0637\u0631\u064A\u0642\u0629 \u0627\u0644\u0645\u0631\u0628\u0639\u0627\u062A \u0627\u0644\u0635\u063A\u0631\u0649 \u0644\u0644\u0627\u0633\u062A\u0643\u0634\u0627\u0641 \u0641\u0642\u0637\u061B \u0627\u062E\u062A\u0644\u0627\u0641 \u0627\u0644\u0636\u063A\u0637 \u0648\u062A\u0631\u0643\u064A\u0628 \u0627\u0644\u063A\u0627\u0632 \u0648\u062D\u062C\u0645 \u0627\u0644\u0642\u0637\u0631\u0629 \u064A\u0645\u0646\u0639 \u062A\u0641\u0633\u064A\u0631\u0647 \u0643\u0623\u062B\u0631 \u0633\u0628\u0628\u064A \u0623\u0648 \u0642\u0627\u0646\u0648\u0646 \u0639\u0627\u0645. \u0647\u0630\u0647 \u0642\u064A\u0627\u0633\u0627\u062A \u0627\u062D\u062A\u0631\u0627\u0642 \u0642\u0637\u0631\u0627\u062A\u060C \u0648\u0644\u064A\u0633\u062A \u0633\u0631\u0639\u0629 \u0627\u0646\u062A\u0634\u0627\u0631 \u062D\u0631\u064A\u0642 \u0645\u0627\u062F\u0629 \u0635\u0644\u0628\u0629." : "Axis names and units follow the NASA PSI-69 table. The least-squares fit is exploratory only; varying pressure, gas composition, and droplet size prevent causal or universal interpretation. These are droplet-combustion measurements, not solid-material flame-spread speeds."} <a href="https://psi.nasa.gov/physci/repo/data/investigations/PSI-69" target="_blank" rel="noreferrer">NASA PSI-69 \u2197</a></div>
+  </section>
+  <section class="evidence-tree card" aria-labelledby="evidence-tree-title"><div class="card-head"><div><span class="eyebrow">TRACEABLE INTERPRETATION</span><h2 id="evidence-tree-title">${ar ? "\u0634\u062C\u0631\u0629 \u0627\u0646\u062A\u0642\u0627\u0644 \u0627\u0644\u062F\u0644\u064A\u0644" : "Evidence-to-claim tree"}</h2><p class="sub">${ar ? "\u0643\u0644 \u0627\u0633\u062A\u0646\u062A\u0627\u062C \u064A\u0633\u064A\u0631 \u0639\u0628\u0631 \u0634\u0631\u0648\u0637 \u0648\u0627\u0636\u062D\u0629 \u0645\u0646 \u0627\u0644\u0642\u064A\u0627\u0633 \u0625\u0644\u0649 \u062D\u062F\u0648\u062F \u0627\u0644\u062A\u0639\u0645\u064A\u0645." : "Every conclusion follows explicit steps from measurements to the limits of generalization."}</p></div></div><div class="evidence-tree-root">${ar ? "\u0645\u0635\u062F\u0631 NASA PSI-69 \xB7 \u062A\u062C\u0627\u0631\u0628 FLEX" : "NASA PSI-69 \xB7 FLEX experiments"}</div><div class="evidence-tree-branches"><article><b>${ar ? "\u0638\u0631\u0648\u0641 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631" : "Test conditions"}</b><span>${ar ? "\u0648\u0642\u0648\u062F \xB7 O\u2082/N\u2082/CO\u2082/He \xB7 \u0636\u063A\u0637 \xB7 \u062D\u062C\u0645 \u0627\u0644\u0642\u0637\u0631\u0629" : "Fuel \xB7 O\u2082/N\u2082/CO\u2082/He \xB7 pressure \xB7 droplet size"}</span></article><article><b>${ar ? "\u0642\u064A\u0627\u0633\u0627\u062A \u0627\u0644\u0645\u0635\u062F\u0631" : "Source measurements"}</b><span>${ar ? "\u0642\u0637\u0631 \u0627\u0644\u0644\u0647\u0628 \u0627\u0644\u0645\u0631\u0626\u064A \xB7 \u062B\u0627\u0628\u062A \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642 \xB7 \u0632\u0645\u0646 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642 \xB7 \u0627\u0644\u0646\u062A\u064A\u062C\u0629" : "Visible flame diameter \xB7 burning-rate constant \xB7 burn time \xB7 outcome"}</span></article></div><div class="evidence-tree-leaves"><article><b>${ar ? "\u064A\u062C\u0648\u0632 \u0648\u0635\u0641\u0647" : "Supported description"}</b><span>${ar ? "\u062A\u0648\u0632\u064A\u0639 \u0627\u0644\u0635\u0641\u0648\u0641 \u0648\u0627\u0644\u0639\u0644\u0627\u0642\u0627\u062A \u062F\u0627\u062E\u0644 \u0627\u0644\u0634\u0631\u0648\u0637 \u0627\u0644\u0645\u0639\u0644\u0646\u0629" : "Distributions and associations within stated conditions"}</span></article><article class="warn-leaf"><b>${ar ? "\u0644\u0627 \u064A\u062C\u0648\u0632 \u0627\u0633\u062A\u0646\u062A\u0627\u062C\u0647" : "Not established"}</b><span>${ar ? "\u0633\u0628\u0628\u064A\u0629 \u0645\u0624\u0643\u062F\u0629 \xB7 \u0627\u062D\u062A\u0645\u0627\u0644 \u062E\u0637\u0631 \u0639\u0627\u0645 \xB7 \u0633\u0644\u0648\u0643 \u0643\u0644 \u0644\u0647\u0628 \u0623\u0648 \u0645\u0647\u0645\u0629 \u0641\u0636\u0627\u0626\u064A\u0629" : "Causation \xB7 universal hazard probability \xB7 behavior of every flame or mission"}</span></article></div></section>`;
+  }
+  function bindMeasurementPlotStudio(root, rows, lang2 = "en") {
+    const studio = root.querySelector("[data-measurement-plot-studio]");
+    if (!studio || !Array.isArray(rows)) return;
+    const ar = lang2 === "ar";
+    const xSelect = studio.querySelector("[data-plot-x]");
+    const ySelect = studio.querySelector("[data-plot-y]");
+    const fuelSelect = studio.querySelector("[data-plot-fuel]");
+    const outcomeSelect = studio.querySelector("[data-plot-outcome]");
+    const fitToggle = studio.querySelector("[data-plot-fit]");
+    const plot2 = studio.querySelector("[data-measurement-plot]");
+    const summary = studio.querySelector("[data-plot-summary]");
+    let zoom = 1;
+    [...new Set(rows.map((row) => row.fuel).filter(Boolean))].sort().forEach((fuel) => fuelSelect.add(new Option(fuel, fuel)));
+    [...new Set(rows.map((row) => row.test_end).filter(Boolean))].sort().forEach((outcome) => outcomeSelect.add(new Option(outcome, outcome)));
+    const draw = () => {
+      const xField = FIELDS.find((item) => item.key === xSelect.value);
+      const yField = FIELDS.find((item) => item.key === ySelect.value);
+      const filtered = rows.filter((row) => (!fuelSelect.value || row.fuel === fuelSelect.value) && (!outcomeSelect.value || row.test_end === outcomeSelect.value));
+      const points = filtered.filter((row) => Number.isFinite(row[xField.key]) && Number.isFinite(row[yField.key])).map((row) => ({ row, x: row[xField.key] * xField.scale, y: row[yField.key] * yField.scale }));
+      if (points.length < 2) {
+        plot2.innerHTML = `<div class="empty">${ar ? "\u0644\u0627 \u062A\u0648\u062C\u062F \u0635\u0641\u0648\u0641 \u0643\u0627\u0641\u064A\u0629 \u062A\u062D\u062A\u0648\u064A \u0627\u0644\u0642\u064A\u0645\u062A\u064A\u0646 \u0627\u0644\u0645\u062E\u062A\u0627\u0631\u062A\u064A\u0646." : "Not enough source rows contain both selected measurements."}</div>`;
+        summary.textContent = `${ar ? "\u0635\u0641\u0648\u0641 \u0635\u0627\u0644\u062D\u0629" : "Valid rows"}: n=${points.length}/${filtered.length}`;
+        return;
+      }
+      const width = 820, height = 440, p = { left: 82, right: 24, top: 24, bottom: 70 };
+      const xmin = Math.min(...points.map((item) => item.x)), xmax = Math.max(...points.map((item) => item.x));
+      const ymin = Math.min(...points.map((item) => item.y)), ymax = Math.max(...points.map((item) => item.y));
+      const xpad = (xmax - xmin) * 0.06 || Math.max(Math.abs(xmin) * 0.06, 0.01);
+      const ypad = (ymax - ymin) * 0.08 || Math.max(Math.abs(ymin) * 0.08, 0.01);
+      const xcenter = (xmin + xmax) / 2, ycenter = (ymin + ymax) / 2;
+      const domain = { x0: xcenter - (xmax - xmin + 2 * xpad) / (2 * zoom), x1: xcenter + (xmax - xmin + 2 * xpad) / (2 * zoom), y0: ycenter - (ymax - ymin + 2 * ypad) / (2 * zoom), y1: ycenter + (ymax - ymin + 2 * ypad) / (2 * zoom) };
+      const sx = (x) => p.left + (x - domain.x0) / (domain.x1 - domain.x0) * (width - p.left - p.right);
+      const sy = (y) => height - p.bottom - (y - domain.y0) / (domain.y1 - domain.y0) * (height - p.top - p.bottom);
+      const ticks = Array.from({ length: 6 }, (_, index) => index / 5);
+      const grid = ticks.map((ratio) => {
+        const x = domain.x0 + (domain.x1 - domain.x0) * ratio, y = domain.y0 + (domain.y1 - domain.y0) * ratio;
+        return `<line x1="${sx(x)}" y1="${p.top}" x2="${sx(x)}" y2="${height - p.bottom}" class="chart-gridline"/><line x1="${p.left}" y1="${sy(y)}" x2="${width - p.right}" y2="${sy(y)}" class="chart-gridline"/><text x="${sx(x)}" y="${height - p.bottom + 20}" class="chart-tick" text-anchor="middle">${Number(x.toPrecision(3))}</text><text x="${p.left - 9}" y="${sy(y) + 4}" class="chart-tick" text-anchor="end">${Number(y.toPrecision(3))}</text>`;
+      }).join("");
+      const groups = [...new Set(points.map(({ row }) => row.fuel || "Unreported"))];
+      const palette = ["#1688be", "#d59a3d", "#39a77e", "#7d73d3", "#d36d7c", "#5077a8"];
+      const colors = new Map(groups.map((group, index) => [group, palette[index % palette.length]]));
+      const marks = points.map(({ row, x, y }) => {
+        var _a;
+        const details = `${row.id || `Test ${row.test}`} \xB7 ${row.fuel || "Fuel unreported"} \xB7 ${fieldLabel(xField, ar)}: ${Number(x.toPrecision(5))} \xB7 ${fieldLabel(yField, ar)}: ${Number(y.toPrecision(5))} \xB7 O\u2082 ${(row.oxygen_mole_fraction * 100).toFixed(1)}% \xB7 ${(_a = row.pressure_mmHg) != null ? _a : "\u2014"} mmHg \xB7 ${row.test_end || "Outcome unreported"}`;
+        return `<circle cx="${sx(x)}" cy="${sy(y)}" r="5" fill="${colors.get(row.fuel || "Unreported")}" fill-opacity=".82" tabindex="0" role="img" aria-label="${esc(details)}"><title>${esc(details)}</title></circle>`;
+      }).join("");
+      let fitMarkup = "", fitText = ar ? "\u0644\u0645 \u064A\u062D\u0633\u0628 \u062E\u0637 \u0645\u0644\u0627\u0621\u0645\u0629." : "No fit calculated.";
+      if (fitToggle.checked) {
+        const summaries = [];
+        groups.forEach((group) => {
+          const subset = points.filter(({ row }) => (row.fuel || "Unreported") === group);
+          if (subset.length < 3) return;
+          const mx = subset.reduce((sum, point) => sum + point.x, 0) / subset.length;
+          const my = subset.reduce((sum, point) => sum + point.y, 0) / subset.length;
+          const variance = subset.reduce((sum, point) => sum + (point.x - mx) ** 2, 0);
+          if (!variance) return;
+          const slope = subset.reduce((sum, point) => sum + (point.x - mx) * (point.y - my), 0) / variance;
+          const intercept = my - slope * mx;
+          const total = subset.reduce((sum, point) => sum + (point.y - my) ** 2, 0);
+          const residual = subset.reduce((sum, point) => sum + (point.y - intercept - slope * point.x) ** 2, 0);
+          const r2 = total ? 1 - residual / total : 1;
+          const groupMin = Math.min(...subset.map((point) => point.x)), groupMax = Math.max(...subset.map((point) => point.x));
+          fitMarkup += `<line x1="${sx(groupMin)}" y1="${sy(intercept + slope * groupMin)}" x2="${sx(groupMax)}" y2="${sy(intercept + slope * groupMax)}" class="chart-trendline" stroke="${colors.get(group)}" visibility="visible"/>`;
+          summaries.push(`${group}: R\xB2=${r2.toFixed(3)} (n=${subset.length})`);
+        });
+        fitText = summaries.length ? `${ar ? "\u0645\u0644\u0627\u0621\u0645\u0629 OLS \u0627\u0633\u062A\u0643\u0634\u0627\u0641\u064A\u0629 \u062D\u0633\u0628 \u0627\u0644\u0648\u0642\u0648\u062F" : "Exploratory OLS by fuel"} \xB7 ${summaries.join(" \xB7 ")}` : ar ? "\u0644\u0627 \u062A\u0643\u0641\u064A 3 \u0646\u0642\u0627\u0637 \u0628\u0648\u0642\u0648\u062F \u0648\u0627\u062D\u062F \u0644\u062D\u0633\u0627\u0628 \u0627\u0644\u0645\u0644\u0627\u0621\u0645\u0629." : "No fuel group has at least 3 points for a fit.";
+      }
+      const legend = groups.map((group) => `<span><i style="--legend-color:${colors.get(group)}"></i>${esc(group)}</span>`).join("");
+      plot2.innerHTML = `<div class="chart-legend">${legend}</div><svg class="measurement-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(fieldLabel(xField, ar))} versus ${esc(fieldLabel(yField, ar))}"><g>${grid}</g><line class="chart-axis" x1="${p.left}" y1="${height - p.bottom}" x2="${width - p.right}" y2="${height - p.bottom}"/><line class="chart-axis" x1="${p.left}" y1="${p.top}" x2="${p.left}" y2="${height - p.bottom}"/>${fitMarkup}${marks}<text x="${(p.left + width - p.right) / 2}" y="${height - 15}" class="chart-axis-label" text-anchor="middle">${esc(fieldLabel(xField, ar))}</text><text transform="translate(18 ${(p.top + height - p.bottom) / 2}) rotate(-90)" class="chart-axis-label" text-anchor="middle">${esc(fieldLabel(yField, ar))}</text></svg>`;
+      summary.textContent = `${ar ? "\u0635\u0641\u0648\u0641 \u0635\u0627\u0644\u062D\u0629" : "Valid source rows"}: n=${points.length}/${filtered.length} \xB7 ${fitText}`;
+    };
+    [xSelect, ySelect, fuelSelect, outcomeSelect, fitToggle].forEach((control) => control.addEventListener("change", draw));
+    studio.querySelectorAll("[data-plot-action]").forEach((button) => button.addEventListener("click", () => {
+      const action = button.dataset.plotAction;
+      zoom = action === "zoom-in" ? Math.min(8, zoom * 1.35) : action === "zoom-out" ? Math.max(0.25, zoom / 1.35) : 1;
+      draw();
+    }));
+    draw();
   }
 
   // public/lib/system-concepts.js
@@ -3753,12 +3940,12 @@ void main() {
   }
   function themeWelcome() {
     if (storageGet("mors-welcome-theme-picked") === "1") return "";
-    const choices = [
+    const choices2 = [
       ["arctic", t("Light \xB7 Arctic", "\u0641\u0627\u062A\u062D \xB7 \u0642\u0637\u0628\u064A"), "theme-preview-arctic"],
       ["space", t("Dark \xB7 Deep Space", "\u062F\u0627\u0643\u0646 \xB7 \u0641\u0636\u0627\u0621 \u0639\u0645\u064A\u0642"), "theme-preview-space"],
       ["observatory", t("Neutral \xB7 Observatory", "\u0645\u062D\u0627\u064A\u062F \xB7 \u0645\u0631\u0635\u062F"), "theme-preview-observatory"]
     ];
-    return `<section class="card welcome-theme" id="theme-welcome"><div><span class="eyebrow">${t("FIRST VISIT \xB7 PERSONALIZE", "\u0627\u0644\u0632\u064A\u0627\u0631\u0629 \u0627\u0644\u0623\u0648\u0644\u0649 \xB7 \u062E\u0635\u0651\u0635 \u0627\u0644\u0645\u0638\u0647\u0631")}</span><h3>${t("Choose your research workspace look", "\u0627\u062E\u062A\u0631 \u0645\u0638\u0647\u0631 \u0645\u0633\u0627\u062D\u0629 \u0627\u0644\u0628\u062D\u062B")}</h3><p class="sub">${t("All three keep the MORS navy, sky-blue and scientific palette. Change it any time from the sidebar.", "\u062A\u062D\u0627\u0641\u0638 \u0627\u0644\u0623\u0646\u0645\u0627\u0637 \u0627\u0644\u062B\u0644\u0627\u062B\u0629 \u0639\u0644\u0649 \u0647\u0648\u064A\u0629 MORS \u0627\u0644\u0643\u062D\u0644\u064A\u0629 \u0648\u0627\u0644\u0633\u0645\u0627\u0648\u064A\u0629 \u0648\u0627\u0644\u0639\u0644\u0645\u064A\u0629. \u064A\u0645\u0643\u0646\u0643 \u062A\u063A\u064A\u064A\u0631\u0647 \u0644\u0627\u062D\u0642\u0627\u064B \u0645\u0646 \u0627\u0644\u0634\u0631\u064A\u0637 \u0627\u0644\u062C\u0627\u0646\u0628\u064A.")}</p></div><div class="welcome-theme-options" role="group" aria-label="${t("Choose a visual theme", "\u0627\u062E\u062A\u0631 \u0646\u0645\u0637 \u0627\u0644\u0639\u0631\u0636")}">${choices.map(([value, label, preview]) => `<button type="button" class="theme-choice ${preview}" data-theme="${value}" aria-pressed="${theme === value}"><span class="theme-preview" aria-hidden="true"><i></i><b></b><em></em></span><span>${label}</span></button>`).join("")}</div></section>`;
+    return `<section class="card welcome-theme" id="theme-welcome"><div><span class="eyebrow">${t("FIRST VISIT \xB7 PERSONALIZE", "\u0627\u0644\u0632\u064A\u0627\u0631\u0629 \u0627\u0644\u0623\u0648\u0644\u0649 \xB7 \u062E\u0635\u0651\u0635 \u0627\u0644\u0645\u0638\u0647\u0631")}</span><h3>${t("Choose your research workspace look", "\u0627\u062E\u062A\u0631 \u0645\u0638\u0647\u0631 \u0645\u0633\u0627\u062D\u0629 \u0627\u0644\u0628\u062D\u062B")}</h3><p class="sub">${t("All three keep the MORS navy, sky-blue and scientific palette. Change it any time from the sidebar.", "\u062A\u062D\u0627\u0641\u0638 \u0627\u0644\u0623\u0646\u0645\u0627\u0637 \u0627\u0644\u062B\u0644\u0627\u062B\u0629 \u0639\u0644\u0649 \u0647\u0648\u064A\u0629 MORS \u0627\u0644\u0643\u062D\u0644\u064A\u0629 \u0648\u0627\u0644\u0633\u0645\u0627\u0648\u064A\u0629 \u0648\u0627\u0644\u0639\u0644\u0645\u064A\u0629. \u064A\u0645\u0643\u0646\u0643 \u062A\u063A\u064A\u064A\u0631\u0647 \u0644\u0627\u062D\u0642\u0627\u064B \u0645\u0646 \u0627\u0644\u0634\u0631\u064A\u0637 \u0627\u0644\u062C\u0627\u0646\u0628\u064A.")}</p></div><div class="welcome-theme-options" role="group" aria-label="${t("Choose a visual theme", "\u0627\u062E\u062A\u0631 \u0646\u0645\u0637 \u0627\u0644\u0639\u0631\u0636")}">${choices2.map(([value, label, preview]) => `<button type="button" class="theme-choice ${preview}" data-theme="${value}" aria-pressed="${theme === value}"><span class="theme-preview" aria-hidden="true"><i></i><b></b><em></em></span><span>${label}</span></button>`).join("")}</div></section>`;
   }
   function flexScatterPanel() {
     const fuels = [...new Set(dataset.rows.map((row) => row.fuel).filter(Boolean))].sort();
@@ -3941,7 +4128,7 @@ void main() {
     const c = wb.conditions, strata = wb.strata, filtered = Object.keys(wb.filter).length > 0, varLabel = ((_a = variableLabels.find(([k]) => k === wbFilter.variable)) == null ? void 0 : _a[1]) || wbFilter.variable, any = (label) => [["", label]];
     const bar = `<article class="card"><div class="card-head"><div><h3>${t("Test-condition filter", "\u062A\u0635\u0641\u064A\u0629 \u0638\u0631\u0648\u0641 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631")}</h3><p class="sub">${esc(c.bandDefinition)} ${t("Diluent is the added inert gas (CO\u2082 or He); \u201Cno diluent\u201D means O\u2082/N\u2082 only.", "\u0627\u0644\u0645\u062E\u0641\u0641 \u0647\u0648 \u0627\u0644\u063A\u0627\u0632 \u0627\u0644\u062E\u0627\u0645\u0644 \u0627\u0644\u0645\u0636\u0627\u0641 (CO\u2082 \u0623\u0648 He)\u061B \u0648\u062A\u0639\u0646\u064A \xAB\u0645\u0646 \u062F\u0648\u0646 \u0645\u062E\u0641\u0641\xBB \u0645\u0632\u064A\u062C O\u2082/N\u2082 \u0641\u0642\u0637.")}</p></div><span class="tag obs">${wb.records} ${t("OF", "\u0645\u0646 \u0623\u0635\u0644")} ${dataset.dataset.records} ${t("TESTS", "\u0627\u062E\u062A\u0628\u0627\u0631\u0627\u064B")}</span></div><div class="toolbar" style="margin:0">${wbSelect("wbFuel", t("Fuel", "\u0627\u0644\u0648\u0642\u0648\u062F"), any(t("All fuels", "\u0643\u0644 \u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u0648\u0642\u0648\u062F")).concat(c.fuels.map((f) => [f.id, `${f.label} (${f.n})`])), wbFilter.fuel)}${wbSelect("wbBand", t("Pressure", "\u0627\u0644\u0636\u063A\u0637"), any(t("All pressures", "\u0643\u0644 \u0627\u0644\u0636\u063A\u0648\u0637")).concat(c.pressureBands.map((b) => [b.id, `${b.label} \xB7 ${b.observed} (${b.n})`])), wbFilter.pressureBand)}${wbSelect("wbDiluent", t("Diluent", "\u0627\u0644\u063A\u0627\u0632 \u0627\u0644\u0645\u062E\u0641\u0641"), any(t("All diluents", "\u0643\u0644 \u0627\u0644\u063A\u0627\u0632\u0627\u062A \u0627\u0644\u0645\u062E\u0641\u0641\u0629")).concat(c.diluents.map((d) => [d.id, `${d.label} (${d.n})`])), wbFilter.diluent)}${wbSelect("wbVariable", t("Grouped variable", "\u0645\u062A\u063A\u064A\u0631 \u0627\u0644\u062A\u062C\u0645\u064A\u0639"), variableLabels, wbFilter.variable)}<button class="outline-btn" id="wbReset">${t("Reset", "\u0625\u0639\u0627\u062F\u0629 \u0636\u0628\u0637")}</button></div></article>`;
     if (!strata)
-      return `${pageHead(t("Scientific Analysis Workbench", "\u0645\u0646\u0636\u062F\u0629 \u0627\u0644\u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u0639\u0644\u0645\u064A"), t("Reproducible summary statistics computed from source rows.", "\u0625\u062D\u0635\u0627\u0621\u0627\u062A \u0648\u0635\u0641\u064A\u0629 \u0642\u0627\u0628\u0644\u0629 \u0644\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0625\u0646\u062A\u0627\u062C \u0648\u0645\u062D\u0633\u0648\u0628\u0629 \u0645\u0646 \u0635\u0641\u0648\u0641 \u0627\u0644\u0645\u0635\u062F\u0631."))}${bar}<div class="callout warn" style="margin-top:15px">${t("No bundled test matches", "\u0644\u0627 \u064A\u0648\u062C\u062F \u0627\u062E\u062A\u0628\u0627\u0631 \u0645\u0631\u0641\u0642 \u064A\u0637\u0627\u0628\u0642")} ${esc(wb.conditionLabel)}. ${t("Nothing is computed for an empty group.", "\u0644\u0627 \u062A\u064F\u062D\u0633\u0628 \u0646\u062A\u0627\u0626\u062C \u0644\u0645\u062C\u0645\u0648\u0639\u0629 \u0641\u0627\u0631\u063A\u0629.")}</div>`;
+      return `${pageHead(t("Scientific Analysis Workbench", "\u0645\u0646\u0636\u062F\u0629 \u0627\u0644\u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u0639\u0644\u0645\u064A"), t("Reproducible summary statistics computed from source rows.", "\u0625\u062D\u0635\u0627\u0621\u0627\u062A \u0648\u0635\u0641\u064A\u0629 \u0642\u0627\u0628\u0644\u0629 \u0644\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0625\u0646\u062A\u0627\u062C \u0648\u0645\u062D\u0633\u0648\u0628\u0629 \u0645\u0646 \u0635\u0641\u0648\u0641 \u0627\u0644\u0645\u0635\u062F\u0631."))}${bar}<div class="callout warn" style="margin-top:15px">${t("No bundled test matches", "\u0644\u0627 \u064A\u0648\u062C\u062F \u0627\u062E\u062A\u0628\u0627\u0631 \u0645\u0631\u0641\u0642 \u064A\u0637\u0627\u0628\u0642")} ${esc(wb.conditionLabel)}. ${t("Summary statistics are withheld; reset the conditions to inspect all records.", "\u062D\u064F\u062C\u0628\u062A \u0627\u0644\u0625\u062D\u0635\u0627\u0621\u0627\u062A\u061B \u0623\u0639\u062F \u0636\u0628\u0637 \u0627\u0644\u0638\u0631\u0648\u0641 \u0644\u0641\u062D\u0635 \u0627\u0644\u0633\u062C\u0644\u0627\u062A.")}</div>${measurementPlotStudioMarkup(lang)}${flex3DMarkup(lang)}`;
     const st = wb.summary.stats, pooled = strata.pooled, boot = strata.bootstrap, highBand = c.pressureBands.find((b) => b.id === ">2atm");
     const metrics = Object.entries(st).map(
       ([k, v]) => {
@@ -3952,7 +4139,7 @@ void main() {
     const table = `<article class="card" style="margin-top:15px"><div class="card-head"><div><h3>${t("Per-condition results", "\u0627\u0644\u0646\u062A\u0627\u0626\u062C \u0628\u062D\u0633\u0628 \u0638\u0631\u0648\u0641 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631")} \xB7 ${esc(varLabel)}</h3><p class="sub">${esc(wb.conditionLabel)} \xB7 ${t("grouped by fuel, pressure band and diluent. 95% CIs are seeded percentile bootstrap intervals", "\u0645\u062C\u0645\u0639\u0629 \u062D\u0633\u0628 \u0627\u0644\u0648\u0642\u0648\u062F \u0648\u0646\u0637\u0627\u0642 \u0627\u0644\u0636\u063A\u0637 \u0648\u0627\u0644\u063A\u0627\u0632 \u0627\u0644\u0645\u062E\u0641\u0641. \u0641\u0648\u0627\u0635\u0644 \u0627\u0644\u062B\u0642\u0629 95% \u0645\u062D\u0633\u0648\u0628\u0629 \u0628\u0625\u0639\u0627\u062F\u0629 \u0645\u0639\u0627\u064A\u0646\u0629 bootstrap \u0630\u0627\u062A \u0628\u0630\u0631\u0629 \u062B\u0627\u0628\u062A\u0629")} (seed ${boot.seed}, ${boot.resamples} ${t("resamples; withheld when n", "\u0625\u0639\u0627\u062F\u0629 \u0645\u0639\u0627\u064A\u0646\u0629\u061B \u0644\u0627 \u062A\u064F\u0639\u0631\u0636 \u0639\u0646\u062F\u0645\u0627 n")} &lt; ${boot.minN}.</p></div><span class="tag comp">${t("COMPUTED", "\u0645\u062D\u0633\u0648\u0628")}</span></div><div class="table-wrap"><table><thead><tr><th>${t("Condition", "\u0627\u0644\u0638\u0631\u0641")}</th><th>${t("Tests", "\u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631\u0627\u062A")}</th><th>n</th><th>${t("Mean", "\u0627\u0644\u0645\u062A\u0648\u0633\u0637")}</th><th>95% CI (${t("mean", "\u0627\u0644\u0645\u062A\u0648\u0633\u0637")})</th><th>SD (${t("sample", "\u0627\u0644\u0639\u064A\u0646\u0629")})</th><th>Pearson r \xB7 ${t("diameter vs burning rate", "\u0627\u0644\u0642\u0637\u0631 \u0645\u0642\u0627\u0628\u0644 \u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642")}</th><th>95% CI (r)</th></tr></thead><tbody>${wbGroupRow(filtered ? `${wb.conditionLabel} (${t("all", "\u0627\u0644\u0643\u0644")})` : t("All tests (pooled)", "\u0643\u0644 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631\u0627\u062A (\u0645\u062C\u0645\u0639\u0629)"), pooled, true)}${strata.groups.map((g) => wbGroupRow(g.label, g)).join("")}</tbody></table></div><div class="callout warn" style="margin-top:12px">${filtered ? t("Oxygen fraction, diluent fraction and droplet size still vary among tests within each row.", "\u0645\u0627 \u062A\u0632\u0627\u0644 \u0646\u0633\u0628\u0629 \u0627\u0644\u0623\u0643\u0633\u062C\u064A\u0646 \u0648\u0627\u0644\u063A\u0627\u0632 \u0627\u0644\u0645\u062E\u0641\u0641 \u0648\u062D\u062C\u0645 \u0627\u0644\u0642\u0637\u0631\u0629 \u062A\u062E\u062A\u0644\u0641 \u0628\u064A\u0646 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631\u0627\u062A \u0641\u064A \u0627\u0644\u0635\u0641 \u0627\u0644\u0648\u0627\u062D\u062F.") : t("The first row pools different fuels, pressures and diluents; prefer the per-condition rows.", "\u064A\u062C\u0645\u0639 \u0627\u0644\u0635\u0641 \u0627\u0644\u0623\u0648\u0644 \u0623\u0646\u0648\u0627\u0639 \u0648\u0642\u0648\u062F \u0648\u0636\u063A\u0648\u0637\u0627\u064B \u0648\u063A\u0627\u0632\u0627\u062A \u0645\u062E\u0641\u0641\u0629 \u0645\u062E\u062A\u0644\u0641\u0629\u061B \u0627\u0639\u062A\u0645\u062F \u0635\u0641\u0648\u0641 \u0638\u0631\u0648\u0641 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631 \u0627\u0644\u0645\u0646\u0641\u0635\u0644\u0629.")} ${t("The >2 atm band spans 2.0\u20133.1 atm and contains", "\u064A\u0645\u062A\u062F \u0646\u0637\u0627\u0642 >2 atm \u0645\u0646 2.0 \u0625\u0644\u0649 3.1 atm \u0648\u064A\u0636\u0645")} ${(_b = highBand == null ? void 0 : highBand.n) != null ? _b : 0} ${t("tests. Intervals describe resampling, not instrument uncertainty.", "\u0627\u062E\u062A\u0628\u0627\u0631\u0627\u064B. \u062A\u0635\u0641 \u0627\u0644\u0641\u0648\u0627\u0635\u0644 \u0625\u0639\u0627\u062F\u0629 \u0645\u0639\u0627\u064A\u0646\u0629 \u0627\u0644\u0633\u062C\u0644\u0627\u062A \u0648\u0644\u0627 \u062A\u0645\u062B\u0644 \u0639\u062F\u0645 \u064A\u0642\u064A\u0646 \u0627\u0644\u0623\u062C\u0647\u0632\u0629.")}</div></article>`;
     const assoc = `<article class="card"><div class="card-head"><div><h3>${t("Exploratory association", "\u0627\u0631\u062A\u0628\u0627\u0637 \u0627\u0633\u062A\u0643\u0634\u0627\u0641\u064A")}</h3><p class="sub">${t("Initial droplet diameter vs. burning rate", "\u0642\u0637\u0631 \u0627\u0644\u0642\u0637\u0631\u0629 \u0627\u0644\u0627\u0628\u062A\u062F\u0627\u0626\u064A \u0645\u0642\u0627\u0628\u0644 \u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0642")} \xB7 ${esc(wb.conditionLabel)}</p></div><span class="tag comp">${t("COMPUTED", "\u0645\u062D\u0633\u0648\u0628")}</span></div><div style="font-size:34px;font-weight:800;margin:18px 0">${(_d = (_c = wb.associations.r) == null ? void 0 : _c.toFixed(3)) != null ? _d : "\u2014"}</div><p class="sub">Pearson r \xB7 n = ${wb.associations.n} \xB7 95% CI ${wb.associations.r === null ? "\u2014" : ciCell(pooled.association.ci95)}. ${t("Conditions still vary within this selection, so this association cannot establish causality.", "\u062A\u0628\u0642\u0649 \u0638\u0631\u0648\u0641 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631 \u0645\u062A\u063A\u064A\u0631\u0629 \u0636\u0645\u0646 \u0647\u0630\u0627 \u0627\u0644\u0627\u062E\u062A\u064A\u0627\u0631\u060C \u0644\u0630\u0644\u0643 \u0644\u0627 \u064A\u062B\u0628\u062A \u0627\u0644\u0627\u0631\u062A\u0628\u0627\u0637 \u0639\u0644\u0627\u0642\u0629 \u0633\u0628\u0628\u064A\u0629.")}</p><div class="callout warn">${t("No hypothesis test is run. Small-group r values are exploratory.", "\u0644\u0645 \u064A\u064F\u062C\u0631\u064E \u0627\u062E\u062A\u0628\u0627\u0631 \u0641\u0631\u0636\u064A\u0629. \u0642\u064A\u0645 r \u0644\u0644\u0645\u062C\u0645\u0648\u0639\u0627\u062A \u0627\u0644\u0635\u063A\u064A\u0631\u0629 \u0627\u0633\u062A\u0643\u0634\u0627\u0641\u064A\u0629.")}</div></article>`;
     const methods = `<article class="card"><h3>${t("Methods & reproducibility", "\u0627\u0644\u0637\u0631\u0642 \u0648\u0642\u0627\u0628\u0644\u064A\u0629 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0625\u0646\u062A\u0627\u062C")}</h3><div class="list-row"><span>${t("Mean", "\u0627\u0644\u0645\u062A\u0648\u0633\u0637")}</span><b>${t("Arithmetic mean", "\u0627\u0644\u0645\u062A\u0648\u0633\u0637 \u0627\u0644\u062D\u0633\u0627\u0628\u064A")}</b></div><div class="list-row"><span>${t("Spread", "\u0627\u0644\u062A\u0634\u062A\u062A")}</span><b>${t("Sample standard deviation (n \u2212 1)", "\u0627\u0644\u0627\u0646\u062D\u0631\u0627\u0641 \u0627\u0644\u0645\u0639\u064A\u0627\u0631\u064A \u0644\u0644\u0639\u064A\u0646\u0629 (n \u2212 1)")}</b></div><div class="list-row"><span>${t("Interval", "\u0627\u0644\u0641\u0627\u0635\u0644")}</span><b>95% ${t("percentile bootstrap", "bootstrap \u0627\u0644\u0645\u0626\u064A\u0646\u064A")} \xB7 seed ${boot.seed} \xB7 ${boot.resamples} \xB7 n \u2265 ${boot.minN}</b></div><div class="list-row"><span>${t("Grouping", "\u0627\u0644\u062A\u062C\u0645\u064A\u0639")}</span><b>${t("Fuel \xB7 pressure band \xB7 diluent", "\u0627\u0644\u0648\u0642\u0648\u062F \xB7 \u0646\u0637\u0627\u0642 \u0627\u0644\u0636\u063A\u0637 \xB7 \u0627\u0644\u063A\u0627\u0632 \u0627\u0644\u0645\u062E\u0641\u0641")}</b></div><div class="list-row"><span>${t("Missing values", "\u0627\u0644\u0642\u064A\u0645 \u0627\u0644\u0645\u0641\u0642\u0648\u062F\u0629")}</span><b>${t("Excluded per variable; no imputation", "\u062A\u064F\u0633\u062A\u0628\u0639\u062F \u0644\u0643\u0644 \u0645\u062A\u063A\u064A\u0631\u061B \u0628\u0644\u0627 \u062A\u0639\u0648\u064A\u0636")}</b></div><div class="list-row"><span>${t("Source table", "\u062C\u062F\u0648\u0644 \u0627\u0644\u0645\u0635\u062F\u0631")}</span><b>NASA PSI-69</b></div><div class="list-row"><span>${t("Software", "\u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C")}</span><b>MORS AEGIS 3.0 \xB7 JS</b></div></article>`;
-    return `${pageHead(t("Scientific Analysis Workbench", "\u0645\u0646\u0636\u062F\u0629 \u0627\u0644\u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u0639\u0644\u0645\u064A"), t("Reproducible statistics computed from source rows by test condition; nulls are excluded per variable.", "\u0625\u062D\u0635\u0627\u0621\u0627\u062A \u0642\u0627\u0628\u0644\u0629 \u0644\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0625\u0646\u062A\u0627\u062C \u0645\u0646 \u0635\u0641\u0648\u0641 \u0627\u0644\u0645\u0635\u062F\u0631 \u0628\u062D\u0633\u0628 \u0638\u0631\u0641 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631\u061B \u062A\u064F\u0633\u062A\u0628\u0639\u062F \u0627\u0644\u0642\u064A\u0645 \u0627\u0644\u0641\u0627\u0631\u063A\u0629 \u0644\u0643\u0644 \u0645\u062A\u063A\u064A\u0631."))}${bar}${scientificChartGallery(dataset.rows)}<div class="grid three" style="margin-top:15px">${metrics}</div>${table}<div class="grid two" style="margin-top:15px">${assoc}${methods}</div>`;
+    return `${pageHead(t("Scientific Analysis Workbench", "\u0645\u0646\u0636\u062F\u0629 \u0627\u0644\u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u0639\u0644\u0645\u064A"), t("Reproducible statistics computed from source rows by test condition; nulls are excluded per variable.", "\u0625\u062D\u0635\u0627\u0621\u0627\u062A \u0642\u0627\u0628\u0644\u0629 \u0644\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0625\u0646\u062A\u0627\u062C \u0645\u0646 \u0635\u0641\u0648\u0641 \u0627\u0644\u0645\u0635\u062F\u0631 \u0628\u062D\u0633\u0628 \u0638\u0631\u0641 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631\u061B \u062A\u064F\u0633\u062A\u0628\u0639\u062F \u0627\u0644\u0642\u064A\u0645 \u0627\u0644\u0641\u0627\u0631\u063A\u0629 \u0644\u0643\u0644 \u0645\u062A\u063A\u064A\u0631."))}${bar}${scientificChartGallery(dataset.rows)}${measurementPlotStudioMarkup(lang)}${flex3DMarkup(lang)}<div class="grid three" style="margin-top:15px">${metrics}</div>${table}<div class="grid two" style="margin-top:15px">${assoc}${methods}</div>`;
   }
   function comparePage() {
     return `${pageHead(t("Experiment Comparison Studio", "\u0627\u0633\u062A\u0648\u062F\u064A\u0648 \u0645\u0642\u0627\u0631\u0646\u0629 \u0627\u0644\u062A\u062C\u0627\u0631\u0628"), t("Compare two FLEX tests. Differences are computed only when fuel and gas composition match.", "\u0642\u0627\u0631\u0646 \u0627\u062E\u062A\u0628\u0627\u0631\u064A\u0646 \u0645\u0646 FLEX. \u0644\u0627 \u062A\u064F\u062D\u0633\u0628 \u0627\u0644\u0641\u0631\u0648\u0642 \u0625\u0644\u0627 \u0625\u0630\u0627 \u062A\u0637\u0627\u0628\u0642 \u0627\u0644\u0648\u0642\u0648\u062F \u0648\u062A\u0631\u0643\u064A\u0628 \u0627\u0644\u063A\u0627\u0632."))}<div class="grid two"><article class="card"><h3>${t("Test A", "\u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631 A")}</h3><label class="field-label">${t("Select record", "\u0627\u062E\u062A\u0631 \u0633\u062C\u0644\u0627\u064B")}</label><select id="compareA" class="field">${dataset.rows.map((r) => {
@@ -4072,6 +4259,11 @@ void main() {
         "https://www.nasa.gov/glenn/glenn-expertise-space-exploration/physical-sciences-program/combustion-science/",
         "CONTEXT"
       ],
+      [
+        "NASA ACME \xB7 candle-flame morphology in microgravity (visual context)",
+        "https://science.nasa.gov/image-detail/candle-flames-3/",
+        "VISUAL CONTEXT"
+      ],
       ["NASA ScienceCasts \xB7 combustion on the ISS (2018)", "https://www.youtube.com/watch?v=W1oXykoz9zg", "VIDEO"],
       [
         "NASA Researcher's Guide to ISS Combustion Science",
@@ -4096,6 +4288,7 @@ void main() {
     const categoryArabic = {
       "PRIMARY DATA": "\u0628\u064A\u0627\u0646\u0627\u062A \u0623\u0633\u0627\u0633\u064A\u0629",
       CONTEXT: "\u0633\u064A\u0627\u0642 \u0639\u0644\u0645\u064A",
+      "VISUAL CONTEXT": "\u0633\u064A\u0627\u0642 \u0628\u0635\u0631\u064A \u0639\u0644\u0645\u064A",
       VIDEO: "\u0641\u064A\u062F\u064A\u0648",
       "OFFICIAL CHALLENGE VIDEO": "\u0641\u064A\u062F\u064A\u0648 \u0627\u0644\u062A\u062D\u062F\u064A \u0627\u0644\u0631\u0633\u0645\u064A",
       "INCIDENT HISTORY": "\u062D\u0648\u0627\u062F\u062B \u062A\u0627\u0631\u064A\u062E\u064A\u0629",
@@ -4191,7 +4384,11 @@ void main() {
       if (name === "Safety Insights") bindSafetyInsightCharts(c, lang);
       if (name === "Investigation Lab") bindInvestigationLab(c, lang);
       if (name === "Flame Physics" || name === "Flame Lab") bindFlameScene3d(c, lang);
-      if (name === "Flame Lab") bindFlameScenarioControls(c);
+      if (name === "Flame Lab") bindFlameScenarioControls(c, lang);
+      if (name === "Analysis Workbench") {
+        bindMeasurementPlotStudio(c, dataset.rows, lang);
+        bindFlex3DPlot(c, dataset.rows, lang);
+      }
       if (name === "Mission Lab") bindMissionLab(c, lang);
       if (name === "System Concepts") bindSystemConcepts(c, lang);
       if (name === "3D Models") bindModelGallery(c, lang);

@@ -18,7 +18,7 @@ export function flameScene3d(lang = 'en') {
         stage: 'مشهد تفسيري ثلاثي الأبعاد، اسحب لتدويره',
         earthLabel: 'طفو · حمل طبيعي صاعد',
         microLabel: 'انتشار · حمل طبيعي أضعف',
-        note: 'يتغير شكل اللهب إيضاحياً بحسب الحالة المختارة. الرذاذ لا يطفئ اللهب تلقائياً في هذا النموذج.',
+        note: 'مشهد الجاذبية الصغرى يعرض غلاف لهب انتشاري أزرق حول قطرة وقود؛ يبدل O₂ الحجم البصري فقط. لا يحسب قطر اللهب أو الإخماد.',
         boundary:
           'رسم مفاهيمي متعدد الطبقات، بلا مقياس كمي. ليس محاكاة CFD ولا صورة من NASA ولا نتيجة تجربة. لا يستنتج إخماد الحريق أو أداء أي جهاز.',
         rendererReady: 'لهب حجمي تفاعلي · تمثيل نوعي',
@@ -43,7 +43,7 @@ export function flameScene3d(lang = 'en') {
         stage: 'Interactive 3D explanatory scene; drag to rotate',
         earthLabel: 'BUOYANCY · UPWARD NATURAL CONVECTION',
         microLabel: 'DIFFUSION · WEAKER NATURAL CONVECTION',
-        note: 'Flame shape changes illustratively with the selected state. Mist does not extinguish the flame in this model.',
+        note: 'The microgravity view shows a blue diffusion-flame shell around a fuel droplet. O₂ changes only the illustrative envelope; flame diameter and extinction are not calculated.',
         boundary:
           'Layered conceptual rendering with no quantitative scale. It is not CFD, NASA imagery, or an experiment result. It does not predict extinction or device performance.',
         rendererReady: 'Interactive volumetric flame · qualitative rendering',
@@ -183,6 +183,7 @@ export function bindFlameScene3d(root, lang = 'en') {
   applyRotation();
   applyMotion();
   updateState();
+  room.addEventListener('flame-input', updateState);
 
   scene.querySelectorAll('[data-scene-key]').forEach((button) => {
     button.addEventListener('click', () => {

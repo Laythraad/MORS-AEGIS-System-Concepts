@@ -24,6 +24,8 @@ import {
 import { FLEX_CHART_GUIDE } from './lib/chart-guide.js';
 import { filterNavEntries } from './lib/navigation.js';
 import { bindFlameScene3d } from './lib/flame-scene3d.js';
+import { flex3DMarkup, bindFlex3DPlot } from './lib/flex-3d.js';
+import { measurementPlotStudioMarkup, bindMeasurementPlotStudio } from './lib/measurement-plots.js';
 import { renderSystemConcepts, bindSystemConcepts } from './lib/system-concepts.js';
 import { renderModelGallery, bindModelGallery } from './lib/model-gallery.js';
 import { renderSourceChartGuide } from './source-charts.js';
@@ -412,7 +414,7 @@ async function analysisPage() {
     any = (label) => [['', label]];
   const bar = `<article class="card"><div class="card-head"><div><h3>${t('Test-condition filter', 'تصفية ظروف الاختبار')}</h3><p class="sub">${esc(c.bandDefinition)} ${t('Diluent is the added inert gas (CO₂ or He); “no diluent” means O₂/N₂ only.', 'المخفف هو الغاز الخامل المضاف (CO₂ أو He)؛ وتعني «من دون مخفف» مزيج O₂/N₂ فقط.')}</p></div><span class="tag obs">${wb.records} ${t('OF', 'من أصل')} ${dataset.dataset.records} ${t('TESTS', 'اختباراً')}</span></div><div class="toolbar" style="margin:0">${wbSelect('wbFuel', t('Fuel', 'الوقود'), any(t('All fuels', 'كل أنواع الوقود')).concat(c.fuels.map((f) => [f.id, `${f.label} (${f.n})`])), wbFilter.fuel)}${wbSelect('wbBand', t('Pressure', 'الضغط'), any(t('All pressures', 'كل الضغوط')).concat(c.pressureBands.map((b) => [b.id, `${b.label} · ${b.observed} (${b.n})`])), wbFilter.pressureBand)}${wbSelect('wbDiluent', t('Diluent', 'الغاز المخفف'), any(t('All diluents', 'كل الغازات المخففة')).concat(c.diluents.map((d) => [d.id, `${d.label} (${d.n})`])), wbFilter.diluent)}${wbSelect('wbVariable', t('Grouped variable', 'متغير التجميع'), variableLabels, wbFilter.variable)}<button class="outline-btn" id="wbReset">${t('Reset', 'إعادة ضبط')}</button></div></article>`;
   if (!strata)
-    return `${pageHead(t('Scientific Analysis Workbench', 'منضدة التحليل العلمي'), t('Reproducible summary statistics computed from source rows.', 'إحصاءات وصفية قابلة لإعادة الإنتاج ومحسوبة من صفوف المصدر.'))}${bar}<div class="callout warn" style="margin-top:15px">${t('No bundled test matches', 'لا يوجد اختبار مرفق يطابق')} ${esc(wb.conditionLabel)}. ${t('Nothing is computed for an empty group.', 'لا تُحسب نتائج لمجموعة فارغة.')}</div>`;
+    return `${pageHead(t('Scientific Analysis Workbench', 'منضدة التحليل العلمي'), t('Reproducible summary statistics computed from source rows.', 'إحصاءات وصفية قابلة لإعادة الإنتاج ومحسوبة من صفوف المصدر.'))}${bar}<div class="callout warn" style="margin-top:15px">${t('No bundled test matches', 'لا يوجد اختبار مرفق يطابق')} ${esc(wb.conditionLabel)}. ${t('Summary statistics are withheld; reset the conditions to inspect all records.', 'حُجبت الإحصاءات؛ أعد ضبط الظروف لفحص السجلات.')}</div>${measurementPlotStudioMarkup(lang)}${flex3DMarkup(lang)}`;
   const st = wb.summary.stats,
     pooled = strata.pooled,
     boot = strata.bootstrap,
@@ -426,7 +428,7 @@ async function analysisPage() {
   const table = `<article class="card" style="margin-top:15px"><div class="card-head"><div><h3>${t('Per-condition results', 'النتائج بحسب ظروف الاختبار')} · ${esc(varLabel)}</h3><p class="sub">${esc(wb.conditionLabel)} · ${t('grouped by fuel, pressure band and diluent. 95% CIs are seeded percentile bootstrap intervals', 'مجمعة حسب الوقود ونطاق الضغط والغاز المخفف. فواصل الثقة 95% محسوبة بإعادة معاينة bootstrap ذات بذرة ثابتة')} (seed ${boot.seed}, ${boot.resamples} ${t('resamples; withheld when n', 'إعادة معاينة؛ لا تُعرض عندما n')} &lt; ${boot.minN}.</p></div><span class="tag comp">${t('COMPUTED', 'محسوب')}</span></div><div class="table-wrap"><table><thead><tr><th>${t('Condition', 'الظرف')}</th><th>${t('Tests', 'الاختبارات')}</th><th>n</th><th>${t('Mean', 'المتوسط')}</th><th>95% CI (${t('mean', 'المتوسط')})</th><th>SD (${t('sample', 'العينة')})</th><th>Pearson r · ${t('diameter vs burning rate', 'القطر مقابل معدل الاحتراق')}</th><th>95% CI (r)</th></tr></thead><tbody>${wbGroupRow(filtered ? `${wb.conditionLabel} (${t('all', 'الكل')})` : t('All tests (pooled)', 'كل الاختبارات (مجمعة)'), pooled, true)}${strata.groups.map((g) => wbGroupRow(g.label, g)).join('')}</tbody></table></div><div class="callout warn" style="margin-top:12px">${filtered ? t('Oxygen fraction, diluent fraction and droplet size still vary among tests within each row.', 'ما تزال نسبة الأكسجين والغاز المخفف وحجم القطرة تختلف بين الاختبارات في الصف الواحد.') : t('The first row pools different fuels, pressures and diluents; prefer the per-condition rows.', 'يجمع الصف الأول أنواع وقود وضغوطاً وغازات مخففة مختلفة؛ اعتمد صفوف ظروف الاختبار المنفصلة.')} ${t('The >2 atm band spans 2.0–3.1 atm and contains', 'يمتد نطاق >2 atm من 2.0 إلى 3.1 atm ويضم')} ${highBand?.n ?? 0} ${t('tests. Intervals describe resampling, not instrument uncertainty.', 'اختباراً. تصف الفواصل إعادة معاينة السجلات ولا تمثل عدم يقين الأجهزة.')}</div></article>`;
   const assoc = `<article class="card"><div class="card-head"><div><h3>${t('Exploratory association', 'ارتباط استكشافي')}</h3><p class="sub">${t('Initial droplet diameter vs. burning rate', 'قطر القطرة الابتدائي مقابل معدل الاحتراق')} · ${esc(wb.conditionLabel)}</p></div><span class="tag comp">${t('COMPUTED', 'محسوب')}</span></div><div style="font-size:34px;font-weight:800;margin:18px 0">${wb.associations.r?.toFixed(3) ?? '—'}</div><p class="sub">Pearson r · n = ${wb.associations.n} · 95% CI ${wb.associations.r === null ? '—' : ciCell(pooled.association.ci95)}. ${t('Conditions still vary within this selection, so this association cannot establish causality.', 'تبقى ظروف الاختبار متغيرة ضمن هذا الاختيار، لذلك لا يثبت الارتباط علاقة سببية.')}</p><div class="callout warn">${t('No hypothesis test is run. Small-group r values are exploratory.', 'لم يُجرَ اختبار فرضية. قيم r للمجموعات الصغيرة استكشافية.')}</div></article>`;
   const methods = `<article class="card"><h3>${t('Methods & reproducibility', 'الطرق وقابلية إعادة الإنتاج')}</h3><div class="list-row"><span>${t('Mean', 'المتوسط')}</span><b>${t('Arithmetic mean', 'المتوسط الحسابي')}</b></div><div class="list-row"><span>${t('Spread', 'التشتت')}</span><b>${t('Sample standard deviation (n − 1)', 'الانحراف المعياري للعينة (n − 1)')}</b></div><div class="list-row"><span>${t('Interval', 'الفاصل')}</span><b>95% ${t('percentile bootstrap', 'bootstrap المئيني')} · seed ${boot.seed} · ${boot.resamples} · n ≥ ${boot.minN}</b></div><div class="list-row"><span>${t('Grouping', 'التجميع')}</span><b>${t('Fuel · pressure band · diluent', 'الوقود · نطاق الضغط · الغاز المخفف')}</b></div><div class="list-row"><span>${t('Missing values', 'القيم المفقودة')}</span><b>${t('Excluded per variable; no imputation', 'تُستبعد لكل متغير؛ بلا تعويض')}</b></div><div class="list-row"><span>${t('Source table', 'جدول المصدر')}</span><b>NASA PSI-69</b></div><div class="list-row"><span>${t('Software', 'البرنامج')}</span><b>MORS AEGIS 3.0 · JS</b></div></article>`;
-  return `${pageHead(t('Scientific Analysis Workbench', 'منضدة التحليل العلمي'), t('Reproducible statistics computed from source rows by test condition; nulls are excluded per variable.', 'إحصاءات قابلة لإعادة الإنتاج من صفوف المصدر بحسب ظرف الاختبار؛ تُستبعد القيم الفارغة لكل متغير.'))}${bar}${scientificChartGallery(dataset.rows)}<div class="grid three" style="margin-top:15px">${metrics}</div>${table}<div class="grid two" style="margin-top:15px">${assoc}${methods}</div>`;
+  return `${pageHead(t('Scientific Analysis Workbench', 'منضدة التحليل العلمي'), t('Reproducible statistics computed from source rows by test condition; nulls are excluded per variable.', 'إحصاءات قابلة لإعادة الإنتاج من صفوف المصدر بحسب ظرف الاختبار؛ تُستبعد القيم الفارغة لكل متغير.'))}${bar}${scientificChartGallery(dataset.rows)}${measurementPlotStudioMarkup(lang)}${flex3DMarkup(lang)}<div class="grid three" style="margin-top:15px">${metrics}</div>${table}<div class="grid two" style="margin-top:15px">${assoc}${methods}</div>`;
 }
 function comparePage() {
   return `${pageHead(t('Experiment Comparison Studio', 'استوديو مقارنة التجارب'), t('Compare two FLEX tests. Differences are computed only when fuel and gas composition match.', 'قارن اختبارين من FLEX. لا تُحسب الفروق إلا إذا تطابق الوقود وتركيب الغاز.'))}<div class="grid two"><article class="card"><h3>${t('Test A', 'الاختبار A')}</h3><label class="field-label">${t('Select record', 'اختر سجلاً')}</label><select id="compareA" class="field">${dataset.rows.map((r) => `<option value="${esc(r.id)}">${esc(r.id)} · ${r.burning_rate_mm_s ?? '—'} mm²/s</option>`).join('')}</select><div id="compareResultA"></div></article><article class="card"><h3>${t('Test B', 'الاختبار B')}</h3><label class="field-label">${t('Select record', 'اختر سجلاً')}</label><select id="compareB" class="field">${dataset.rows.map((r, i) => `<option value="${esc(r.id)}" ${i === 1 ? 'selected' : ''}>${esc(r.id)} · ${r.burning_rate_mm_s ?? '—'} mm²/s</option>`).join('')}</select><div id="compareResultB"></div></article></div><article class="card" style="margin-top:15px"><div class="card-head"><div><h3>${t('Paired variables', 'المتغيرات المقارنة')}</h3><p class="sub">${t('Observed source values shown side by side', 'قيم المصدر المرصودة معروضة جنباً إلى جنب')}</p></div><span class="tag obs">${t('OBSERVED', 'مرصود')}</span></div><div id="compareTable"></div></article><div class="callout warn" style="margin-top:14px">${t('These are individual records, not controlled matched groups. A difference does not establish a physical effect.', 'هذه سجلات اختبار منفردة وليست مجموعات مضبوطة ومتطابقة؛ والفرق الظاهر لا يثبت أثراً فيزيائياً.')}</div>`;
@@ -571,6 +573,11 @@ async function sourcesPage() {
       'https://www.nasa.gov/glenn/glenn-expertise-space-exploration/physical-sciences-program/combustion-science/',
       'CONTEXT',
     ],
+    [
+      'NASA ACME · candle-flame morphology in microgravity (visual context)',
+      'https://science.nasa.gov/image-detail/candle-flames-3/',
+      'VISUAL CONTEXT',
+    ],
     ['NASA ScienceCasts · combustion on the ISS (2018)', 'https://www.youtube.com/watch?v=W1oXykoz9zg', 'VIDEO'],
     [
       "NASA Researcher's Guide to ISS Combustion Science",
@@ -595,6 +602,7 @@ async function sourcesPage() {
   const categoryArabic = {
     'PRIMARY DATA': 'بيانات أساسية',
     CONTEXT: 'سياق علمي',
+    'VISUAL CONTEXT': 'سياق بصري علمي',
     VIDEO: 'فيديو',
     'OFFICIAL CHALLENGE VIDEO': 'فيديو التحدي الرسمي',
     'INCIDENT HISTORY': 'حوادث تاريخية',
@@ -696,7 +704,11 @@ async function go(name) {
     if (name === 'Safety Insights') bindSafetyInsightCharts(c, lang);
     if (name === 'Investigation Lab') bindInvestigationLab(c, lang);
     if (name === 'Flame Physics' || name === 'Flame Lab') bindFlameScene3d(c, lang);
-    if (name === 'Flame Lab') bindFlameScenarioControls(c);
+    if (name === 'Flame Lab') bindFlameScenarioControls(c, lang);
+    if (name === 'Analysis Workbench') {
+      bindMeasurementPlotStudio(c, dataset.rows, lang);
+      bindFlex3DPlot(c, dataset.rows, lang);
+    }
     if (name === 'Mission Lab') bindMissionLab(c, lang);
     if (name === 'System Concepts') bindSystemConcepts(c, lang);
     if (name === '3D Models') bindModelGallery(c, lang);

@@ -15,6 +15,7 @@ uniform float u_gravity;
 uniform float u_air;
 uniform float u_mist;
 uniform float u_fire;
+uniform float u_oxygen;
 uniform float u_yaw;
 uniform float u_pitch;
 
@@ -52,23 +53,34 @@ void main() {
       float height01 = clamp(heightFromBase / 1.52, 0.0, 1.0);
       float heightMask = smoothstep(-0.08, 0.06, heightFromBase)
         * (1.0 - smoothstep(1.30, 1.54, heightFromBase));
-      float width = mix(0.29, 0.018, height01) * (1.0 + noise * 1.5);
+      float width = mix(0.29, 0.018, height01) * mix(0.72, 1.0, u_oxygen) * (1.0 + noise * 1.5);
+      heightMask *= mix(0.48, 1.0, u_oxygen);
       float centreShift = u_air * 0.38 * height01 * height01;
       radial = length(vec2((p.x - centreShift) / max(width, 0.025), p.z / max(width * 0.78, 0.02)));
       density = heightMask * (1.0 - smoothstep(0.64, 1.18, radial + noise));
     } else {
-      vec3 ellipsoid = vec3(p.x / 0.58, p.y / 0.49, p.z / 0.58);
+      float envelopeScale = mix(0.72, 1.0, u_oxygen);
+      vec3 ellipsoid = vec3(p.x / (0.58 * envelopeScale), p.y / (0.49 * envelopeScale), p.z / (0.58 * envelopeScale));
       ellipsoid.x -= u_air * p.y * 0.34;
       radial = length(ellipsoid);
-      density = 1.0 - smoothstep(0.70, 1.12, radial + noise);
+      // A diffusion-flame shell around a fuel source; the hollow center is intentional.
+      density = (1.0 - smoothstep(0.12, 0.34, abs(radial - 0.92))) * (1.0 + noise * 1.7);
     }
 
     density *= u_fire * (1.0 - 0.12 * u_mist);
+    density *= mix(0.35, 1.0, u_oxygen);
     float core = 1.0 - smoothstep(0.02, 0.86, radial);
-    vec3 edgeColor = mix(vec3(1.0, 0.25, 0.035), vec3(0.91, 0.22, 0.48), u_gravity * 0.62);
-    vec3 sampleColor = mix(edgeColor, vec3(1.0, 0.84, 0.40), core);
+    vec3 edgeColor = mix(vec3(1.0, 0.25, 0.035), vec3(0.20, 0.64, 1.0), u_gravity);
+    vec3 hotColor = mix(vec3(1.0, 0.84, 0.40), vec3(0.78, 0.91, 1.0), u_gravity);
+    vec3 sampleColor = mix(edgeColor, hotColor, core);
     sampleColor = mix(sampleColor, vec3(0.58, 0.83, 1.0), u_mist * 0.16);
-    float alpha = density * 0.12;
+    float alpha = density * (u_gravity > 0.5 ? 0.24 : 0.16);
+    float dropletRadius = length(p);
+    if (u_gravity > 0.5 && dropletRadius < 0.105) {
+      float light = 0.35 + 0.65 * max(dot(normalize(p + vec3(0.0001)), normalize(vec3(-0.45, 0.5, 0.75))), 0.0);
+      sampleColor = mix(vec3(0.035, 0.055, 0.075), vec3(0.46, 0.34, 0.19), light);
+      alpha = 0.98;
+    }
     accumulated.rgb += (1.0 - accumulated.a) * sampleColor * alpha;
     accumulated.a += (1.0 - accumulated.a) * alpha;
     if (accumulated.a > 0.96) break;
@@ -80,12 +92,14 @@ void main() {
 }`;
 
 export function flameVolumeParameters(scene, { time = 0, rx = 0, ry = 0 } = {}) {
+  const oxygenPercent = Number(scene.dataset.oxygen || 21);
   return {
     time,
     gravity: scene.dataset.gravity === 'micro' ? 1 : 0,
     air: scene.dataset.air === 'on' ? 1 : 0,
     mist: scene.dataset.mist === 'on' ? 1 : 0,
     fire: scene.dataset.fire === 'on' ? 1 : 0,
+    oxygen: Math.max(0, Math.min(1, (oxygenPercent - 12) / 22)),
     yaw: (ry * Math.PI) / 180,
     pitch: (rx * Math.PI) / 180,
   };
@@ -139,7 +153,7 @@ export function bindFlameVolume(canvas, scene) {
   gl.enableVertexAttribArray(position);
   gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
   const uniforms = Object.fromEntries(
-    ['u_resolution', 'u_time', 'u_gravity', 'u_air', 'u_mist', 'u_fire', 'u_yaw', 'u_pitch'].map((name) => [
+    ['u_resolution', 'u_time', 'u_gravity', 'u_air', 'u_mist', 'u_fire', 'u_oxygen', 'u_yaw', 'u_pitch'].map((name) => [
       name,
       gl.getUniformLocation(program, name),
     ]),
@@ -176,6 +190,7 @@ export function bindFlameVolume(canvas, scene) {
     gl.uniform1f(uniforms.u_air, state.air);
     gl.uniform1f(uniforms.u_mist, state.mist);
     gl.uniform1f(uniforms.u_fire, state.fire);
+    gl.uniform1f(uniforms.u_oxygen, state.oxygen);
     gl.uniform1f(uniforms.u_yaw, state.yaw);
     gl.uniform1f(uniforms.u_pitch, state.pitch);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);

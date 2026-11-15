@@ -276,19 +276,32 @@ function electricFieldNote(ar) {
 
 export function flameScenarioControlsMarkup(lang = 'en') {
   const ar = lang === 'ar';
-  return `<article class="card flame-scenario-builder" style="margin-top:15px"><div class="card-head"><div><h2>${ar ? 'مُنشئ سيناريو اللهب' : 'Flame Scenario Builder'}</h2><p class="sub">${ar ? 'غيّر مدخلات افتراضية واعرض الحساب المباشر؛ لا ينتج المختبر تنبؤاً بالاشتعال أو الإخماد.' : 'Change hypothetical inputs and inspect a direct calculation; this lab does not predict ignition or extinction.'}</p></div><span class="tag inf">${ar ? 'سيناريو افتراضي' : 'HYPOTHETICAL'}</span></div><div class="scenario-controls"><label>${ar ? 'الأكسجين · %' : 'Oxygen · %'}<input type="range" min="10" max="100" step="0.5" value="21" data-flame-o2><output data-flame-o2-value>21%</output></label><label>${ar ? 'الضغط الكلي · kPa' : 'Total pressure · kPa'}<input type="range" min="1" max="110" step="0.1" value="101.3" data-flame-pressure><output data-flame-pressure-value>101.3 kPa</output></label><label>${ar ? 'حرارة البداية · °C' : 'Initial temperature · °C'}<input type="range" min="0" max="80" step="1" value="22" data-flame-temp><output data-flame-temp-value>22 °C</output></label><label>${ar ? 'الوقود · سياق فقط' : 'Fuel · context only'}<select class="field" data-flame-fuel><option>n-Heptane</option><option>Methanol</option><option>PMMA</option><option>${ar ? 'مخصص' : 'Custom'}</option></select></label></div><div class="scenario-readout" style="margin-top:14px"><span>${ar ? 'ضغط O₂ الجزئي الجاف المحسوب' : 'Computed dry-gas O₂ partial pressure'}<small class="sub"> pO₂ = (O₂ % ÷ 100) × Ptotal</small></span><strong data-flame-po2>21.27 kPa</strong></div><div class="callout warn" style="margin-top:12px">${ar ? 'ضغط O₂ الجزئي هو الناتج العددي الوحيد. الوقود والحرارة والتدفق لا ينتج عنها درجة خطر أو احتمال انطفاء؛ يتطلب ذلك نموذجاً موثقاً وبيانات معايرة.' : 'O₂ partial pressure is the only numeric output. Fuel, temperature, and flow do not produce a hazard score or extinction probability; that requires a validated model and calibrated data.'}</div></article>`;
+  return `<article class="card flame-scenario-builder" style="margin-top:15px"><div class="card-head"><div><h2>${ar ? 'مُنشئ سيناريو اللهب' : 'Flame Scenario Builder'}</h2><p class="sub">${ar ? 'يُحسب ضغط الأكسجين الجزئي. يتغير المجسم وفق خريطة بصرية نوعية معلنة، لا وفق حل كيميائي.' : 'Oxygen partial pressure is calculated. The flame responds through a disclosed visual mapping, not a chemical-kinetics solver.'}</p></div><span class="tag inf">${ar ? 'سيناريو + تصور توضيحي' : 'SCENARIO + ILLUSTRATION'}</span></div><div class="scenario-controls"><label>${ar ? 'الأكسجين · % حجمي' : 'Oxygen · vol %'}<input type="range" min="12" max="34" step="0.5" value="21" data-flame-o2><output data-flame-o2-value>21%</output><small class="sub">${ar ? 'نطاق سجلات PSI-69 المرفقة: 12–34%.' : 'Range in bundled PSI-69 rows: 12–34%.'}</small></label><label>${ar ? 'الضغط الكلي · kPa' : 'Total pressure · kPa'}<input type="range" min="1" max="110" step="0.1" value="101.3" data-flame-pressure><output data-flame-pressure-value>101.3 kPa</output></label><label>${ar ? 'حرارة المحيط · سياق فقط °C' : 'Ambient temperature · context only °C'}<input type="range" min="0" max="80" step="1" value="22" data-flame-temp><output data-flame-temp-value>22 °C</output></label><label>${ar ? 'الوقود · سياق فقط' : 'Fuel · context only'}<select class="field" data-flame-fuel><option>n-Heptane</option><option>Methanol</option><option>PMMA</option><option>${ar ? 'مخصص' : 'Custom'}</option></select></label></div><div class="scenario-readout" style="margin-top:14px"><span>${ar ? 'ضغط O₂ الجزئي الجاف المحسوب' : 'Computed dry-gas O₂ partial pressure'}<small class="sub"> pO₂ = xO₂ × Ptotal</small></span><strong data-flame-po2>21.27 kPa</strong></div><p class="sub" data-flame-shape-readout aria-live="polite"></p><div class="callout warn" style="margin-top:12px">${ar ? 'لا يحسب هذا المختبر معدل الاحتراق أو احتمال الإخماد من O₂/الضغط وحدهما. يغيّر ضغط O₂ حجم الغلاف في التصور، لكن هذا التحويل البصري بلا معايرة وليس قياساً أو تنبؤاً. الوقود والحرارة سياق فقط.' : 'This lab does not infer burn rate or extinction from O₂/pressure alone. pO₂ changes the envelope in the illustration, but the visual mapping is uncalibrated and is neither a measurement nor a prediction. Fuel and temperature are context only.'} <a href="https://psi.nasa.gov/physci/repo/data/investigations/PSI-69" target="_blank" rel="noreferrer">NASA PSI-69 ↗</a></div></article>`;
 }
 
-export function bindFlameScenarioControls(root) {
+export function bindFlameScenarioControls(root, lang = 'en') {
   const o2 = root.querySelector('[data-flame-o2]');
   const pressure = root.querySelector('[data-flame-pressure]');
   const temperature = root.querySelector('[data-flame-temp]');
+  const room = root.querySelector('.scene3d-room');
   if (!o2 || !pressure || !temperature) return;
   const update = () => {
+    const oxygen = Number(o2.value);
+    const partialPressure = oxygen / 100 * Number(pressure.value);
+    const equivalentOxygen = partialPressure / 101.3 * 100;
+    const normalized = Math.max(0, Math.min(1, (equivalentOxygen - 12) / 22));
     root.querySelector('[data-flame-o2-value]').textContent = `${Number(o2.value).toFixed(1)}%`;
     root.querySelector('[data-flame-pressure-value]').textContent = `${Number(pressure.value).toFixed(1)} kPa`;
     root.querySelector('[data-flame-temp-value]').textContent = `${temperature.value} °C`;
-    root.querySelector('[data-flame-po2]').textContent = `${(Number(o2.value) / 100 * Number(pressure.value)).toFixed(2)} kPa`;
+    root.querySelector('[data-flame-po2]').textContent = `${partialPressure.toFixed(2)} kPa`;
+    if (room) {
+      room.dataset.oxygen = equivalentOxygen.toFixed(2);
+      room.style.setProperty('--oxygen-scale', (0.72 + normalized * 0.28).toFixed(3));
+      room.dispatchEvent(new Event('flame-input'));
+    }
+    root.querySelector('[data-flame-shape-readout]').textContent = lang === 'ar'
+      ? `مؤشر الغلاف البصري: ${(0.72 + normalized * 0.28).toFixed(2)}× · مستند إلى pO₂ مقارنةً بهواء 101.3 kPa؛ بلا وحدة وليس قطر اللهب.`
+      : `Illustrative envelope scale: ${(0.72 + normalized * 0.28).toFixed(2)}× · mapped from pO₂ relative to 101.3 kPa air; dimensionless, not flame diameter.`;
   };
   [o2, pressure, temperature, root.querySelector('[data-flame-fuel]')].forEach(control => control?.addEventListener('input', update));
   update();

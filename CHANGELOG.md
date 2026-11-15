@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.0.0-alpha.8 — 2026-11-15
+
+- Connected the 12–34 vol % FLEX PSI-69 oxygen control to the qualitative 3D flame envelope; exposed the dimensionless visual mapping and kept partial pressure as the only calculated physical value.
+- Reworked the microgravity illustration as a hollow, blue diffusion-flame shell around a visible fuel droplet; preserved explicit non-CFD/non-prediction limits.
+- Added a source-row 2D plot studio with selectable measurement axes, fuel/outcome filters, point-level source details, and an explicitly exploratory OLS fit.
+- Made the FLEX 3D measurement view choose any three measured axes, filter by fuel and outcome, inspect row values, and zoom/rotate.
+- Added an evidence-to-claim tree and corrected reduced-motion behavior in the flame scene.
+
 ## 3.0.0-alpha.7 — 2026-11-15
 
 - Added a subtle animated starfield and orbiting planets that preserve the MORS navy, cyan, and gold identity.
