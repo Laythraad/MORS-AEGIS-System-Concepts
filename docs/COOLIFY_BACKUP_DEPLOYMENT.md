@@ -22,7 +22,7 @@ Set these values in Coolify's private environment settings, never in GitHub:
 | --- | --- |
 | `MORS_PUBLIC_READONLY` | `1` |
 | `MORS_ACCESS_TOKEN` | Keep the existing private deployment value or replace it with a unique random value of 32+ characters. The server minimum is 12 characters. Network access still requires token login before any page or API is served, including in read-only mode. Never put the value in GitHub, slides, URLs, or logs. |
-| `MORS_TRUSTED_ORIGINS` | The exact HTTPS origin configured for this application, with no path or wildcard. |
+| `MORS_TRUSTED_ORIGINS` | Comma-separated exact HTTPS origins for the Coolify app host and the public Cloudflare hostname, with no paths or wildcards. |
 | `MORS_COOKIE_SECURE` | `1` when the app is accessed through HTTPS. |
 
 Leave Gemini credentials unset for this public copy. The public-only server rejects application-changing `POST` APIs; do not place private data in the repository or its bundled assets. See [the security boundary](../SECURITY.md).

@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.0.0-alpha.5 — 2026-11-15
+
+- Fixed trusted-origin checks behind Coolify and Cloudflare Tunnel when the proxy's internal Host differs from the public browser origin.
+- Preserved exact-origin allowlisting and cross-site request rejection.
+
 ## 3.0.0-alpha.4 — 2026-11-15
 
 - Added a minimal unauthenticated `/healthz` liveness endpoint for Coolify; it reports only `status: ok` and reveals no configuration details.

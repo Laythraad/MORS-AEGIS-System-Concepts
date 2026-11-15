@@ -2,7 +2,7 @@
 
 MORS AEGIS is a research dashboard for the NASA Space Apps challenge **[Flame in Freefall: SI-Powered Fire Safety Insights from Microgravity Combustion Data](https://www.spaceappschallenge.org/2026/challenges/flame-in-freefall/?tab=resources)**. It presents source-linked NASA Physical Sciences Informatics (PSI) combustion records, explains the transport physics behind flames in reduced gravity, and makes the limits of the available evidence visible.
 
-**Current application version: `3.0.0-alpha.4`.** See [CHANGELOG.md](CHANGELOG.md) for changes and [versioning and backups](docs/VERSIONING_AND_BACKUPS.md) for restoring earlier snapshots.
+**Current application version: `3.0.0-alpha.5`.** See [CHANGELOG.md](CHANGELOG.md) for changes and [versioning and backups](docs/VERSIONING_AND_BACKUPS.md) for restoring earlier snapshots.
 
 ## Run locally
 
@@ -80,7 +80,7 @@ The Arabic interface is a translation layer; English is the default scientific w
 
 The seven-slide English PowerPoint is available at [`deliverables/presentation/MORS_AEGIS_Flame_in_Freefall_English_Competition_Final.pptx`](deliverables/presentation/MORS_AEGIS_Flame_in_Freefall_English_Competition_Final.pptx). It includes the team logo, an editable PSI table-row chart, the project palette, presenter notes, clickable links, and the website and repository QR codes on the final slide. The live QR uses the current temporary Cloudflare Quick Tunnel hostname and may change if its service is recreated. The site asks for the presenter-provided access code. Deployment status and the manual Coolify redeploy step are recorded in [the Coolify runbook](docs/COOLIFY_BACKUP_DEPLOYMENT.md).
 
-For an HTTPS reverse proxy such as Cloudflare Tunnel, set `MORS_TRUSTED_ORIGINS` to the exact public HTTPS origin and set `MORS_COOKIE_SECURE=1`. In private mode the server checks the request host, origin, and private/local proxy connection; wildcard origins are rejected. `MORS_PUBLIC_READONLY=1` rejects API mutation requests, while the separate network login gate still applies to pages and APIs. A Cloudflare Quick Tunnel hostname can change when its process is recreated, so update the exact origin when that happens. Keep `MORS_ACCESS_TOKEN` private and out of the repository, slides, URLs, and logs.
+For an HTTPS reverse proxy such as Cloudflare Tunnel, set `MORS_TRUSTED_ORIGINS` to the exact public HTTPS origin and any exact proxy origin needed by the deployment, separated by commas; set `MORS_COOKIE_SECURE=1`. The server checks browser origins against this exact allowlist, so a proxy may use a different internal `Host` value without blocking the trusted public origin. Wildcard origins are rejected. `MORS_PUBLIC_READONLY=1` rejects API mutation requests, while the separate network login gate still applies to pages and APIs. A Cloudflare Quick Tunnel hostname can change when its process is recreated, so update the exact origin when that happens. Keep `MORS_ACCESS_TOKEN` private and out of the repository, slides, URLs, and logs.
 
 ## Data sources, API boundaries, and integrity audit
 

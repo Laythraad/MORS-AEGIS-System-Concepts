@@ -25,4 +25,6 @@ Use prerelease increments such as `3.0.0-alpha.3`, `3.0.0-alpha.4`, and so on un
 - `v3.0.0-alpha.3`: source-linked supplemental NASA plots and versioning workflow.
 - `backup/pre-v3.0.0-alpha.3-20261115-041147`: ZIP and tag snapshot before the public liveness endpoint change.
 - `v3.0.0-alpha.4`: minimal Coolify health endpoint that does not bypass workspace authentication.
+- `backup/pre-v3.0.0-alpha.4-20261115-042953`: ZIP and tag snapshot before the reverse-proxy origin check change.
+- `v3.0.0-alpha.5`: exact trusted-origin handling when Coolify's internal Host differs from the public origin.
 

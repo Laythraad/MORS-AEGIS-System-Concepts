@@ -65,15 +65,17 @@ export function isLoopbackOrPrivate(address = '') {
 
 export function requestIsLocal(req) {
   const host = String(req.headers.host || '').toLowerCase();
-  if (!ALLOWED_HOSTS.has(host)) return false;
+  const hostAllowed = ALLOWED_HOSTS.has(host);
   if (NETWORK_MODE && !PUBLIC_READONLY && !isLoopbackOrPrivate(req.socket.remoteAddress)) return false;
   if (req.headers['sec-fetch-site'] === 'cross-site') return false;
   const origin = req.headers.origin;
-  if (!origin) return true; // CLI clients and same-origin navigations may omit Origin.
+  if (!origin) return hostAllowed; // CLI clients and same-origin navigations may omit Origin.
   try {
     const parsed = new URL(origin);
-    if (parsed.origin === `http://${host}`) return true;
-    return parsed.host === host && TRUSTED_ORIGINS.has(parsed.origin);
+    // Reverse proxies may replace Host with their internal application hostname.
+    // An exact configured origin plus Fetch Metadata is the browser trust boundary.
+    if (TRUSTED_ORIGINS.has(parsed.origin)) return true;
+    return hostAllowed && parsed.origin === `http://${host}`;
   } catch { return false; }
 }
 
