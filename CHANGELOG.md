@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.0.0-alpha.4 — 2026-11-15
+
+- Added a minimal unauthenticated `/healthz` liveness endpoint for Coolify; it reports only `status: ok` and reveals no configuration details.
+- Updated the backup deployment health check to use `/healthz`, avoiding false failures from the access-token gate on `/api/health`.
+
 ## 3.0.0-alpha.3 — 2026-11-15
 
 - Added NASA BASS forced-airflow versus flame-spread chart, with plotted points marked as approximate figure digitization.

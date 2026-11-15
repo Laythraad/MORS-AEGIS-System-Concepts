@@ -40,6 +40,9 @@ async function serveStatic(req, res, url) {
 
 async function handle(req, res) {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  // Minimal unauthenticated liveness probe for the hosting platform. Keep this
+  // response free of configuration, credential, and runtime details.
+  if (req.method === 'GET' && url.pathname === '/healthz') return send(res, 200, { status: 'ok' });
   if (url.pathname === '/api/logout') return req.method === 'POST' ? logout(req, res) : send(res, 405, { error: 'Method not allowed.' });
   if (NETWORK_MODE && !hasSession(req)) {
     if (url.pathname === '/api/auth' && req.method === 'POST') return authenticate(req, res);

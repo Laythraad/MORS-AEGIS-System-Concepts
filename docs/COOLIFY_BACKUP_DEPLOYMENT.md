@@ -10,7 +10,7 @@ Configure the Coolify application to use:
 - Branch: `main`
 - Build method: the root `Dockerfile`
 - Container port: `4173`
-- Health check: `GET /api/health` on port `4173`
+- Health check: `GET /healthz` on port `4173`
 
 The Dockerfile binds inside the container to `0.0.0.0:4173`, enables the guarded network binding, and runs Node as the unprivileged `node` user. Keep the application behind Coolify's proxy; do not publish port `4173` directly on the host.
 
@@ -37,7 +37,8 @@ Leave Gemini credentials unset for this public copy. The public-only server reje
 6. Check the public read-only behavior:
 
    - `/` returns the MORS AEGIS page.
-   - `/api/health` returns `200`.
+   - `/healthz` returns `200` with only `{"status":"ok"}`.
+   - After entering the access code, `/api/health` returns `200`.
    - `/models/catalog.json` lists 41 GLB models.
    - `/vendor/model-viewer.min.js` and a selected `.glb` return `200`.
    - Application-changing `POST` routes return `405`.

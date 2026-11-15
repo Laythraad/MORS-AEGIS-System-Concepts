@@ -23,4 +23,6 @@ Use prerelease increments such as `3.0.0-alpha.3`, `3.0.0-alpha.4`, and so on un
 - `backup/pre-v3.0.0-alpha.2-20261115-034254`: exact source snapshot immediately before versioning was added; its source commit is `9b1ab1f`.
 - `backup/pre-v3.0.0-alpha.3-20261115-034454`: exact snapshot before this documentation correction.
 - `v3.0.0-alpha.3`: source-linked supplemental NASA plots and versioning workflow.
+- `backup/pre-v3.0.0-alpha.3-20261115-041147`: ZIP and tag snapshot before the public liveness endpoint change.
+- `v3.0.0-alpha.4`: minimal Coolify health endpoint that does not bypass workspace authentication.
 
