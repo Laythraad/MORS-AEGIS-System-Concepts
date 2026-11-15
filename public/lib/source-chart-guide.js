@@ -427,6 +427,39 @@ export const SOURCE_STUDY_CHARTS = [
     },
   ),
   plot(
+    'psi69-oxygen-burning-rate',
+    'PSI-69',
+    'O initial ambient composition; mole fraction',
+    'Burning rate; mm',
+    'mole fraction',
+    'mm²/s',
+    bilingual('Recorded oxygen fraction and droplet burning-rate constant', 'نسبة الأكسجين المسجلة وثابت معدل احتراق القطرة'),
+    bilingual(
+      'How are FLEX droplet burning-rate constants distributed across the oxygen fractions reported in each test?',
+      'كيف تتوزع ثوابت معدل احتراق قطرات FLEX عبر نسب الأكسجين المسجلة لكل اختبار؟',
+    ),
+    bilingual(
+      'Each point retains its source test and can be inspected with fuel, pressure, and diluent values.',
+      'تحتفظ كل نقطة باختبار المصدر ويمكن فحص الوقود والضغط والغازات المخففة معها.',
+    ),
+    bilingual(
+      'Fuel, pressure, and other diluents vary together. This descriptive plot does not isolate oxygen or establish a flammability threshold.',
+      'يتغير الوقود والضغط والغازات المخففة معاً؛ الرسم وصفي ولا يعزل أثر الأكسجين أو يحدد حد قابلية اشتعال.',
+    ),
+    {
+      groupField: 'Fuel',
+      rowIdField: 'FLEX Test #',
+      detailFields: [
+        'Fuel',
+        'Ambient pressure; mmHg',
+        'N initial ambient composition; mole fraction',
+        'CO initial ambient composition; mole fraction',
+        'He initial ambient composition; mole fraction',
+      ],
+      aggregateDuplicates: true,
+    },
+  ),
+  plot(
     'psi69-nitrogen-burning-rate',
     'PSI-69',
     'N initial ambient composition; mole fraction',

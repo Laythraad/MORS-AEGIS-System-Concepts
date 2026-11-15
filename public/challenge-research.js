@@ -116,6 +116,39 @@ export async function renderChallengeLibrary(lang = 'en') {
   return `${pageHead(ar ? 'بيانات تحدي اللهب في الجاذبية الصغرى' : 'Flame in Freefall · NASA PSI Evidence', ar ? 'فهرس NASA PSI الرسمي مع فرز شفاف لمدى صلة التحقيقات بسلامة الطاقم.' : 'Official NASA PSI Combustion Science inventory with transparent mission-relevance ranking and source-checked findings.')}<div class="grid stats">${stat(ar ? 'تحقيقات في الفهرس' : 'PSI INVESTIGATIONS', data.officialInventory.total, 'Official NASA PSI · Combustion Science', '◉')}${stat(ar ? 'جداول مرفقة' : 'TABLES BUNDLED', bundledCount, 'Original table files checksum verified', '▤')}${stat(ar ? 'صفوف الجداول' : 'SOURCE ROWS', data.recordCountAcrossFiles, 'Separate tables; never pooled', '▤')}${stat(ar ? 'ملفات داعمة' : 'SUPPORTING ASSETS', data.supportingAssets.length, 'Selected imagery, telemetry, and documents', '↗')}</div>${renderEvidenceCoverage(data.investigations, lang)}<article class="card" style="margin-top:15px"><h3>${ar ? 'حجم أرشيف NASA PSI حسب الفهارس' : 'NASA PSI archive inventory'}</h3><p class="sub">${ar ? `استلمنا بيانات وصفية لـ ${archive.listedFileCount.toLocaleString()} ملفاً عبر ${archive.manifestsRetrieved} فهرس دراسة؛ مجموع أحجام الملفات المعلنة ${archiveTB} تيرابايت. هذا وصف للأرشيف وليس تنزيل محتوياته.` : `Metadata lists ${archive.listedFileCount.toLocaleString()} files across ${archive.manifestsRetrieved} retrieved study manifests; the reported file sizes sum to ${archiveTB} TB. This is archive inventory metadata, not a download of those contents.`}</p>${archiveCategories}<p class="sub">${esc(archiveCoverageNote)}</p><div class="callout warn">${ar ? `${archive.manifestsUnavailable} فهارس من أصل ${data.officialInventory.total} لم تُرجع قائمة ملفات في لقطة الاستعلام؛ لا يعني ذلك أن NASA لا تملك ملفات لتلك التحقيقات. لم ننزّل مجموعة Raw Data الضخمة تلقائياً.` : `${archive.manifestsUnavailable} of ${data.officialInventory.total} study manifests returned no file listing in this snapshot; this does not mean NASA has no files for those investigations. The multi-terabyte Raw Data collection was not downloaded automatically.`}</div></article><div class="callout warn">${ar ? `أُرفق ${bundledCount} جدولاً تجريبياً أصلياً مع بصمات تحقق. التحقيقات الأخرى تبقى بياناتها الوصفية وروابطها ظاهرة؛ وحالة فهرس الملفات موضحة في القائمة.` : `${bundledCount} original experimental tables are bundled and checksum-verified. Other investigations remain visible with metadata and source links; their file-index retrieval status is shown below.`}</div><div class="callout">${ar ? 'درجة صلة المهمة = مطابقة موضوع سلامة الطاقم (1–3) + سياق طيران/جاذبية صغرى (0 أو 2). توفر الجدول ظاهر منفصلاً ويكسر التعادل فقط؛ الدرجة ليست خطورة أو قابلية اشتعال.' : 'Mission relevance = crew-fire-safety topic match (1–3) + flight/reduced-gravity context (0 or 2). Table availability is shown separately and only breaks ties; the score is not hazard or flammability.'}</div><details class="card" style="margin:15px 0"><summary><b>${ar ? 'ترتيب تحقيقات NASA PSI حسب صلة المهمة وأهدافها' : 'NASA PSI studies ranked by mission relevance with objectives'}</b> · ${data.officialInventory.total}</summary><div class="inventory-list">${inventory}</div><p class="sub">${ar ? 'الأهداف والمنهج من بيانات NASA PSI الوصفية؛ لا تُعرض على أنها نتائج مقاسة.' : 'Objectives and approaches are NASA PSI metadata, not measured findings. Ground/model and flight investigations are identified separately.'}</p></details><h2>${ar ? 'نتائج مدعومة بالجداول المرفقة' : 'Findings supported by bundled source tables'}</h2><div class="grid two">${findings}</div><div class="callout warn" style="margin-top:15px">${ar ? 'لا تجمع الصفوف بين التحقيقات؛ مجموع الصفوف فهرس ملفات فقط وليس عينة علمية موحدة.' : 'Do not pool rows across studies. The summed row count is a file inventory, not one scientific sample.'}</div><h2>${ar ? 'الجداول التجريبية الأصلية المرفقة' : 'Bundled original experimental tables'}</h2><div class="grid two evidence-grid">${cards}</div><article class="card" style="margin-top:15px"><h3>${ar ? 'ملفات القياس والمستندات' : 'Supporting measurements and documents'}</h3>${data.supportingAssets.map(a => `<div class="list-row"><span>${esc(a.investigationId)} · ${esc(a.filename)}${a.rowCount ? ` · ${a.rowCount} rows × ${a.headers.length} fields` : ''}</span><a href="${esc(a.sourceUrl)}" target="_blank" rel="noreferrer">NASA PSI · ${esc(a.category)} · ${esc(a.sourceIntegrity)} ↗</a></div>`).join('')}</article>`;
 }
 export function bindChallengeLibrary(root, lang = 'en') {
+  const grid = root.querySelector('.evidence-grid');
+  if (grid && !root.querySelector('.dataset-explorer-controls')) {
+    const ar = lang === 'ar';
+    const controls = document.createElement('div');
+    controls.className = 'toolbar dataset-explorer-controls';
+    controls.innerHTML = `<label class="field-label">${ar ? 'ابحث في التحقيقات والحقول' : 'Search investigations and source fields'}<input class="field" type="search" data-dataset-search placeholder="${ar ? 'مثل: FLEX، burn time، airflow…' : 'Try: FLEX, burn time, airflow…'}"></label><label class="field-label">${ar ? 'المجال' : 'Evidence domain'}<select class="field" data-dataset-domain><option value="all">${ar ? 'كل المجالات' : 'All domains'}</option><option value="flame">${ar ? 'لهب وقطرات' : 'Flame & droplets'}</option><option value="materials">${ar ? 'مواد وحرائق' : 'Materials & fires'}</option><option value="smoke">${ar ? 'دخان وهباء' : 'Smoke & aerosols'}</option><option value="conditions">${ar ? 'شروط وبيانات وصفية' : 'Conditions & metadata'}</option></select></label><span class="sub" data-dataset-count role="status" aria-live="polite"></span>`;
+    grid.before(controls);
+    const cards = [...grid.querySelectorAll('.evidence-card')];
+    const search = controls.querySelector('[data-dataset-search]');
+    const domain = controls.querySelector('[data-dataset-domain]');
+    const count = controls.querySelector('[data-dataset-count]');
+    const classify = card => {
+      const id = card.querySelector('.eyebrow')?.textContent || '';
+      if (/PSI-(20|21|22|23|39|68|69|107)/.test(id)) return 'flame';
+      if (/PSI-(25|26|98|99|100|102)/.test(id)) return 'materials';
+      if (/PSI-(47|101)/.test(id)) return 'smoke';
+      return 'conditions';
+    };
+    const filter = () => {
+      const query = search.value.trim().toLocaleLowerCase();
+      const selectedDomain = domain.value;
+      let visible = 0;
+      cards.forEach(card => {
+        const match = (!query || card.textContent.toLocaleLowerCase().includes(query)) && (selectedDomain === 'all' || classify(card) === selectedDomain);
+        card.hidden = !match;
+        if (match) visible++;
+      });
+      count.textContent = `${visible} / ${cards.length} ${ar ? 'تحقيق ظاهر' : 'investigations shown'}`;
+    };
+    search.addEventListener('input', filter);
+    domain.addEventListener('change', filter);
+    filter();
+  }
   root.querySelectorAll('[data-investigation]').forEach(button => {
     button.onclick = async () => {
       const id = button.dataset.investigation;
@@ -240,6 +273,26 @@ function electricFieldNote(ar) {
   return `<article class="card" style="margin-top:15px"><h2>${ar ? 'اللهب تحت تأثير المجال الكهربائي · PSI-22' : 'Electric-field flame demonstration · PSI-22'}</h2><p>${ar ? 'يعرض فيديو التحدي تجربة لهب المجال الكهربائي: يحرك المجال الأيونات داخل اللهب، وتنقل تصادماتها جزءاً من الزخم إلى الغاز المتعادل، فينشأ جريان أيوني يمكنه تغيير شكل اللهب رغم ضعف الطفو.' : 'The challenge video shows the E-FIELD flame experiment: an electric field moves ions in the flame; collisions transfer momentum to neutral gas and create an ionic wind that can reshape the flame even when buoyancy is weak.'}</p><div class="equation"><b>${ar ? 'قوة كهربائية حجمية على الشحنة' : 'Electric body force on charge'}</b><code>fₑ = ρₑ E</code><p class="sub">${ar ? 'ρₑ كثافة الشحنة الحجمية وE شدة المجال الكهربائي. هذه علاقة للقوة على الشحنات؛ انتقال الزخم إلى الغاز يعتمد على اقتران الأيونات بالجزيئات المتعادلة.' : 'ρₑ is volumetric charge density and E is electric-field strength. This is the force on charged species; momentum transfer to neutral gas depends on ion–neutral coupling.'}</p></div><div class="callout warn">${ar ? 'هذا مثال على نقل قسري للزخم، وليس محاكاة للجاذبية القمرية أو قياساً عند 1/6 g. لا يستنتج المشروع جرياناً أو قوة من جدول PSI-22 دون حقول معايرة مناسبة.' : 'This is an example of forced momentum transport, not a simulation of lunar gravity or a measurement at 1/6 g. The project does not infer flow or force from PSI-22 without suitable calibrated fields.'} <a href="https://psi.nasa.gov/physci/repo/data/investigations/PSI-22" target="_blank" rel="noreferrer">${ar ? 'سجل NASA PSI-22 ↗' : 'NASA PSI-22 record ↗'}</a></div></article>`;
 }
 
+export function flameScenarioControlsMarkup(lang = 'en') {
+  const ar = lang === 'ar';
+  return `<article class="card flame-scenario-builder" style="margin-top:15px"><div class="card-head"><div><h2>${ar ? 'مُنشئ سيناريو اللهب' : 'Flame Scenario Builder'}</h2><p class="sub">${ar ? 'غيّر مدخلات افتراضية واعرض الحساب المباشر؛ لا ينتج المختبر تنبؤاً بالاشتعال أو الإخماد.' : 'Change hypothetical inputs and inspect a direct calculation; this lab does not predict ignition or extinction.'}</p></div><span class="tag inf">${ar ? 'سيناريو افتراضي' : 'HYPOTHETICAL'}</span></div><div class="scenario-controls"><label>${ar ? 'الأكسجين · %' : 'Oxygen · %'}<input type="range" min="10" max="100" step="0.5" value="21" data-flame-o2><output data-flame-o2-value>21%</output></label><label>${ar ? 'الضغط الكلي · kPa' : 'Total pressure · kPa'}<input type="range" min="1" max="110" step="0.1" value="101.3" data-flame-pressure><output data-flame-pressure-value>101.3 kPa</output></label><label>${ar ? 'حرارة البداية · °C' : 'Initial temperature · °C'}<input type="range" min="0" max="80" step="1" value="22" data-flame-temp><output data-flame-temp-value>22 °C</output></label><label>${ar ? 'الوقود · سياق فقط' : 'Fuel · context only'}<select class="field" data-flame-fuel><option>n-Heptane</option><option>Methanol</option><option>PMMA</option><option>${ar ? 'مخصص' : 'Custom'}</option></select></label></div><div class="scenario-readout" style="margin-top:14px"><span>${ar ? 'ضغط O₂ الجزئي الجاف المحسوب' : 'Computed dry-gas O₂ partial pressure'}<small class="sub"> pO₂ = (O₂ % ÷ 100) × Ptotal</small></span><strong data-flame-po2>21.27 kPa</strong></div><div class="callout warn" style="margin-top:12px">${ar ? 'ضغط O₂ الجزئي هو الناتج العددي الوحيد. الوقود والحرارة والتدفق لا ينتج عنها درجة خطر أو احتمال انطفاء؛ يتطلب ذلك نموذجاً موثقاً وبيانات معايرة.' : 'O₂ partial pressure is the only numeric output. Fuel, temperature, and flow do not produce a hazard score or extinction probability; that requires a validated model and calibrated data.'}</div></article>`;
+}
+
+export function bindFlameScenarioControls(root) {
+  const o2 = root.querySelector('[data-flame-o2]');
+  const pressure = root.querySelector('[data-flame-pressure]');
+  const temperature = root.querySelector('[data-flame-temp]');
+  if (!o2 || !pressure || !temperature) return;
+  const update = () => {
+    root.querySelector('[data-flame-o2-value]').textContent = `${Number(o2.value).toFixed(1)}%`;
+    root.querySelector('[data-flame-pressure-value]').textContent = `${Number(pressure.value).toFixed(1)} kPa`;
+    root.querySelector('[data-flame-temp-value]').textContent = `${temperature.value} °C`;
+    root.querySelector('[data-flame-po2]').textContent = `${(Number(o2.value) / 100 * Number(pressure.value)).toFixed(2)} kPa`;
+  };
+  [o2, pressure, temperature, root.querySelector('[data-flame-fuel]')].forEach(control => control?.addEventListener('input', update));
+  update();
+}
+
 export function renderFlamePhysics(lang = 'en') {
   const ar = lang === 'ar';
   const earthLabel = ar ? 'الأرض: الطفو يصنع تياراً طبيعياً' : 'Earth: buoyancy drives natural convection';
@@ -280,6 +333,73 @@ export function renderSafetyInsights(lang = 'en') {
   return `${pageHead(ar ? 'استنتاجات سلامة الحريق' : 'Fire Safety Insights', ar ? 'تحويل الأدلة إلى أسئلة تصميم قابلة للاختبار من دون ادعاء تصديق أو تصنيف خطر عام.' : 'Turn NASA evidence into testable design actions without claiming certification or a universal hazard ranking.')}<div class="equation"><b>${ar ? 'ضغط الأكسجين الجزئي' : 'Oxygen partial pressure'}</b><code>pO₂ = xO₂ · Ptotal</code><p class="sub">${ar ? 'نسبة الأكسجين وحدها لا تكفي لوصف الجو. تغيّر الضغط أو التركيب قد يغيّر حدود الاشتعال؛ لا نوصي بإعدادات جو للطاقم.' : 'Oxygen fraction alone does not define the atmosphere. Changing total pressure or composition changes flammability conditions; this dashboard does not prescribe crew atmosphere settings.'}</p></div><div class="grid two safety-grid">${cards.map(([title, body, evidence]) => `<article class="card safety-card"><span class="tag comp">${ar ? 'إجراء وقائي' : 'DESIGN CONTROL'}</span><h2>${title}</h2><p>${body}</p><div class="callout">${evidence}</div></article>`).join('')}</div><article class="card" style="margin-top:15px"><h2>${ar ? 'أسئلة اختبار قابلة للتنفيذ' : 'Actionable qualification questions'}</h2><ol><li>${ar ? 'هل المادة نفسها اختُبرت عند ضغط الأكسجين المتوقع، لا عند نسبة O₂ وحدها؟' : 'Was the exact material tested at the expected oxygen partial pressure, not oxygen fraction alone?'}</li><li>${ar ? 'هل اتجاه وسرعة التهوية وموضع الكاشف مطابق لبيئة الاستخدام؟' : 'Do airflow speed/direction and detector location match the intended environment?'}</li><li>${ar ? 'هل نتيجة الإخماد تقيس إطفاء اللهب المرئي وتوقف التفاعل الكيميائي كلٌّ على حدة؟' : 'Does the suppression outcome separately measure visible-flame extinction and cessation of chemical reaction?'}</li><li>${ar ? 'هل عدد التكرارات وعدم اليقين كافيان قبل تعميم الاستنتاج؟' : 'Are replication and uncertainty adequate before generalizing the result?'}</li></ol><p class="sub">${ref}</p><div class="list-row"><span>NASA OCHMO-TB-008 · Fire Protection</span><a href="https://www.nasa.gov/wp-content/uploads/2023/12/ochmo-tb-008-fire-protection.pdf" target="_blank" rel="noreferrer">${ar ? 'فتح المصدر ↗' : 'Open source ↗'}</a></div><div class="list-row"><span>NASA-STD-3001 Volume 2 · Revision F</span><a href="https://www.nasa.gov/wp-content/uploads/2025/05/nasa-std-3001-vol-2.pdf" target="_blank" rel="noreferrer">${ar ? 'فتح المصدر ↗' : 'Open source ↗'}</a></div><div class="list-row"><span>NASA combustion and fire safety investigations</span><a href="https://www.nasa.gov/missions/station/studying-combustion-and-fire-safety/" target="_blank" rel="noreferrer">${ar ? 'فتح المصدر ↗' : 'Open source ↗'}</a></div></article>`;
 }
 
+export async function renderMissionLab(lang = 'en') {
+  const ar = lang === 'ar';
+  const targets = [
+    { id: 'earth', en: 'Earth', ar: 'الأرض', gravity: '9.81 m/s²', keywords: ['ground', 'earth', 'terrestrial'] },
+    { id: 'iss', en: 'ISS', ar: 'محطة الفضاء', gravity: 'microgravity', keywords: ['iss', 'station', 'spaceflight'] },
+    { id: 'moon', en: 'Moon', ar: 'القمر', gravity: '1.62 m/s²', keywords: ['lunar', 'moon'] },
+    { id: 'mars', en: 'Mars', ar: 'المريخ', gravity: '3.7 m/s²', keywords: ['mars'] },
+  ];
+  const cards = targets.map((target, i) => `<button type="button" class="mission-target" data-mission-target="${target.id}" aria-pressed="${i === 1}"><b>${ar ? target.ar : target.en}</b><small>${ar ? 'الجاذبية المرجعية' : 'Reference gravity'} · ${target.gravity}</small></button>`).join('');
+  return `${pageHead(ar ? 'مختبر انطباق المهمة' : 'Mission Applicability Lab', ar ? 'حدد بيئة المهمة واستكشف ما إذا كانت فهارس NASA PSI تحتوي سياقاً وصفياً مطابقاً؛ هذا ليس تقييماً للجاهزية أو الخطورة.' : 'Select a target environment and inspect whether NASA PSI metadata contains matching context; this is not a readiness or hazard assessment.')}<div class="mission-targets" role="group" aria-label="${ar ? 'بيئة المهمة' : 'Mission environment'}">${cards}</div><div class="grid two" style="margin-top:15px"><article class="card"><div class="card-head"><div><h2 data-mission-title>${ar ? 'محطة الفضاء' : 'ISS'}</h2><p class="sub" data-mission-gravity>${ar ? 'الجاذبية المرجعية · microgravity' : 'Reference gravity · microgravity'}</p></div><span class="tag">${ar ? 'حالة بحثية' : 'RESEARCH SCENARIO'}</span></div><div class="scenario-controls"><label>${ar ? 'الأكسجين المفترض · %' : 'Scenario oxygen · %'}<input type="range" min="10" max="100" step="0.5" value="21" data-mission-o2><output data-mission-o2-value>21%</output></label><label>${ar ? 'الضغط الكلي المفترض · kPa' : 'Scenario total pressure · kPa'}<input type="range" min="1" max="110" step="0.1" value="101.3" data-mission-pressure><output data-mission-pressure-value>101.3 kPa</output></label></div><div class="scenario-readout" style="margin-top:14px"><span>${ar ? 'ضغط O₂ الجزئي الجاف المحسوب' : 'Computed dry-gas O₂ partial pressure'}<small class="sub"> pO₂ = xO₂ × Ptotal</small></span><strong data-mission-po2>21.3 kPa</strong></div><p class="sub">${ar ? 'التركيز والضغط مدخلات افتراضية تختارها أنت؛ الحساب وحده مشتق. لا يوصي هذا المختبر بجو للمركبة ولا يحسب قابلية الاشتعال.' : 'Oxygen and pressure are user-defined scenario inputs; only their product is computed. This lab does not prescribe a vehicle atmosphere or calculate flammability.'}</p></article><article class="card"><h2>${ar ? 'سياق NASA PSI المطابق وصفياً' : 'NASA PSI metadata matches'}</h2><p class="sub">${ar ? 'مطابقة كلمات في بيانات الفهرس فقط؛ ليست مطابقة لظروف الاختبار ولا تصنيفاً لسلامة المهمة.' : 'Keyword matches in inventory metadata only; not a match to experimental conditions or a mission-safety ranking.'}</p><div data-mission-records aria-live="polite"><div class="empty">${ar ? 'جارٍ تحميل فهرس NASA PSI…' : 'Loading NASA PSI inventory…'}</div></div></article></div><article class="card" style="margin-top:15px"><h2>${ar ? 'حدود تمثيل القمر والمريخ' : 'Moon and Mars evidence boundary'}</h2><p>${ar ? 'قيم الجاذبية تساعد على تعريف السيناريو، لكنها لا تجعل سجلات الجاذبية الصغرى تجارب قمرية أو مريخية. كما أن الضغط وتركيب الجو في مساكن ومركبات المهمات يحتاجان مدخلات تصميم خاصة بكل مهمة؛ لم نملأها بقيم مفترضة.' : 'Gravity values define a scenario; they do not turn microgravity records into lunar or Martian experiments. Habitat and vehicle pressure/composition require mission-specific design inputs, so no atmosphere values are assumed here.'}</p><div class="callout warn">${ar ? 'درجة صلة الفهرس العامة لا تعني قابلية نقل النتيجة بين الأرض وISS والقمر والمريخ.' : 'The inventory’s general relevance score does not imply that results transfer among Earth, ISS, Moon, and Mars.'}</div></article>`;
+}
+
+export function bindMissionLab(root, lang = 'en') {
+  const ar = lang === 'ar';
+  const dataPromise = get('/api/challenge/catalog');
+  const targets = {
+    earth: { en: 'Earth', ar: 'الأرض', gravity: '9.81 m/s²', keywords: ['ground', 'earth', 'terrestrial'] },
+    iss: { en: 'ISS', ar: 'محطة الفضاء', gravity: 'microgravity', keywords: ['iss', 'station', 'spaceflight'] },
+    moon: { en: 'Moon', ar: 'القمر', gravity: '1.62 m/s²', keywords: ['lunar', 'moon'] },
+    mars: { en: 'Mars', ar: 'المريخ', gravity: '3.7 m/s²', keywords: ['mars'] },
+  };
+  const output = root.querySelector('[data-mission-records]');
+  const gravitySources = document.createElement('p');
+  gravitySources.className = 'sub mission-gravity-sources';
+  gravitySources.innerHTML = ar
+    ? 'تسارع السطح المرجعي: <a href="https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/moon/" target="_blank" rel="noreferrer">القمر · NASA</a> · <a href="https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/mars/" target="_blank" rel="noreferrer">المريخ · NASA</a>. قيمة الأرض معيار مرجعي مقرب.'
+    : 'Reference surface acceleration: <a href="https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/moon/" target="_blank" rel="noreferrer">Moon · NASA</a> · <a href="https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/mars/" target="_blank" rel="noreferrer">Mars · NASA</a>. Earth value is a rounded reference.';
+  root.querySelector('.mission-targets')?.after(gravitySources);
+  const title = root.querySelector('[data-mission-title]');
+  const gravity = root.querySelector('[data-mission-gravity]');
+  const o2 = root.querySelector('[data-mission-o2]');
+  const pressure = root.querySelector('[data-mission-pressure]');
+  const updatePartialPressure = () => {
+    const fraction = Number(o2?.value) / 100;
+    const total = Number(pressure?.value);
+    root.querySelector('[data-mission-o2-value]').textContent = `${Number(o2.value).toFixed(1)}%`;
+    root.querySelector('[data-mission-pressure-value]').textContent = `${Number(pressure.value).toFixed(1)} kPa`;
+    root.querySelector('[data-mission-po2]').textContent = `${(fraction * total).toFixed(2)} kPa`;
+  };
+  o2?.addEventListener('input', updatePartialPressure);
+  pressure?.addEventListener('input', updatePartialPressure);
+  root.querySelectorAll('[data-mission-target]').forEach(button => button.addEventListener('click', async () => {
+    const id = button.dataset.missionTarget;
+    const target = targets[id];
+    if (!target) return;
+    root.querySelectorAll('[data-mission-target]').forEach(item => {
+      item.setAttribute('aria-pressed', String(item === button));
+    });
+    title.textContent = ar ? target.ar : target.en;
+    gravity.textContent = `${ar ? 'الجاذبية المرجعية' : 'Reference gravity'} · ${target.gravity}`;
+    try {
+      const data = await dataPromise;
+      const records = data.officialInventory.records.filter(item => {
+        const text = `${item.title} ${item.acronym} ${item.subResearchArea} ${item.projectType} ${item.flightPlatform} ${item.keywords}`.toLowerCase();
+        return target.keywords.some(keyword => text.includes(keyword));
+      }).slice(0, 6);
+      output.innerHTML = records.length
+        ? records.map(item => `<div class="list-row"><span><b>${esc(item.id)} · ${esc(item.acronym || item.title)}</b><small>${esc(item.title)} · ${item.rawTableBundled ? (ar ? 'جدول المصدر مرفق' : 'source table bundled') : (ar ? 'بيانات وصفية فقط' : 'metadata only')}</small></span><a href="${esc(item.nasaRecordUrl)}" target="_blank" rel="noreferrer">NASA PSI ↗</a></div>`).join('')
+        : `<div class="callout">${ar ? 'لا توجد مطابقة وصفية واضحة في لقطة الفهرس الحالية. هذا لا يثبت غياب دراسات أخرى لدى NASA.' : 'No clear metadata match in the current inventory snapshot. This does not prove NASA has no other relevant studies.'}</div>`;
+    } catch (error) {
+      output.innerHTML = `<div class="callout warn">${esc(error.message)}</div>`;
+    }
+  }));
+  root.querySelector('[data-mission-target="iss"]')?.click();
+  updatePartialPressure();
+}
+
 // Add source-backed plots to the safety page. Keep PSI-69 isolated: its droplet
 // measurements cannot be pooled with BASS solid-material tests or used as a
 // universal flame-spread curve.
@@ -291,8 +411,25 @@ export async function bindSafetyInsightCharts(root, lang = 'en') {
   const anchor = root.querySelector('.safety-grid');
   if (anchor) anchor.after(section); else root.append(section);
   try {
-    const [table, dataset] = await Promise.all([loadStudyTable('PSI-69'), get('/api/datasets/flex')]);
-    section.innerHTML = `<h2>${ar ? 'اتجاهات من قياسات NASA الفعلية' : 'Trends from measured NASA records'}</h2><p class="sub">${ar ? `جدول NASA PSI-69 FLEX · ${table.rows.length} صفاً في المصدر. تعرض الرسوم الحقول المقاسة المتاحة مع وحداتها وحدود كل علاقة.` : `NASA PSI-69 FLEX source table · ${table.rows.length} rows. Plots use measured fields, units, and per-relationship limitations.`}</p>${flex3DMarkup(lang)}${renderSourceStudyCharts('PSI-69', table.rows, lang, 'https://psi.nasa.gov/physci/repo/data/investigations/PSI-69')}`;
+    const [table, dataset, bass, weightLoss, catalog] = await Promise.all([
+      loadStudyTable('PSI-69'), get('/api/datasets/flex'), loadStudyTable('PSI-98'),
+      loadStudyTable('PSI-102'), get('/api/challenge/catalog'),
+    ]);
+    const rowCountByStudy = new Map(catalog.investigations.map(item => [item.id, item.rowCount]));
+    const programCounts = new Map();
+    for (const item of catalog.officialInventory.records) {
+      const count = rowCountByStudy.get(item.id);
+      if (!Number.isFinite(count)) continue;
+      const program = item.acronym || item.subResearchArea || item.id;
+      const current = programCounts.get(program) || { rows: 0, studies: 0 };
+      current.rows += count;
+      current.studies++;
+      programCounts.set(program, current);
+    }
+    const programs = [...programCounts].map(([name, value]) => ({ name, ...value })).sort((a, b) => b.rows - a.rows);
+    const maxRows = Math.max(1, ...programs.map(item => item.rows));
+    const distribution = programs.map(item => `<div class="source-count-row"><span><b>${esc(item.name)}</b><small>${item.studies} ${ar ? 'تحقيق' : 'investigations'}</small></span><div class="source-count-track" role="img" aria-label="${esc(item.rows)} ${ar ? 'صفاً مرفقاً' : 'bundled source rows'}"><i style="width:${(item.rows / maxRows * 100).toFixed(1)}%"></i></div><strong>${item.rows}</strong></div>`).join('');
+    section.innerHTML = `<h2>${ar ? 'اتجاهات من قياسات NASA الفعلية' : 'Trends from measured NASA records'}</h2><p class="sub">${ar ? `NASA PSI-69 FLEX · ${table.rows.length} صفاً في الجدول الخام. تُعرض القياسات بحسب التحقيق ولا تدمج الدراسات.` : `NASA PSI-69 FLEX · ${table.rows.length} raw source rows. Measurements stay separated by investigation; studies are not pooled.`}</p>${flex3DMarkup(lang)}<section class="insight-chart-block"><h3>${ar ? 'سلوك اللهب والقطرات · PSI-69 FLEX' : 'Flame and droplet behavior · PSI-69 FLEX'}</h3>${renderSourceStudyCharts('PSI-69', table.rows, lang, 'https://psi.nasa.gov/physci/repo/data/investigations/PSI-69')}</section><section class="insight-chart-block"><h3>${ar ? 'مواد واختبارات الحريق · NASA PSI' : 'Materials and fire-test records · NASA PSI'}</h3><p class="sub">${ar ? 'كل مخطط يبقى داخل جدول مصدره؛ مؤشرات فقدان الوزن أو زمن الاحتراق لا تعادل معدل انتشار اللهب.' : 'Each plot stays inside its source table; weight loss or burn time is not a flame-spread rate.'}</p>${renderSourceStudyCharts('PSI-98', bass.rows, lang, 'https://psi.nasa.gov/physci/repo/data/investigations/PSI-98')}${renderSourceStudyCharts('PSI-102', weightLoss.rows, lang, 'https://psi.nasa.gov/physci/repo/data/investigations/PSI-102')}</section><section class="card evidence-gaps"><h3>${ar ? 'ما الذي لا تسمح به البيانات الحالية؟' : 'Questions the bundled data cannot plot yet'}</h3><div class="grid two"><div class="callout warn"><b>${ar ? 'التهوية مقابل انتشار اللهب' : 'Airflow vs. flame spread'}</b><p>${ar ? 'لا يوجد جدول مرفق يجمع قياس سرعة الهواء ومعدل انتشار اللهب في سجلات فردية متوافقة. PSI-68 نطاق شروط، وPSI-102 يقيس فقدان وزن مادة؛ لذلك لا نرسم علاقة مصطنعة.' : 'No bundled table pairs airflow speed with measured flame-spread rate in compatible individual records. PSI-68 is a test envelope and PSI-102 reports material weight loss, so no synthetic curve is drawn.'}</p></div><div class="callout warn"><b>${ar ? 'الجاذبية مقابل شكل اللهب' : 'Gravity vs. flame morphology'}</b><p>${ar ? 'جدول FLEX PSI-69 لا يقدم محور جاذبية متغيراً ولا قياساً كمياً للاستدارة؛ لذلك لا يمكن رسم علاقة جاذبية–استدارة من هذه الصفوف.' : 'The PSI-69 FLEX table has no varying gravity field or quantitative sphericity measure, so a gravity–shape relationship cannot be plotted from these rows.'}</p></div></div></section><section class="card source-distribution"><h3>${ar ? 'صفوف الجداول المرفقة حسب برنامج البحث' : 'Bundled source-row inventory by research program'}</h3><p class="sub">${ar ? 'مجموع الصفوف الخام داخل كل برنامج بحسب الجداول المتاحة فقط؛ لا تمثل عينة موحدة ولا مقارنة خطورة.' : 'Sum of raw rows for each program across bundled tables only; these are not one pooled sample or a hazard comparison.'}</p>${distribution}</section>`;
     bindFlex3DPlot(section, dataset.rows, lang);
     bindInteractiveCharts(section);
   } catch (error) {

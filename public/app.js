@@ -2,7 +2,11 @@ import {
   renderChallengeLibrary,
   renderFlamePhysics,
   renderMissionAtmospheres,
+  renderMissionLab,
+  bindMissionLab,
   renderSafetyInsights,
+  flameScenarioControlsMarkup,
+  bindFlameScenarioControls,
   bindSafetyInsightCharts,
   bindChallengeLibrary,
   renderInvestigationLab,
@@ -26,13 +30,14 @@ import { renderSourceChartGuide } from './source-charts.js';
 import { judgingTrail } from './lib/judging-trail.js';
 const nav = [
   ['Overview', 'Challenge overview', '⌂', 'COMMAND'],
-  ['Flame Physics', 'Gravity, transport & flame behavior', '∿', 'SCIENCE'],
+  ['Flame Lab', 'Interactive flame physics & scenarios', '∿', 'SCIENCE'],
+  ['Mission Lab', 'Target environments & evidence fit', '⊕', 'SCIENCE'],
   ['Mission Atmospheres', 'Oxygen, pressure & EVA transitions', '◉', 'SCIENCE'],
   ['Safety Insights', 'Prevention, detection & suppression', '◇', 'SCIENCE'],
   ['System Concepts', 'HARBOR observation concept & microgravity fire-response map', '⌘', 'SCIENCE'],
   ['3D Models', 'Interactive models, research purposes & scenario controls', '⬡', 'SCIENCE'],
   ['Mission Lessons', 'NASA incidents & technology transfer', '⌁', 'SCIENCE'],
-  ['Challenge Evidence', 'NASA PSI investigation tables', '▤', 'SCIENCE'],
+  ['Challenge Evidence', 'Dataset Explorer · NASA PSI source tables', '▤', 'SCIENCE'],
   ['Investigation Lab', 'Study-specific NASA PSI evidence summaries', '◉', 'ANALYSIS'],
   ['Analysis Workbench', 'FLEX-only descriptive analysis', '∑', 'ANALYSIS'],
   ['Chart Guide', 'Chart purposes, variables & limits', '▥', 'ANALYSIS'],
@@ -45,7 +50,7 @@ const nav = [
 function pageFromHash() {
   try {
     const requested = decodeURIComponent(location.hash.slice(1));
-    return nav.some(([name]) => name === requested) ? requested : 'Overview';
+    return nav.some(([name]) => name === requested) || requested === 'Flame Physics' ? requested : 'Overview';
   } catch {
     return 'Overview';
   }
@@ -108,13 +113,15 @@ try {
 const t = (a, b) => (lang === 'ar' ? b : a);
 const navArabic = {
   Overview: 'نظرة عامة',
+  'Flame Lab': 'مختبر اللهب',
   'Flame Physics': 'فيزياء اللهب',
+  'Mission Lab': 'مختبر المهمات',
   'Mission Atmospheres': 'أجواء المهمات',
   'Safety Insights': 'رؤى سلامة الحريق',
   'System Concepts': 'تصاميم الأنظمة',
   '3D Models': 'النماذج ثلاثية الأبعاد',
   'Mission Lessons': 'دروس المهمات والتقنية',
-  'Challenge Evidence': 'أدلة التحدي',
+  'Challenge Evidence': 'مستكشف البيانات',
   'Investigation Lab': 'مختبر التحقيقات',
   'Analysis Workbench': 'منضدة التحليل',
   'Chart Guide': 'دليل المخططات',
@@ -198,6 +205,10 @@ function rowsTable(rows) {
 }
 function hero() {
   return `<div class="hero"><div class="hero-copy"><div class="eyebrow">MORS AEGIS · FLAME IN FREEFALL</div><h2>${t('A source-linked workspace for spaceflight fire-safety research.', 'مساحة بحث موثقة المصدر لأبحاث سلامة الحرائق في الرحلات الفضائية.')}</h2><p>${t('Microgravity weakens buoyancy-driven flow and changes flame and droplet behavior. MORS AEGIS brings NASA PSI investigations and original tables into a searchable, condition-aware workspace so teams can inspect measurements and form testable safety questions. It explains research evidence; it does not certify equipment or operating procedures.', 'تضعف الجاذبية الصغرى تيارات الحمل الطبيعي وتغيّر سلوك اللهب والقطرات. يجمع MORS AEGIS تحقيقات NASA PSI وجداولها الأصلية في مساحة بحث قابلة للبحث بحسب ظروف الاختبار، لمساعدة الفرق على فحص القياسات وصياغة أسئلة سلامة قابلة للاختبار. يشرح المشروع الأدلة البحثية ولا يصادق على المعدات أو إجراءات التشغيل.')}</p><div class="hero-actions"><button class="primary-btn" data-go="Challenge Evidence">${t('Explore NASA PSI data →', 'استكشف بيانات NASA PSI ←')}</button><button class="secondary-btn" data-go="Flame Physics">${t('Study flame physics →', 'افهم فيزياء اللهب ←')}</button></div></div><div class="hero-meta">NASA PSI · COMBUSTION SCIENCE<br>${t('CHALLENGE-SCOPED · INVESTIGATION-LEVEL EVIDENCE', 'نطاق التحدي · الأدلة حسب كل تحقيق')}</div></div>`;
+}
+function themeWelcome() {
+  if (storageGet('mors-welcome-theme-picked') === '1') return '';
+  return `<section class="card welcome-theme" id="theme-welcome"><div><h3>${t('Welcome · choose your research workspace look', 'أهلاً بك · اختر مظهر مساحة البحث')}</h3><p class="sub">${t('You can change it later in Settings.', 'يمكنك تغييره لاحقاً من الإعدادات.')}</p></div><div class="welcome-theme-options"><button class="outline-btn" data-theme="arctic">${t('Light · Arctic', 'فاتح · قطبي')}</button><button class="outline-btn" data-theme="space">${t('Dark · Deep Space', 'داكن · فضاء عميق')}</button><button class="outline-btn" data-theme="observatory">${t('Neutral · Observatory', 'محايد · مرصد')}</button></div></section>`;
 }
 function flexScatterPanel() {
   const fuels = [...new Set(dataset.rows.map((row) => row.fuel).filter(Boolean))].sort();
@@ -291,7 +302,7 @@ function flexBurnRateHistogram() {
 }
 async function overview() {
   const evidence = await get('/api/challenge/catalog');
-  return `${hero()}${challengeGoals()}${judgingTrail(evidence, lang)}<div class="grid stats">${stat(t('PSI COMBUSTION INVESTIGATIONS', 'تحقيقات الاحتراق في PSI'), evidence.officialInventory.total, t('Official NASA inventory snapshot', 'لقطة من فهرس NASA الرسمي'), '◉')}${stat(t('TABLES BUNDLED', 'الجداول المرفقة'), evidence.investigations.length, t('NASA PSI tables · checksums verified', 'جداول NASA PSI · البصمات متحققة'), '▤')}${stat(t('SEPARATE SOURCE ROWS', 'صفوف المصدر المنفصلة'), evidence.recordCountAcrossFiles, t('Separate studies · never pooled', 'دراسات منفصلة · غير مدمجة'), '▤')}${stat(t('VERIFIED TABLE HASHES', 'بصمات الجداول المتحققة'), evidence.investigations.filter((x) => x.sourceIntegrity === 'VERIFIED').length, t('Original source bytes verified', 'تم التحقق من بايتات الملفات الأصلية'), '✓')}</div><div class="grid two"><article class="card"><div class="card-head"><div><h3>FLEX · PSI-69</h3><p class="sub">${t('One investigation selected for detailed, condition-stratified analysis.', 'تحقيق واحد للتحليل التفصيلي بحسب ظروف الاختبار.')}</p></div><span class="tag obs">${t('OBSERVED', 'مرصود')}</span></div>${flexBurnRateHistogram()}<div class="legend"><span>PSI-69 · DOI 10.60555/mbq8-0451</span></div></article><article class="card"><h3>${t('NASA challenge-source coverage', 'تغطية مصدر بيانات التحدي')}</h3><p class="sub">${t(`Measurements come from the challenge-relevant NASA PSI Combustion Science repository. NASA PSI lists ${evidence.officialInventory.total} investigations; ${evidence.investigations.length} original table files are bundled, checksummed, and inspectable. Studies remain separate because their methods and outcomes differ.`, `تأتي القياسات من مستودع NASA PSI Combustion Science المرتبط بالتحدي. يسجل الفهرس ${evidence.officialInventory.total} تحقيقاً؛ أرفقنا ${evidence.investigations.length} جدولاً أصلياً مع بصماتها لفحصها. بقيت الدراسات منفصلة لاختلاف طرقها ونتائجها.`)}</p><div class="list-row"><span>${t('Flame and droplet studies', 'دراسات اللهب والقطرات')}</span><b>ACME · CFI · FLEX · SPICE</b></div><div class="list-row"><span>${t('Solid materials and spacecraft fires', 'المواد الصلبة وحرائق المركبات')}</span><b>BASS · SAFFIRE</b></div><div class="list-row"><span>${t('Smoke and aerosol studies', 'دراسات الدخان والهباء')}</span><b>SAME · DAFT</b></div><div class="callout warn">${t('Other PSI records remain metadata and source links. Unlike experiments are not pooled into a universal fire-hazard rank.', 'تبقى سجلات PSI الأخرى بيانات وصفية وروابط للمصادر. لا ندمج تجارب مختلفة في تصنيف عام لخطر الحريق.')}</div></article></div>${flexScatterPanel()}<div class="grid three"><article class="card"><h3>${t('Study the physics', 'ادرس الفيزياء')}</h3><p class="sub">${t('Buoyancy-driven convection weakens in microgravity; diffusion and forced ventilation remain.', 'يضعف الحمل الناتج عن الطفو في الجاذبية الصغرى، بينما يستمر الانتشار والتهوية القسرية.')}</p><button class="outline-btn" data-go="Flame Physics">${t('Open Flame Physics →', 'افتح فيزياء اللهب ←')}</button></article><article class="card"><h3>${t('Inspect primary data', 'افحص البيانات الأساسية')}</h3><p class="sub">${t('Browse source rows, missing values, DOIs, and integrity checks for each study.', 'استعرض صفوف المصدر والقيم المفقودة وDOI وفحوص السلامة لكل دراسة.')}</p><button class="outline-btn" data-go="Challenge Evidence">${t('Open evidence library →', 'افتح مكتبة الأدلة ←')}</button></article><article class="card"><h3>${t('Decision-support boundary', 'حدود دعم القرار')}</h3><p class="sub">${t('This research dashboard does not certify spacecraft fire risk or replace flight-safety procedures.', 'لوحة الأبحاث لا تصادق على مخاطر الحريق ولا تستبدل إجراءات سلامة الطيران.')}</p><a href="https://www.nasa.gov/missions/station/studying-combustion-and-fire-safety/" target="_blank" rel="noreferrer">NASA · ${t('fire-safety research', 'أبحاث سلامة الحريق')} ↗</a></article></div>`;
+  return `${hero()}${themeWelcome()}${challengeGoals()}${judgingTrail(evidence, lang)}<div class="grid stats">${stat(t('PSI COMBUSTION INVESTIGATIONS', 'تحقيقات الاحتراق في PSI'), evidence.officialInventory.total, t('Official NASA inventory snapshot', 'لقطة من فهرس NASA الرسمي'), '◉')}${stat(t('TABLES BUNDLED', 'الجداول المرفقة'), evidence.investigations.length, t('NASA PSI tables · checksums verified', 'جداول NASA PSI · البصمات متحققة'), '▤')}${stat(t('SEPARATE SOURCE ROWS', 'صفوف المصدر المنفصلة'), evidence.recordCountAcrossFiles, t('Separate studies; never pooled', 'دراسات منفصلة؛ غير مدمجة'), '▤')}${stat(t('VERIFIED TABLE HASHES', 'بصمات الجداول المتحققة'), evidence.investigations.filter((x) => x.sourceIntegrity === 'VERIFIED').length, t('Original source bytes verified', 'تم التحقق من بايتات الملفات الأصلية'), '✓')}</div><div class="grid two"><article class="card"><div class="card-head"><div><h3>FLEX · PSI-69</h3><p class="sub">${t('One investigation selected for detailed, condition-stratified analysis.', 'تحقيق واحد للتحليل التفصيلي بحسب ظروف الاختبار.')}</p></div><span class="tag obs">${t('OBSERVED', 'مرصود')}</span></div>${flexBurnRateHistogram()}<div class="legend"><span>PSI-69 · DOI 10.60555/mbq8-0451</span></div></article><article class="card"><h3>${t('NASA challenge-source coverage', 'تغطية مصدر بيانات التحدي')}</h3><p class="sub">${t(`Measurements come from the challenge-relevant NASA PSI Combustion Science repository. NASA PSI lists ${evidence.officialInventory.total} investigations; ${evidence.investigations.length} original table files are bundled, checksummed, and inspectable. Studies remain separate because their methods and outcomes differ.`, `تأتي القياسات من مستودع NASA PSI Combustion Science المرتبط بالتحدي. يسجل الفهرس ${evidence.officialInventory.total} تحقيقاً؛ أرفقنا ${evidence.investigations.length} جدولاً أصلياً مع بصماتها لفحصها. بقيت الدراسات منفصلة لاختلاف طرقها ونتائجها.`)}</p><div class="list-row"><span>${t('Flame and droplet studies', 'دراسات اللهب والقطرات')}</span><b>ACME · CFI · FLEX · SPICE</b></div><div class="list-row"><span>${t('Solid materials and spacecraft fires', 'المواد الصلبة وحرائق المركبات')}</span><b>BASS · SAFFIRE</b></div><div class="list-row"><span>${t('Smoke and aerosol studies', 'دراسات الدخان والهباء')}</span><b>SAME · DAFT</b></div><div class="callout warn">${t('Other PSI records remain metadata and source links. Unlike experiments are not pooled into a universal fire-hazard rank.', 'تبقى سجلات PSI الأخرى بيانات وصفية وروابط للمصادر. لا ندمج تجارب مختلفة في تصنيف عام لخطر الحريق.')}</div></article></div>${flexScatterPanel()}<div class="grid three"><article class="card"><h3>${t('Study the physics', 'ادرس الفيزياء')}</h3><p class="sub">${t('Buoyancy-driven convection weakens in microgravity; diffusion and forced ventilation remain.', 'يضعف الحمل الناتج عن الطفو في الجاذبية الصغرى، بينما يستمر الانتشار والتهوية القسرية.')}</p><button class="outline-btn" data-go="Flame Lab">${t('Open Flame Lab →', 'افتح مختبر اللهب ←')}</button></article><article class="card"><h3>${t('Inspect primary data', 'افحص البيانات الأساسية')}</h3><p class="sub">${t('Browse source rows, missing values, DOIs, and integrity checks for each study.', 'استعرض صفوف المصدر والقيم المفقودة وDOI وفحوص السلامة لكل دراسة.')}</p><button class="outline-btn" data-go="Challenge Evidence">${t('Open Dataset Explorer →', 'افتح مستكشف البيانات ←')}</button></article><article class="card"><h3>${t('Decision-support boundary', 'حدود دعم القرار')}</h3><p class="sub">${t('This research dashboard does not certify spacecraft fire risk or replace flight-safety procedures.', 'لوحة الأبحاث لا تصادق على مخاطر الحريق ولا تستبدل إجراءات سلامة الطيران.')}</p><a href="https://www.nasa.gov/missions/station/studying-combustion-and-fire-safety/" target="_blank" rel="noreferrer">NASA · ${t('fire-safety research', 'أبحاث سلامة الحريق')} ↗</a></article></div>`;
 }
 const WB_VARIABLES = [
   ['burning_rate_mm_s', 'Burning-rate constant (mm²/s)'],
@@ -619,7 +630,9 @@ function settings() {
 }
 const pageMap = {
   Overview: overview,
+  'Flame Lab': () => renderFlamePhysics(lang) + flameScenarioControlsMarkup(lang),
   'Flame Physics': () => renderFlamePhysics(lang),
+  'Mission Lab': () => renderMissionLab(lang),
   'Mission Atmospheres': () => renderMissionAtmospheres(lang),
   'Safety Insights': () => renderSafetyInsights(lang),
   'System Concepts': () => renderSystemConcepts(lang),
@@ -676,7 +689,9 @@ async function go(name) {
     if (name === 'Challenge Evidence') bindChallengeLibrary(c, lang);
     if (name === 'Safety Insights') bindSafetyInsightCharts(c, lang);
     if (name === 'Investigation Lab') bindInvestigationLab(c, lang);
-    if (name === 'Flame Physics') bindFlameScene3d(c, lang);
+    if (name === 'Flame Physics' || name === 'Flame Lab') bindFlameScene3d(c, lang);
+    if (name === 'Flame Lab') bindFlameScenarioControls(c);
+    if (name === 'Mission Lab') bindMissionLab(c, lang);
     if (name === 'System Concepts') bindSystemConcepts(c, lang);
     if (name === '3D Models') bindModelGallery(c, lang);
     if (name === 'Comparison Studio') renderCompare();
@@ -880,6 +895,7 @@ function bindPage() {
       (b.onclick = () => {
         theme = b.dataset.theme;
         storageSet('mors-theme', theme);
+        if (b.closest('#theme-welcome')) storageSet('mors-welcome-theme-picked', '1');
         setTheme();
         go(current);
       }),
