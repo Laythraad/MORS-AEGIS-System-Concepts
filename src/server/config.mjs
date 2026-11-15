@@ -81,3 +81,12 @@ const resolved = Object.freeze({
 export const secrets = Object.freeze(Object.fromEntries(Object.entries(resolved).map(([key, value]) => [key, () => value])));
 
 export const GEMINI_MODEL = /^[A-Za-z0-9.-]{1,80}$/.test(process.env.GEMINI_MODEL || '') ? process.env.GEMINI_MODEL : 'gemini-3-flash-preview';
+const ollamaBaseUrl = process.env.MORS_OLLAMA_BASE_URL?.trim() || '';
+if (ollamaBaseUrl) {
+  let parsed;
+  try { parsed = new URL(ollamaBaseUrl); } catch { throw new Error('MORS_OLLAMA_BASE_URL must be a valid private Ollama URL.'); }
+  if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password || parsed.search || parsed.hash || parsed.pathname !== '/')
+    throw new Error('MORS_OLLAMA_BASE_URL must be an origin URL without credentials, path, query, or fragment.');
+}
+export const OLLAMA_BASE_URL = ollamaBaseUrl.replace(/\/$/, '');
+export const OLLAMA_MODEL = /^[A-Za-z0-9._:-]{1,100}$/.test(process.env.MORS_OLLAMA_MODEL || '') ? process.env.MORS_OLLAMA_MODEL : 'qwen2.5:3b';

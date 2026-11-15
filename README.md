@@ -2,7 +2,7 @@
 
 MORS AEGIS is a research dashboard for the NASA Space Apps challenge **[Flame in Freefall: SI-Powered Fire Safety Insights from Microgravity Combustion Data](https://www.spaceappschallenge.org/2026/challenges/flame-in-freefall/?tab=resources)**. It presents source-linked NASA Physical Sciences Informatics (PSI) combustion records, explains the transport physics behind flames in reduced gravity, and makes the limits of the available evidence visible.
 
-**Current application version: `3.0.0-alpha.9`.** See [CHANGELOG.md](CHANGELOG.md) for changes and [versioning and backups](docs/VERSIONING_AND_BACKUPS.md) for restoring earlier snapshots.
+**Current application version: `3.0.0-alpha.10`.** See [CHANGELOG.md](CHANGELOG.md) for changes and [versioning and backups](docs/VERSIONING_AND_BACKUPS.md) for restoring earlier snapshots.
 
 ## Run locally
 
@@ -13,9 +13,9 @@ Copy-Item .env.example .env
 npm start
 ```
 
-Open <http://127.0.0.1:4173>. Copying `.env.example` is only needed if you want optional Gemini-assisted explanations; the NASA PSI evidence browser and physics pages work without an API key. Never commit `.env` or place credentials in source files. The service binds locally by default.
+Open <http://127.0.0.1:4173>. Copy `.env.example` to configure optional Gemini or a private Ollama model; the NASA PSI evidence browser and physics pages work without an AI provider. Never commit `.env` or place credentials in source files. The service binds locally by default.
 
-For a deliberately public research deployment, set `MORS_PUBLIC_READONLY=1` and exact HTTPS origins in `MORS_TRUSTED_ORIGINS`. Pages and GET APIs are public without a login; application-changing POST APIs remain blocked. Leave `MORS_ACCESS_TOKEN` unset in this mode. Keep Gemini credentials unset for a public judges' copy.
+For a deliberately public research deployment, set `MORS_PUBLIC_READONLY=1` and exact HTTPS origins in `MORS_TRUSTED_ORIGINS`. Pages and GET APIs are public without a login; only the same-origin, rate-limited research Copilot POST is allowed. All other application-changing POST APIs remain blocked. Leave `MORS_ACCESS_TOKEN` unset in this mode. The local Ollama endpoint stays private on Tailscale; never expose its port publicly.
 
 ## Challenge evidence
 
@@ -71,14 +71,14 @@ Read the [official challenge resource audit](docs/OFFICIAL_CHALLENGE_RESOURCE_AU
 - **Investigation Lab** — select from the full PSI inventory and inspect curated, source-field-specific descriptive summaries and verbatim experiment-condition values for bundled tables. Studies with condition-only data or unresolved field meanings show the gap instead of a fabricated outcome.
 - **Analysis Workbench / Comparison Studio** — reproducible PSI-69/FLEX analysis stratified by test conditions and comparison of individual matched FLEX records. These pages do not imply cross-study equivalence; arbitrary CSV import is intentionally unavailable so unrelated data cannot enter the challenge analysis path.
 - **Chart Guide** — catalog of the scientific plots, source fields, interaction controls, reading notes, and interpretation limits. The interactive collection combines source-table views with PSI-69/FLEX plots; zoom, pan, point details, and guide lines support inspection without turning descriptive data into a predictive model.
-- **AI Copilot** — optional Gemini-assisted explanation. Generated text is not a measurement or validation and must remain traceable to the displayed evidence.
+- **AI Copilot** — source-bounded Qwen 2.5 3B answers from the separate GPU PC over private Tailscale, with a deterministic evidence-summary fallback. Gemini can be used as an optional alternative. Generated text is never a measurement or validation.
 - **Sources & Methods / Reports** — challenge-provided resources, source DOIs, evidence labels, data boundaries and exportable summaries. The duplicate Provenance view is consolidated into Sources & Methods.
 
 The Arabic interface is a translation layer; English is the default scientific wording. Earth-fire maps, geomagnetic/space-weather feeds, unrelated astronomy or quantum demonstrations, and synthetic habitat telemetry are outside the active product scope.
 
 ## Committee presentation
 
-The seven-slide English PowerPoint is available at [`deliverables/presentation/MORS_AEGIS_Flame_in_Freefall_English_Competition_Final.pptx`](deliverables/presentation/MORS_AEGIS_Flame_in_Freefall_English_Competition_Final.pptx). It includes the team logo, an editable PSI table-row chart, the project palette, presenter notes, clickable links, and the website and repository QR codes on the final slide. The live QR uses the current temporary Cloudflare Quick Tunnel hostname and may change if its service is recreated. The site asks for the presenter-provided access code. Deployment status and the manual Coolify redeploy step are recorded in [the Coolify runbook](docs/COOLIFY_BACKUP_DEPLOYMENT.md).
+The seven-slide English competition deck is available at [`deliverables/presentation/MORS_AEGIS_NASA_Space_Apps_Submission_7_Slides_AI.pptx`](deliverables/presentation/MORS_AEGIS_NASA_Space_Apps_Submission_7_Slides_AI.pptx). It includes the team logo, an editable PSI table-row chart, presenter notes, clickable links, website and repository QR codes, and the local AI workflow. The public site is read-only and does not require sign-in. The live website QR uses the current temporary Cloudflare Quick Tunnel hostname and may change if its service is recreated. Deployment details are in [the Coolify runbook](docs/COOLIFY_BACKUP_DEPLOYMENT.md).
 
 For an HTTPS reverse proxy such as Cloudflare Tunnel, set `MORS_TRUSTED_ORIGINS` to exact public and proxy HTTPS origins, separated by commas; set `MORS_COOKIE_SECURE=1` if login is enabled. The server checks browser origins against this exact allowlist, so a proxy may use a different internal `Host` value without blocking the trusted public origin. Wildcard origins are rejected. `MORS_PUBLIC_READONLY=1` exposes read-only pages without login and rejects API mutation requests. A Cloudflare Quick Tunnel hostname can change when its process is recreated, so update the exact origin when that happens. When login is enabled for a private deployment, keep `MORS_ACCESS_TOKEN` private and out of the repository, slides, URLs, and logs.
 
@@ -113,7 +113,7 @@ Browser SPA (public/)
   ├─ /api/challenge/catalog ── selected source manifest + PSI tables
   ├─ /api/challenge/table ──── allowlisted, investigation-specific rows
   ├─ /api/research/* ───────── bounded analysis of supported evidence
-  └─ /api/copilot ──────────── optional Gemini, server-side key handling
+  └─ /api/copilot ──────────── local Ollama over Tailscale, deterministic fallback
 ```
 
 `server.mjs` wires the HTTP application; `src/server/` contains configuration, request/security helpers and routes; `ms02-connectors/challenge-data/` holds the immutable source package and catalog; `ms05-analysis/` holds deterministic calculations; `public/` contains the accessible interface and visual explanations. See `docs/` for research decisions and data interpretation. For Coolify redeployment, public routing, recovery, and asset checks, use the [backup deployment runbook](docs/COOLIFY_BACKUP_DEPLOYMENT.md).

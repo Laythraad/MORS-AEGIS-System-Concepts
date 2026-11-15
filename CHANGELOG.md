@@ -1,4 +1,10 @@
 # Changelog
+## 3.0.0-alpha.10 — 2026-11-15
+
+- Enabled the public, same-origin, rate-limited research Copilot endpoint while keeping all other write APIs blocked in public read-only mode.
+- Connected Copilot to the existing Qwen 2.5 3B model on the RTX 4060 PC over private Tailscale; deterministic PSI-69 summaries remain available when it is offline.
+- Kept optional Gemini credentials server-side and made the active AI provider visible in the Copilot interface.
+
 ## 3.0.0-alpha.9 — 2026-11-15
 
 - Moved FLEX 3D axis names and measured ranges into a responsive readout above the chart so they remain readable on mobile without covering plotted observations.

@@ -473,7 +473,7 @@ function renderCompare() {
 }
 function copilot() {
   const ar = lang === 'ar';
-  return `${pageHead(ar ? 'مساعد أبحاث MORS AEGIS' : 'AEGIS AI Research Chat', ar ? 'محادثة بحثية مرتبطة ببيانات NASA PSI-69 مع إظهار المصدر والقيود.' : 'Ask about the FLEX evidence, methods, or limitations. Answers distinguish source observations from computed results.')}<article class="card chat-shell"><div class="chat-top"><div class="chat-brand"><div class="chat-avatar">✧</div><div><h3>${ar ? 'مساعد البحث العلمي' : 'AEGIS Research Assistant'}</h3><p class="sub">${ar ? 'NASA PSI-69 · جدول التجارب الكامل · DOI 10.60555/mbq8-0451' : 'NASA PSI-69 · full experimental table · DOI 10.60555/mbq8-0451'}</p></div></div><div class="chat-top-actions"><span class="tag" id="copilotMode">${ar ? 'جارٍ التحقق من الخدمة…' : 'Checking provider…'}</span><button class="outline-btn" id="newChat" type="button">${ar ? 'محادثة جديدة' : 'New chat'}</button></div></div><div class="chat-context"><span class="tag obs">OBSERVED · PSI-69</span><span class="tag comp">COMPUTED · ${ar ? 'إحصاءات وصفية' : 'descriptive statistics'}</span><span class="tag">${ar ? 'السجل محفوظ محليًا في هذا المتصفح' : 'Chat saved locally in this browser'}</span></div><div class="chat-log" id="chatLog" role="log" aria-live="polite" aria-relevant="additions text"></div><div id="chatTyping" class="chat-typing" hidden>${ar ? 'يفحص الأدلة…' : 'Checking the evidence…'}</div><div class="chat-suggestions" id="chatSuggestions"><button class="suggestion" data-question="${t('What is the mean burning rate, and how was it computed?', 'ما متوسط ثابت معدل الاحتراق، وكيف حُسب؟')}">${t('Mean burning rate', 'متوسط معدل الاحتراق')}</button><button class="suggestion" data-question="${t('What do these records tell us about droplet diameter and burning rate?', 'ماذا تخبرنا السجلات عن قطر القطرة ومعدل الاحتراق؟')}">${t('Explore relationship', 'استكشف العلاقة')}</button><button class="suggestion" data-question="${t('What are the main limitations of this table?', 'ما أبرز حدود هذا الجدول؟')}">${t('Evidence limits', 'حدود الأدلة')}</button></div><div class="chat-compose"><form id="chatForm"><textarea class="field" id="question" rows="2" maxlength="1500" required aria-label="${ar ? 'رسالة إلى مساعد أبحاث AEGIS' : 'Message AEGIS research assistant'}" placeholder="${ar ? 'اكتب سؤالك عن الأدلة…' : 'Message AEGIS about the evidence…'}"></textarea><button class="primary-btn chat-send" id="chatSend" type="submit">${ar ? 'إرسال ↑' : 'Send ↑'}</button></form><div class="chat-disclosure">${ar ? 'تُحفظ المحادثة في تخزين المتصفح فقط. لا تدخل معلومات شخصية أو سرية.' : 'Conversation is stored in this browser only. Do not enter personal or confidential information.'} · ${ar ? 'قد يستخدم السؤال Gemini إذا كانت الخدمة متاحة؛ وإلا يظهر ملخص محلي محدد بوضوح.' : 'Questions may be sent to Gemini when configured; otherwise a clearly labeled local summary is shown.'}</div></div></article>`;
+  return `${pageHead(ar ? 'مساعد أبحاث MORS AEGIS' : 'AEGIS AI Research Chat', ar ? 'محادثة بحثية مرتبطة ببيانات NASA PSI-69 مع إظهار المصدر والقيود.' : 'Ask about the FLEX evidence, methods, or limitations. Answers distinguish source observations from computed results.')}<article class="card chat-shell"><div class="chat-top"><div class="chat-brand"><div class="chat-avatar">✧</div><div><h3>${ar ? 'مساعد البحث العلمي' : 'AEGIS Research Assistant'}</h3><p class="sub">${ar ? 'NASA PSI-69 · جدول التجارب الكامل · DOI 10.60555/mbq8-0451' : 'NASA PSI-69 · full experimental table · DOI 10.60555/mbq8-0451'}</p></div></div><div class="chat-top-actions"><span class="tag" id="copilotMode">${ar ? 'جارٍ التحقق من الخدمة…' : 'Checking provider…'}</span><button class="outline-btn" id="newChat" type="button">${ar ? 'محادثة جديدة' : 'New chat'}</button></div></div><div class="chat-context"><span class="tag obs">OBSERVED · PSI-69</span><span class="tag comp">COMPUTED · ${ar ? 'إحصاءات وصفية' : 'descriptive statistics'}</span><span class="tag">${ar ? 'السجل محفوظ محليًا في هذا المتصفح' : 'Chat saved locally in this browser'}</span></div><div class="chat-log" id="chatLog" role="log" aria-live="polite" aria-relevant="additions text"></div><div id="chatTyping" class="chat-typing" hidden>${ar ? 'يفحص الأدلة…' : 'Checking the evidence…'}</div><div class="chat-suggestions" id="chatSuggestions"><button class="suggestion" data-question="${t('What is the mean burning rate, and how was it computed?', 'ما متوسط ثابت معدل الاحتراق، وكيف حُسب؟')}">${t('Mean burning rate', 'متوسط معدل الاحتراق')}</button><button class="suggestion" data-question="${t('What do these records tell us about droplet diameter and burning rate?', 'ماذا تخبرنا السجلات عن قطر القطرة ومعدل الاحتراق؟')}">${t('Explore relationship', 'استكشف العلاقة')}</button><button class="suggestion" data-question="${t('What are the main limitations of this table?', 'ما أبرز حدود هذا الجدول؟')}">${t('Evidence limits', 'حدود الأدلة')}</button></div><div class="chat-compose"><form id="chatForm"><textarea class="field" id="question" rows="2" maxlength="1500" required aria-label="${ar ? 'رسالة إلى مساعد أبحاث AEGIS' : 'Message AEGIS research assistant'}" placeholder="${ar ? 'اكتب سؤالك عن الأدلة…' : 'Message AEGIS about the evidence…'}"></textarea><button class="primary-btn chat-send" id="chatSend" type="submit">${ar ? 'إرسال ↑' : 'Send ↑'}</button></form><div class="chat-disclosure">${ar ? 'تُحفظ المحادثة في تخزين المتصفح فقط. لا تدخل معلومات شخصية أو سرية.' : 'Conversation is stored in this browser only. Do not enter personal or confidential information.'} · ${ar ? 'تُرسل أسئلة البحث إلى نموذج محلي عبر شبكة Tailscale الخاصة، أو يعرض النظام ملخصاً محلياً عند توقف النموذج.' : 'Questions go to a local model over private Tailscale; a deterministic evidence summary appears if it is offline.'}</div></div></article>`;
 }
 function missionLessons() {
   const ar = lang === 'ar';
@@ -714,9 +714,15 @@ async function go(name) {
     if (name === '3D Models') bindModelGallery(c, lang);
     if (name === 'Comparison Studio') renderCompare();
     if (name === 'AI Copilot') {
-      const provider = (await get('/api/health')).credentials.gemini;
-      if (id === navigationId)
-        $('#copilotMode').textContent = provider ? 'GEMINI CONFIGURED · CHECKED PER REPLY' : 'LOCAL EVIDENCE MODE';
+      const health = await get('/api/health');
+      if (id === navigationId) {
+        const ai = health.ai || {};
+        $('#copilotMode').textContent = ai.provider === 'ollama'
+          ? `LOCAL AI · ${ai.model || 'OLLAMA'} · TAILSCALE`
+          : ai.provider === 'gemini' || health.credentials?.gemini
+            ? 'GEMINI CONFIGURED · CHECKED PER REPLY'
+            : 'LOCAL EVIDENCE MODE';
+      }
     }
   } catch (e) {
     if (id === navigationId)
@@ -806,7 +812,7 @@ async function submitChat(event) {
     const result = await post('/api/copilot', { question, history });
     const provider =
       result.status === 'live'
-        ? `AI INTERPRETATION · GEMINI ${result.model || ''}`
+        ? `${result.provider || 'AI INTERPRETATION'} · ${result.model || ''}`
         : (result.provider || 'DETERMINISTIC LOCAL SUMMARY').toUpperCase();
     chatThread.push({
       role: 'assistant',

@@ -59,7 +59,7 @@ The video mentions lunar/partial-gravity contexts, but the challenge brief expli
 | Find studies relevant to crew habitats | Full 24-record PSI inventory with a visible, factor-by-factor mission-relevance score | The score is a metadata heuristic, not a flame-danger ranking; table availability does not change relevance. |
 | Extract data useful to predictive modeling | Investigation conditions, fields, missingness and outcomes are shown study by study; FLEX has a separate condition-stratified descriptive workbench | Current evidence does not validate a cross-investigation predictive fire-risk model. |
 | Inform future controls and equipment | Safety Insights maps prevention, detection and suppression questions to relevant PSI families and NASA references | These are research directions, not flight procedures or certified recommendations. |
-| Provide SI assistance | Optional Gemini-assisted, source-bounded explanations with a deterministic local fallback | Generated prose is labeled separately and never substitutes for source measurements. |
+| Provide SI assistance | Source-bounded Qwen 2.5 3B through a private Ollama endpoint over Tailscale, with deterministic local summaries when offline | Generated prose is labeled separately and never substitutes for source measurements. The Copilot currently covers PSI-69/FLEX evidence. |
 | Optional Earth applications | Sources page identifies NASA technology-transfer examples | Context only; Earth fire feeds and unrelated challenge datasets are not ingested. |
 
 ## NASA ScienceCasts resource video

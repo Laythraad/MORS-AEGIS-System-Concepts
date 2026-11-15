@@ -3,7 +3,7 @@
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { HOST, PORT, NETWORK_MODE, PUBLIC_READONLY, PUBLIC_ROOT } from './src/server/config.mjs';
+import { HOST, PORT, NETWORK_MODE, PUBLIC_READONLY, PUBLIC_ROOT, TRUSTED_ORIGINS } from './src/server/config.mjs';
 import { send, safeHeaders, requestIsLocal } from './src/server/http.mjs';
 import { hasSession, loginPage, authenticate, logout } from './src/server/auth.mjs';
 import { dataRoutes } from './src/server/routes/data.mjs';
@@ -49,8 +49,12 @@ async function handle(req, res) {
     if (url.pathname.startsWith('/api/')) return send(res, 401, { error: 'Access token required.' });
     return send(res, 401, loginPage(), 'text/html; charset=utf-8');
   }
-  if (NETWORK_MODE && PUBLIC_READONLY && url.pathname.startsWith('/api/') && req.method !== 'GET')
-    return send(res, 405, { error: 'Read-only public mode.' });
+  if (NETWORK_MODE && PUBLIC_READONLY && url.pathname.startsWith('/api/') && req.method !== 'GET') {
+    const publicCopilotRequest = req.method === 'POST' && url.pathname === '/api/copilot';
+    if (!publicCopilotRequest) return send(res, 405, { error: 'Read-only public mode.' });
+    if (!TRUSTED_ORIGINS.has(req.headers.origin || ''))
+      return send(res, 403, { error: 'The public research assistant requires a trusted same-origin request.' });
+  }
   if (!url.pathname.startsWith('/api/')) return serveStatic(req, res, url);
   const route = ROUTES.get(`${req.method} ${url.pathname}`);
   if (route) return route(req, res, url, req.socket.remoteAddress || 'local');

@@ -35,3 +35,5 @@ Use prerelease increments such as `3.0.0-alpha.3`, `3.0.0-alpha.4`, and so on un
 - `v3.0.0-alpha.8`: oxygen-responsive qualitative flame, selectable 2D/3D source-row plots, and evidence interpretation tree.
 - `backup/pre-v3.0.0-alpha.8-20261115-073511`: ZIP and tag snapshot before the mobile 3D axis-label layout fix.
 - `v3.0.0-alpha.9`: responsive axis labels and ranges displayed outside the FLEX 3D measurement plot.
+- `backup/pre-v3.0.0-alpha.9-20261115-143720`: ZIP and tag snapshot before enabling the public research Copilot endpoint.
+- `v3.0.0-alpha.10`: same-origin, rate-limited public Copilot request backed by local Qwen 2.5 3B over private Tailscale, with deterministic offline fallback.

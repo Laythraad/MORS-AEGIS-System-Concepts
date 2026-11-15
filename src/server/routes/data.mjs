@@ -2,7 +2,7 @@
 import { summarize, validate, pearson } from '../../../ms05-analysis/analysis.mjs';
 import { runWorkflow } from '../../../ms09-agents/workflow.mjs';
 import { SOURCES } from '../../../ms02-connectors/registry.mjs';
-import { HOST, secrets } from '../config.mjs';
+import { HOST, OLLAMA_BASE_URL, OLLAMA_MODEL, secrets } from '../config.mjs';
 import { send, readJson, rateLimit } from '../http.mjs';
 import { researchDataset, catalogList } from '../dataset.mjs';
 import { normalizeFilter, filterRows, conditionLabel, conditionCatalog } from '../../../ms05-analysis/strata.mjs';
@@ -19,6 +19,7 @@ export const dataRoutes = {
   'GET /api/health': (req, res) => send(res, 200, {
     status: 'ok', product: 'MORS AEGIS', timestamp: new Date().toISOString(),
     credentials: Object.fromEntries(Object.entries(secrets).map(([name, get]) => [name, Boolean(get())])),
+    ai: { configured: Boolean(secrets.gemini() || OLLAMA_BASE_URL), provider: OLLAMA_BASE_URL ? 'ollama' : secrets.gemini() ? 'gemini' : 'local-evidence', model: OLLAMA_BASE_URL ? OLLAMA_MODEL : undefined },
     runtime: 'Node.js', binding: HOST
   }),
 

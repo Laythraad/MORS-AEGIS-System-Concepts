@@ -21,11 +21,14 @@ Set these values in Coolify's private environment settings, never in GitHub:
 | Variable | Value |
 | --- | --- |
 | `MORS_PUBLIC_READONLY` | `1` |
-| `MORS_ACCESS_TOKEN` | Leave unset for this public judges' copy. With read-only mode enabled, pages and GET APIs are public and application-changing POST APIs remain blocked. |
+| `MORS_ACCESS_TOKEN` | Leave unset for this public judges' copy. With read-only mode enabled, pages and GET APIs are public; only the bounded Copilot POST is allowed. |
 | `MORS_TRUSTED_ORIGINS` | Comma-separated exact HTTPS origins for the Coolify app host and the public Cloudflare hostname, with no paths or wildcards. |
 | `MORS_COOKIE_SECURE` | `1` when the app is accessed through HTTPS. |
+| `MORS_OLLAMA_BASE_URL` | `http://100.93.0.64:11434` for the current Windows RTX 4060 PC, reachable privately over Tailscale. This endpoint has no API authentication; keep it on the tailnet and never publish port `11434` publicly. |
+| `MORS_OLLAMA_MODEL` | `qwen2.5:3b` (the model already installed on the AI PC). |
+| `GEMINI_API_KEY` | Optional alternative provider. Store it only as a locked server-side secret; never put it in Git or a browser bundle. When Ollama is configured, the app prefers Ollama. |
 
-Leave Gemini credentials unset for this public copy. The public-only server rejects application-changing `POST` APIs; do not place private data in the repository or its bundled assets. See [the security boundary](../SECURITY.md).
+The public-only server permits only the same-origin, rate-limited `POST /api/copilot` research request; all other mutation `POST` APIs remain blocked. Copilot sends only the PSI-69 summary and question-relevant rows over Tailscale to Ollama. The Windows AI PC and Ollama must be running for generated answers; a deterministic evidence summary is shown when they are offline. Do not place private data in the repository or its bundled assets. See [the security boundary](../SECURITY.md).
 
 ## Redeploying from GitHub
 

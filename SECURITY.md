@@ -3,8 +3,8 @@
 ## Application boundary
 
 - The Node.js application binds to `127.0.0.1` by default. In this mode it is a local research dashboard. Network binding requires explicit configuration, a 32-character access token, and an exact trusted-origin allowlist.
-- **Explicit public read-only exception:** `MORS_PUBLIC_READONLY=1` publishes static research pages and `GET` APIs without login. Application-changing `POST` endpoints, including AI requests, return `405`; logout only clears the caller's session cookie. Use this mode only when all bundled datasets, concepts, and models are intended for anyone to read. Never route Coolify, SSH, databases, or other administration endpoints through the public tunnel.
-- Gemini explanations are optional. Provider credentials stay on the server and are not included in API responses or browser storage. AI output is explanatory text, not NASA evidence or a measured result.
+- **Explicit public read-only exception:** `MORS_PUBLIC_READONLY=1` publishes static research pages and `GET` APIs without login. The only public `POST` exception is the stateless `/api/copilot` research request, and it requires an exact trusted `Origin` plus the existing per-IP rate limit. Every other application-changing `POST` endpoint returns `405`; logout only clears the caller's session cookie. Use this mode only when all bundled datasets, concepts, and models are intended for anyone to read. Never route Coolify, SSH, databases, or other administration endpoints through the public tunnel.
+- The optional local Ollama model is reachable only over the private Tailscale network; never expose its unauthenticated port publicly. Gemini is an optional alternative whose key stays on the server. AI output is explanatory text, not NASA evidence or a measured result.
 - Uploaded or imported data must retain its own provenance. The app must not attribute user data to NASA PSI unless the content is verified against the bundled source bytes.
 
 ## NASA source files
